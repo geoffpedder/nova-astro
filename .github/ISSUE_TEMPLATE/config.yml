@@ -1,0 +1,8 @@
+blank_issues_enabled: true
+contact_links:
+  - name: Installing NOVA
+    url: https://github.com/geoffpedder/nova-astro/blob/main/docs/INSTALL.md#troubleshooting
+    about: Troubleshooting for setup, drivers, plate solving and PHD2.
+  - name: Using NOVA
+    url: https://github.com/geoffpedder/nova-astro/blob/main/docs/USER-GUIDE.md
+    about: How each part of the page works.

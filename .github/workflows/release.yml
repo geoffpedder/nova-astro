@@ -1,0 +1,99 @@
+# Builds NOVA for 64-bit PCs (linux-x64) and the Raspberry Pi 4/5 (linux-arm64), after the tests pass.
+#   - Push a tag like v0.2.0: the two downloads are attached to a GitHub release of that name
+#     (a tag with a hyphen, like v0.2.0-beta.1, makes a pre-release).
+#   - Run it by hand (Actions → Release → Run workflow): the same builds, kept as workflow artifacts only.
+# Before releasing, setup-test.yml runs setup.sh from scratch on Debian, Ubuntu and Arch.
+# On the mini PC, deploy/update.sh installs the latest release.
+name: Release
+
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-dotnet@v6
+        with:
+          dotnet-version: '10.0.x'
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+      - name: Tests
+        # One retry, as a safety net: the tests that depended on timing and simulated seeing were made steady.
+        run: dotnet test tests/Nova.Tests || dotnet test tests/Nova.Tests
+      - name: Web UI type check
+        run: cd web && npm ci && npm run check
+      - name: Shell scripts (errors only)
+        run: shellcheck -S error deploy/*.sh deploy/nova tests/setup/*.sh
+
+  build:
+    needs: test
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        rid: [linux-x64, linux-arm64]
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-dotnet@v6
+        with:
+          dotnet-version: '10.0.x'
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+      - name: Version
+        run: |
+          if [[ "$GITHUB_REF" == refs/tags/v* ]]; then v="${GITHUB_REF_NAME#v}"; else v="0.0.0-dev.${GITHUB_RUN_NUMBER}"; fi
+          echo "VERSION=$v" >> "$GITHUB_ENV"
+      - name: Build
+        run: NOVA_VERSION="$VERSION" deploy/publish.sh ${{ matrix.rid }}
+      - name: Pack
+        run: deploy/package.sh ${{ matrix.rid }} "$VERSION"
+      - uses: actions/upload-artifact@v7
+        with:
+          name: nova-${{ matrix.rid }}
+          path: out/nova-*.tar.gz*
+          if-no-files-found: error
+
+  # setup.sh from scratch on each system, with this code (see setup-test.yml).
+  setup-test:
+    needs: test
+    if: startsWith(github.ref, 'refs/tags/v')
+    uses: ./.github/workflows/setup-test.yml
+
+  release:
+    needs: [build, setup-test]
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v7
+      - name: Release notes from CHANGELOG.md
+        run: |
+          # This version's section ("## [0.2.0] - …" up to the next "## "), without the link lines at the end.
+          awk -v v="${GITHUB_REF_NAME#v}" '
+            /^## / { on = index($0, "[" v "]") > 0; next }
+            on && !/^\[[^]]*\]: / { print }
+          ' CHANGELOG.md > notes.md
+          [ -s notes.md ] || echo "See CHANGELOG.md." > notes.md
+          cat notes.md
+      - uses: actions/download-artifact@v8
+        with:
+          path: dist
+          # Only the release builds (nova-linux-x64, nova-linux-arm64), not the setup test's own build.
+          pattern: nova-linux-*
+          merge-multiple: true
+      - uses: softprops/action-gh-release@v3
+        with:
+          files: dist/*
+          body_path: notes.md
+          generate_release_notes: true
+          prerelease: ${{ contains(github.ref_name, '-') }}

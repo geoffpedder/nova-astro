@@ -1,0 +1,16 @@
+[Unit]
+Description=Browser view of the PHD2 screen (noVNC on port 6080)
+Requires=nova-display.service
+After=nova-display.service
+
+[Service]
+Type=simple
+User=NOVA_USER
+# For Nova__ConfigDirectory, if it's set: nova-screen.sh looks there for NOVA's password.
+EnvironmentFile=-/etc/nova/nova.env
+ExecStart=/opt/nova/nova-screen.sh
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

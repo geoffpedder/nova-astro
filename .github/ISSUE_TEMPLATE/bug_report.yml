@@ -1,0 +1,58 @@
+name: Something's not working
+description: A problem with NOVA, setting it up or a piece of equipment
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for reporting it. `nova doctor` on the mini PC checks most of what can go wrong and says how to fix
+        it, so try that first; if it doesn't help, its output below makes the problem much quicker to find.
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened
+      description: What you did, what you expected, and what happened instead. Screenshots welcome.
+    validations:
+      required: true
+  - type: textarea
+    id: doctor
+    attributes:
+      label: Output of `nova doctor`
+      description: Run it on the mini PC and paste everything it prints.
+      render: text
+    validations:
+      required: true
+  - type: textarea
+    id: log
+    attributes:
+      label: Log around the time it happened
+      description: NOVA's Activity panel, or `nova logs` on the mini PC (Ctrl+C to stop it). `nova logs indiserver` for driver trouble.
+      render: text
+  - type: input
+    id: version
+    attributes:
+      label: NOVA version
+      description: Shown in the header next to NOVA, or `nova version`.
+      placeholder: 0.2.0
+    validations:
+      required: true
+  - type: input
+    id: system
+    attributes:
+      label: System
+      description: The mini PC or Raspberry Pi, and its system.
+      placeholder: Raspberry Pi 5, Raspberry Pi OS 64-bit (trixie)
+    validations:
+      required: true
+  - type: textarea
+    id: equipment
+    attributes:
+      label: Equipment
+      description: Mount, cameras, focuser and so on, with their INDI drivers if you know them.
+      placeholder: ZWO AM5 (indi_lx200am5), ASI2600MC Pro (indi_asi_ccd)
+  - type: input
+    id: browser
+    attributes:
+      label: Browser
+      description: Only if it's about the page itself.
+      placeholder: Chrome on Windows, Safari on iPad

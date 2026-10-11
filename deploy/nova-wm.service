@@ -1,0 +1,17 @@
+[Unit]
+Description=Window manager for the headless PHD2 display (NOVA)
+Requires=nova-display.service
+After=nova-display.service
+
+[Service]
+Type=simple
+User=NOVA_USER
+Environment=DISPLAY=:99
+# IceWM (Openbox on older installs): PHD2's main window fills the screen, its dialogs can be moved, and a taskbar
+# lists every window (see nova-wm.sh and icewm/).
+ExecStart=/opt/nova/nova-wm.sh
+Restart=on-failure
+RestartSec=3
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,61 @@
+#!/usr/bin/env bash
+# The "nova" command, installed to /usr/local/bin by install.sh. It runs NOVA's maintenance scripts, which install.sh
+# keeps in /opt/nova/scripts, so they're there even without a copy of the source.
+set -euo pipefail
+SCRIPTS=/opt/nova/scripts
+
+usage() {
+  cat <<'EOF'
+Usage: nova <command>
+
+  update [vX.Y.Z] [--force]   install the newest NOVA release (or a chosen one)
+  doctor                      check everything NOVA needs, and say how to fix what isn't right
+  setup [options]             install or add what NOVA needs (drivers, ASTAP, PHD2); see: nova setup --help
+  status                      version, services and the web address
+  logs [service]              follow a service's log (nova, indiserver, phd2, ...; default nova)
+  restart                     restart INDI and NOVA (and PHD2's screen)
+  password [--clear]          set NOVA's password (asked twice), or remove it, e.g. when it's forgotten
+  version                     the installed version
+EOF
+}
+
+version() { cat /opt/nova/VERSION 2>/dev/null || echo "built here (no release version)"; }
+
+command="${1:-help}"
+[ $# -gt 0 ] && shift
+case "$command" in
+  update) exec bash "$SCRIPTS/update.sh" "$@" ;;
+  doctor) exec bash "$SCRIPTS/doctor.sh" "$@" ;;
+  setup) exec bash "$SCRIPTS/setup.sh" "$@" ;;
+  version|--version|-v) version ;;
+  status)
+    echo "NOVA $(version)"
+    for unit in indiserver nova nova-display nova-wm phd2 nova-screen; do
+      systemctl cat "$unit" >/dev/null 2>&1 || continue
+      state="$(systemctl is-active "$unit" 2>/dev/null || true)"
+      # The PHD2 services are only switched on once PHD2 is installed.
+      [ "$state" != active ] && ! systemctl is-enabled --quiet "$unit" 2>/dev/null && state="not set up"
+      printf '  %-13s %s\n' "$unit" "$state"
+    done
+    echo "http://$(hostname).local:5000"
+    ;;
+  logs)
+    unit="${1:-nova}"
+    exec journalctl -u "$unit" -n 50 -f ;;
+  restart)
+    sudo systemctl restart indiserver nova
+    # PHD2's screen picks up a password change (its own page on port 6080 closes or opens to match).
+    systemctl is-active --quiet nova-screen && sudo systemctl restart nova-screen
+    echo "Restarted INDI and NOVA." ;;
+  password)
+    # NOVA keeps the password (hashed) in its user's config folder, so run as that user, with NOVA's settings.
+    user="$(systemctl show -p User --value nova 2>/dev/null || true)"
+    user="${user:-$(id -un)}"
+    if [ -r /etc/nova/nova.env ]; then set -a; . /etc/nova/nova.env; set +a; fi
+    if [ "$user" = "$(id -un)" ]; then /opt/nova/Nova.Server password "$@"
+    else sudo -H -u "$user" --preserve-env=Nova__ConfigDirectory /opt/nova/Nova.Server password "$@"; fi
+    systemctl is-active --quiet nova-screen && sudo systemctl restart nova-screen
+    true ;;
+  help|-h|--help) usage ;;
+  *) echo "Unknown command: $command" >&2; usage >&2; exit 1 ;;
+esac

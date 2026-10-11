@@ -1,0 +1,100 @@
+NOVA
+Copyright (C) 2026 Geoff Pedder
+
+NOVA is free software: you can redistribute it and/or modify it under the terms of the GNU General Public License
+as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later
+version. It is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied
+warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License (the LICENSE
+file) for more details.
+
+The data, fonts and libraries below keep their own licences.
+
+NOVA includes data, fonts and libraries made by others, under their own licences. Thank you to all of them.
+
+NOVA is inspired by N.I.N.A. (Nighttime Imaging 'N' Astronomy, https://nighttime-imaging.eu/) but contains no
+code from it and isn't affiliated with it.
+
+
+DATA
+====
+
+HYG star database v4.1
+  David Nash, https://github.com/astronexus/HYG-Database (from the Hipparcos, Yale Bright Star and Gliese
+  catalogues). Licensed CC BY-SA 4.0 (https://creativecommons.org/licenses/by-sa/4.0/).
+  NOVA's extract, src/Nova.Core/Catalogs/stars.tsv.gz, is a derived database under the same licence.
+
+OpenNGC
+  Mattia Verga, https://github.com/mattiaverga/OpenNGC (NGC, IC, Messier and addenda).
+  Licensed CC BY-SA 4.0 (https://creativecommons.org/licenses/by-sa/4.0/).
+  With the Sharpless catalogue of HII regions (Sharpless 1959, VizieR VII/20, CDS Strasbourg).
+  NOVA's extract, src/Nova.Core/Catalogs/dso.tsv.gz, is a derived database under the same licence.
+
+d3-celestial constellation lines and names
+  Copyright (c) 2015, Olaf Frohn, https://github.com/ofrohn/d3-celestial (lines after the IAU constellation
+  charts). Used in web/src/lib/constellations.json under the BSD 3-Clause licence:
+
+    Redistribution and use in source and binary forms, with or without modification, are permitted provided
+    that the following conditions are met:
+    1. Redistributions of source code must retain the above copyright notice, this list of conditions and
+       the following disclaimer.
+    2. Redistributions in binary form must reproduce the above copyright notice, this list of conditions and
+       the following disclaimer in the documentation and/or other materials provided with the distribution.
+    3. Neither the name of the copyright holder nor the names of its contributors may be used to endorse or
+       promote products derived from this software without specific prior written permission.
+    THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED
+    WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A
+    PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR
+    ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED
+    TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
+    HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
+    NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+    POSSIBILITY OF SUCH DAMAGE.
+
+GeoNames
+  Towns for the site map, from cities1000, https://www.geonames.org/. Licensed CC BY 4.0
+  (https://creativecommons.org/licenses/by/4.0/). Data in web/src/lib/map/.
+
+Natural Earth
+  Coasts, borders, states and provinces, lakes and rivers for the site map, https://www.naturalearthdata.com/.
+  Public domain.
+
+Planet positions
+  JPL's "Keplerian Elements for Approximate Positions of the Major Planets" (E. M. Standish), public domain;
+  magnitudes from Mallama & Hilton (2018).
+
+Sky survey imagery (downloaded while NOVA runs, not bundled)
+  Digitized Sky Survey (STScI/NASA), coloured and tiled as HiPS by CDS Strasbourg; hips2fits by CDS.
+  Mellinger all-sky panorama (Axel Mellinger) through CDS.
+
+
+FONTS
+=====
+
+Inter, Copyright 2016 The Inter Project Authors (https://github.com/rsms/inter)
+JetBrains Mono, Copyright 2020 The JetBrains Mono Project Authors (https://github.com/JetBrains/JetBrainsMono)
+  Both licensed under the SIL Open Font License, Version 1.1 (https://openfontlicense.org/), bundled through
+  the @fontsource-variable packages.
+
+
+LIBRARIES IN THE WEB PAGE
+=========================
+
+Svelte                 MIT licence, Copyright (c) 2016-2025 Svelte Contributors
+@microsoft/signalr     MIT licence, Copyright (c) .NET Foundation and Contributors
+topojson-client        ISC licence, Copyright 2012-2019 Michael Bostock
+world-atlas            ISC licence, Copyright 2013-2019 Michael Bostock (Natural Earth data)
+
+
+THE SERVER
+==========
+
+.NET and ASP.NET Core (the self-contained runtime included in release downloads) and
+Microsoft.Extensions.Hosting.Systemd: MIT licence, Copyright (c) .NET Foundation and Contributors.
+
+
+PROGRAMS NOVA WORKS WITH (installed separately, not part of NOVA)
+=================================================================
+
+INDI (https://www.indilib.org/, LGPL/GPL), ASTAP (https://www.hnsky.org/astap.htm, MPL 2.0 / GPL star
+databases), PHD2 (https://openphdguiding.org/, BSD), noVNC (MPL 2.0), x11vnc (GPL), Openbox (GPL),
+Stellarium (GPL).

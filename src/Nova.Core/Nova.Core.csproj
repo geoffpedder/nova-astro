@@ -1,0 +1,15 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- HYG database extract (CC BY-SA 4.0), built by tools/build_star_catalog.py -->
+    <EmbeddedResource Include="Catalogs\stars.tsv.gz" LogicalName="Nova.Core.Catalogs.stars.tsv.gz" />
+    <EmbeddedResource Include="Catalogs\dso.tsv.gz" LogicalName="Nova.Core.Catalogs.dso.tsv.gz" />
+  </ItemGroup>
+
+</Project>

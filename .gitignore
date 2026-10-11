@@ -1,0 +1,13 @@
+bin/
+obj/
+out/
+node_modules/
+# Built from web/ by `npm run build`
+src/Nova.Server/wwwroot/
+.vs/
+.vscode/
+.idea/
+*.user
+*.swp
+# Raw catalogue downloads (see tools/build_*_catalog.py)
+tools/data/

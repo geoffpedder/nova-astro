@@ -1,0 +1,16 @@
+name: An idea or request
+description: Something NOVA could do, or do better
+labels: [enhancement]
+body:
+  - type: textarea
+    id: what
+    attributes:
+      label: What you'd like
+      description: What you're trying to do at the telescope, and how NOVA could help. How you do it today (in N.I.N.A., Ekos or by hand) is useful to know too.
+    validations:
+      required: true
+  - type: textarea
+    id: equipment
+    attributes:
+      label: Equipment it's for
+      description: If it's about a particular mount, camera or accessory.

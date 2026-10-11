@@ -1,0 +1,16 @@
+[Unit]
+Description=NOVA astrophotography server
+After=network-online.target indiserver.service
+Wants=network-online.target indiserver.service
+
+[Service]
+Type=notify
+User=NOVA_USER
+WorkingDirectory=/opt/nova
+EnvironmentFile=/etc/nova/nova.env
+ExecStart=/opt/nova/Nova.Server
+Restart=on-failure
+RestartSec=3
+
+[Install]
+WantedBy=multi-user.target

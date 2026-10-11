@@ -1,0 +1,2 @@
+# Nothing per window: nova-wm.sh maximises PHD2's main window by its title (its dialogs share its window class,
+# so an option here would stretch them too).

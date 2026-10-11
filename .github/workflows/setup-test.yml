@@ -1,0 +1,59 @@
+# Runs deploy/setup.sh from scratch in clean Debian 13, Ubuntu 26.04 and Arch containers (with systemd), installing
+# a freshly built NOVA, then checks it runs and that nova doctor is happy (tests/setup/test-setup.sh).
+#   - Before every release (the Release workflow calls this).
+#   - Every Monday, to catch changes in the systems' packages between releases.
+#   - By hand: Actions → Setup test → Run workflow.
+name: Setup test
+
+on:
+  workflow_call:
+  workflow_dispatch:
+  schedule:
+    - cron: '0 6 * * 1'
+
+jobs:
+  package:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-dotnet@v6
+        with:
+          dotnet-version: '10.0.x'
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+      - name: Build and pack
+        run: |
+          v="0.0.0-setuptest.${GITHUB_RUN_NUMBER}"
+          NOVA_VERSION="$v" deploy/publish.sh linux-x64
+          deploy/package.sh linux-x64 "$v"
+      - uses: actions/upload-artifact@v7
+        with:
+          name: nova-setuptest-linux-x64
+          path: out/nova-*.tar.gz*
+          if-no-files-found: error
+
+  setup:
+    needs: package
+    runs-on: ubuntu-latest
+    timeout-minutes: 75
+    strategy:
+      fail-fast: false
+      matrix:
+        image: ['debian:trixie', 'ubuntu:26.04', 'archlinux']
+    # Arch's AUR drivers need exactly Arch's INDI version, so for a few days after an INDI update they can't
+    # install: report it, but don't hold up a release for it.
+    continue-on-error: ${{ matrix.image == 'archlinux' }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/download-artifact@v8
+        with:
+          name: nova-setuptest-linux-x64
+          path: out
+      - name: Allow user namespaces, as a normal PC does
+        # GitHub's Ubuntu runners restrict them (AppArmor), which stops the sandbox PHD2's image loader uses.
+        run: sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0 || true
+      - name: setup.sh in ${{ matrix.image }}
+        run: tests/setup/test-setup.sh '${{ matrix.image }}' out/nova-*-linux-x64.tar.gz

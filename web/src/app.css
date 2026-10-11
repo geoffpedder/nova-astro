@@ -1,0 +1,301 @@
+/* Neutral dark greys (a darkened Maya palette), Inter with JetBrains Mono for numbers and labels, and panels with
+   one corner cut. */
+:root {
+  --bg: #1e1e1e;
+  --panel: #232323;
+  --panel-border: #161616;
+  --header: #1a1a1a;
+  --text: #dcdcdc;
+  --muted: #a2a2a2;
+  --accent: #5e9fcf;
+  --accent-text: #0d1b26;
+  --ok: #6fcf8a;
+  --warn: #e8b75a;
+  --danger: #ef6b6b;
+  --input: #151515;
+  --button: #292929;
+  --radius: 3px;
+  /* The panels' cut top-right corner, and the line along it. */
+  --cut: 14px;
+  --cut-line: #3a3a3a;
+  --font: 'Inter Variable', Inter, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  --font-mono: 'JetBrains Mono Variable', 'JetBrains Mono', ui-monospace, Consolas, monospace;
+  /* One colour per kind of equipment: panel edges/tints and the Equipment list. */
+  --kind-mount: #a78bfa;
+  --kind-camera: #38bdf8;
+  --kind-focuser: #f59e0b;
+  --kind-filterwheel: #34d399;
+  --kind-rotator: #f472b6;
+  --kind-guider: #a3e635;
+  --kind-flatpanel: #fde68a;
+  color-scheme: dark;
+}
+
+/* Night vision mode: everything in dim red so it doesn't ruin dark adaptation at the scope. */
+:root[data-theme='night'] {
+  --bg: #000;
+  --panel: #0d0000;
+  --panel-border: #2a0000;
+  --header: #000;
+  --button: #0d0000;
+  --cut-line: #2a0000;
+  --text: #d02020;
+  --muted: #7a1010;
+  --accent: #b01010;
+  --accent-text: #000;
+  --ok: #d02020;
+  --warn: #d02020;
+  --danger: #ff3030;
+  --input: #050000;
+  /* Night vision: keep every kind red, varying only brightness. */
+  --kind-mount: #8a1010;
+  --kind-camera: #b01010;
+  --kind-focuser: #701010;
+  --kind-filterwheel: #9a1818;
+  --kind-rotator: #600808;
+  --kind-guider: #c02020;
+  --kind-flatpanel: #7a1414;
+}
+:root[data-theme='night'] img.frame,
+:root[data-theme='night'] .viewport > img {
+  filter: grayscale(1) sepia(1) saturate(6) hue-rotate(-50deg) brightness(0.55);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+/* Checkboxes, radios, sliders and progress bars in the theme's accent; scrollbars in its colours. */
+:root {
+  accent-color: var(--accent);
+  scrollbar-color: var(--panel-border) transparent;
+}
+
+/* The browser's own checkboxes, radios and sliders draw grey and white whatever accent-color says (no good at night), so
+   NOVA draws them, the same size in every theme so nothing shifts when switching to night mode. */
+:root[data-theme='night'] {
+  scrollbar-color: var(--muted) var(--bg);
+}
+input[type='checkbox'],
+input[type='radio'] {
+  appearance: none;
+  /* Fixed whatever a panel's "input { width: 100% }" or the general input padding says. */
+  width: 14px !important;
+  height: 14px !important;
+  min-width: 14px;
+  padding: 0;
+  margin: 0;
+  flex: none;
+  vertical-align: -2px;
+  border: 1px solid var(--muted);
+  border-radius: 3px;
+  background: var(--input) center / 10px 10px no-repeat;
+  cursor: pointer;
+}
+input[type='radio'] {
+  border-radius: 50%;
+}
+input[type='checkbox']:checked {
+  background-color: var(--accent);
+  border-color: var(--accent);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 10 10'%3E%3Cpath d='M1.5 5.2 4 7.6 8.6 2.4' fill='none' stroke='%23000' stroke-width='1.8'/%3E%3C/svg%3E");
+}
+input[type='radio']:checked {
+  border-color: var(--accent);
+  background-image: radial-gradient(circle, var(--accent) 0 3px, transparent 3.5px);
+  background-size: auto;
+}
+input[type='checkbox']:disabled,
+input[type='radio']:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+input[type='range'] {
+  appearance: none;
+  padding: 0;
+  border: none;
+  height: 16px;
+  background: transparent;
+  cursor: pointer;
+}
+input[type='range']::-webkit-slider-runnable-track {
+  height: 4px;
+  border-radius: 2px;
+  background: var(--panel-border);
+}
+input[type='range']::-webkit-slider-thumb {
+  appearance: none;
+  width: 14px;
+  height: 14px;
+  margin-top: -5px;
+  border-radius: 50%;
+  border: none;
+  background: var(--accent);
+}
+input[type='range']::-moz-range-track {
+  height: 4px;
+  border-radius: 2px;
+  background: var(--panel-border);
+}
+input[type='range']::-moz-range-progress {
+  height: 4px;
+  border-radius: 2px;
+  background: var(--muted);
+}
+input[type='range']::-moz-range-thumb {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  border: none;
+  background: var(--accent);
+}
+:root[data-theme='night'] ::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+  background: var(--bg);
+}
+:root[data-theme='night'] ::-webkit-scrollbar-thumb {
+  background: var(--panel-border);
+  border-radius: 5px;
+}
+:root[data-theme='night'] ::-webkit-scrollbar-thumb:hover {
+  background: var(--muted);
+}
+:root[data-theme='night'] ::-webkit-scrollbar-corner {
+  background: var(--bg);
+}
+/* The clock and spinner icons of time and number inputs. */
+:root[data-theme='night'] input::-webkit-calendar-picker-indicator {
+  filter: brightness(0) invert(18%) sepia(100%) saturate(7000%) hue-rotate(-35deg);
+}
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font: 13.5px/1.5 var(--font);
+  letter-spacing: -0.005em;
+}
+
+/* letter-spacing is inherited as a fixed length (about -0.07px from the body), which is wider than the letters in
+   SVGs drawn in small units (the site map works in degrees): the text came out backwards. SVG text sets its own. */
+svg text {
+  letter-spacing: normal;
+}
+
+button,
+input,
+select {
+  font: inherit;
+  color: inherit;
+}
+
+button {
+  background: var(--accent);
+  color: var(--accent-text);
+  border: 0;
+  border-radius: var(--radius);
+  padding: 6px 12px;
+  font-weight: 600;
+  cursor: pointer;
+}
+button.secondary {
+  background: var(--button);
+  color: var(--text);
+  border: 1px solid var(--panel-border);
+}
+button.danger {
+  background: var(--danger);
+  color: #000;
+}
+button:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+input,
+select {
+  background: var(--input);
+  border: 1px solid var(--panel-border);
+  border-radius: var(--radius);
+  padding: 5px 8px;
+  min-width: 0;
+}
+
+.panel {
+  position: relative;
+  background: var(--panel);
+  border: 1px solid var(--panel-border);
+  border-radius: 2px;
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.04);
+  padding: 12px 14px;
+}
+/* The cut corner, painted over the panel's top-right corner in the page's colour with a line along the cut. Painted
+   rather than clipped, so dialogs opened from inside a panel aren't cut off. */
+.panel::after {
+  content: '';
+  position: absolute;
+  top: -1px;
+  right: -1px;
+  width: calc(var(--cut) + 1px);
+  height: calc(var(--cut) + 1px);
+  background: linear-gradient(
+    to top right,
+    transparent calc(50% - 0.8px),
+    var(--cut-line) calc(50% - 0.8px),
+    var(--cut-line) calc(50% + 0.6px),
+    var(--bg) calc(50% + 0.6px)
+  );
+  pointer-events: none;
+}
+.panel h2 {
+  margin: 0 0 10px;
+  min-height: 22px;
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  font-weight: 500;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--muted);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+}
+
+.row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+.muted {
+  color: var(--muted);
+}
+.mono,
+code {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+}
+
+.badge {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  padding: 2px 8px;
+  border-radius: 999px;
+  border: 1px solid currentColor;
+  text-transform: none;
+}
+.badge.ok {
+  color: var(--ok);
+}
+.badge.warn {
+  color: var(--warn);
+}
+.badge.danger {
+  color: var(--danger);
+}
+.badge.muted {
+  color: var(--muted);
+}

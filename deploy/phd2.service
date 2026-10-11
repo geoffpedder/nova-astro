@@ -1,0 +1,19 @@
+[Unit]
+Description=PHD2 guiding on the virtual display (NOVA)
+Requires=nova-display.service
+# Start after the window manager so PHD2's window is maximised from the start.
+After=nova-display.service nova-wm.service indiserver.service
+Wants=nova-wm.service indiserver.service
+
+[Service]
+Type=simple
+User=NOVA_USER
+Environment=DISPLAY=:99
+# PHD2's event server (port 4400) is on by default; NOVA controls PHD2 through it.
+ExecStart=/usr/bin/phd2
+# Also when its window is closed by mistake: NOVA guides through it.
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

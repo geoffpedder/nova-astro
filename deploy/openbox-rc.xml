@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Window rules for the headless PHD2 display (:99), used by nova-wm.service.
+     Main windows fill the screen; dialogs keep their size and a title bar so they can be moved. -->
+<openbox_config xmlns="http://openbox.org/3.4/rc">
+  <desktops>
+    <number>1</number>
+  </desktops>
+  <margins>
+    <top>0</top>
+    <bottom>0</bottom>
+    <left>0</left>
+    <right>0</right>
+  </margins>
+  <applications>
+    <application class="*" type="normal">
+      <decor>no</decor>
+      <maximized>true</maximized>
+    </application>
+    <application class="*" type="dialog">
+      <decor>yes</decor>
+      <!-- Always above the full-screen main window: a modal dialog underneath it (PHD2's New Profile Wizard on
+           a fresh install) can't be seen, and PHD2 then ignores every click on the main window. -->
+      <layer>above</layer>
+      <focus>yes</focus>
+      <position force="yes">
+        <x>center</x>
+        <y>center</y>
+      </position>
+    </application>
+  </applications>
+</openbox_config>

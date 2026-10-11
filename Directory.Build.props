@@ -1,0 +1,13 @@
+<Project>
+  <PropertyGroup>
+    <!--
+      Source-built SDKs (e.g. Arch's dotnet-sdk package) ship without the PrunePackageData
+      folder, which fails restore with NETSDK1226. Pruning only drops redundant package
+      references, so building without the data is safe.
+    -->
+    <AllowMissingPrunePackageData>true</AllowMissingPrunePackageData>
+    <!-- Local builds; releases set the version from their tag (deploy/publish.sh, NOVA_VERSION). -->
+    <Version>0.0.0-dev</Version>
+    <Copyright>Copyright (C) 2026 Geoff Pedder. GPL-3.0-or-later.</Copyright>
+  </PropertyGroup>
+</Project>

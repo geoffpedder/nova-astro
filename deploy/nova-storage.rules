@@ -1,0 +1,18 @@
+// Lets NOVA (running as NOVA_USER, a service with no desktop session) mount, unmount and eject USB drives through
+// udisks2, so frames can be saved to a drive plugged into the mini PC, as a desktop allows its logged-in user.
+// Installed to /etc/polkit-1/rules.d/49-nova-storage.rules by deploy/install.sh.
+polkit.addRule(function (action, subject) {
+    var storage = [
+        "org.freedesktop.udisks2.filesystem-mount",
+        "org.freedesktop.udisks2.filesystem-mount-other-seat",
+        "org.freedesktop.udisks2.filesystem-mount-system",
+        "org.freedesktop.udisks2.filesystem-unmount-others",
+        "org.freedesktop.udisks2.eject-media",
+        "org.freedesktop.udisks2.eject-media-other-seat",
+        "org.freedesktop.udisks2.power-off-drive",
+        "org.freedesktop.udisks2.power-off-drive-other-seat",
+    ];
+    if (subject.user == "NOVA_USER" && storage.indexOf(action.id) >= 0) {
+        return polkit.Result.YES;
+    }
+});

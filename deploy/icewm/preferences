@@ -1,0 +1,32 @@
+# IceWM on PHD2's virtual screen (NOVA's PHD2 tab), from /opt/nova/icewm via nova-wm.sh.
+# A taskbar along the bottom lists PHD2's windows: click one to bring it to the front, so a dialog that opens
+# behind another is never out of reach. Every window has a title bar to drag it by. Nothing else.
+ShowTaskBar=1
+TaskBarAtTop=0
+TaskBarAutoHide=0
+TaskBarShowStartMenu=0
+TaskBarShowWindowListMenu=0
+TaskBarShowWorkspaces=0
+TaskBarShowClock=0
+TaskBarShowAPMStatus=0
+TaskBarShowCPUStatus=0
+TaskBarShowMEMStatus=0
+TaskBarShowNetStatus=0
+TaskBarShowMailboxStatus=0
+TaskBarShowShowDesktopButton=0
+TaskBarShowTray=0
+TaskBarShowCollapseButton=0
+# Click a window to focus it and bring it to the front; new windows come to the front.
+FocusMode=1
+RaiseOnFocus=1
+RaiseOnClickClient=1
+FocusOnAppRaise=1
+RequestFocusOnAppRaise=1
+SmartPlacement=1
+CenterTransientsOnOwner=1
+DesktopBackgroundColor="rgb:00/00/00"
+# No Alt+click to move or resize windows (drag them by their title bars): if a browser loses Alt's release (Alt+Tab
+# away from the PHD2 tab), every click would otherwise start moving a window.
+MouseWinMove=""
+MouseWinSize=""
+MouseWinRaise=""

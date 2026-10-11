@@ -1,0 +1,22 @@
+[Unit]
+Description=INDI server (device drivers for NOVA)
+After=network.target
+
+[Service]
+Type=simple
+User=NOVA_USER
+EnvironmentFile=/etc/nova/indi.env
+# The GSC star catalog (AUR: gsc) that INDI's CCD Simulator draws stars from. Its own setup is in
+# /etc/profile.d, which services don't read, so without these the simulator finds no stars.
+Environment=GSCDAT=/usr/share/GSC
+Environment=GSCBIN=/usr/share/GSC/bin
+Environment=PATH=/usr/share/GSC/bin:/usr/local/bin:/usr/bin
+# /run/nova-indi holds the control pipe NOVA uses to start/stop drivers (e.g. the simulator toggle).
+RuntimeDirectory=nova-indi
+RuntimeDirectoryMode=0700
+ExecStart=/opt/nova/indiserver-start.sh
+Restart=on-failure
+RestartSec=3
+
+[Install]
+WantedBy=multi-user.target

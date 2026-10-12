@@ -218,6 +218,8 @@ public class GuidingEngineTests
         var withoutLock = sky.Stars().Skip(1).ToList();
         m = tracker.Measure(withoutLock)!;
         Assert.Equal(3, m.Found);
+        Assert.Equal([false, true, true, true], tracker.Stars.Select(s => s.Found));
+        Assert.Equal(sky.X, tracker.Stars[0].X, 6); // expected where the others say
         Assert.Equal(0, m.Snr);
         Assert.Equal(3, m.Dx, 6);
 

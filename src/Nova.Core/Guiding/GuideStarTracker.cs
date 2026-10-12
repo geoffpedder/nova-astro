@@ -23,6 +23,7 @@ public sealed class GuideStarTracker
         public double HomeX = star.X, HomeY = star.Y;      // where it should be
         public double LastX = star.X, LastY = star.Y;      // where it was last seen
         public double Snr = star.Snr;
+        public bool Found = true;
     }
 
     private readonly List<Tracked> _stars = [];
@@ -36,6 +37,9 @@ public sealed class GuideStarTracker
     public bool HasLock => _stars.Count > 0;
     public (double X, double Y)? LockHome => HasLock ? (_stars[0].HomeX, _stars[0].HomeY) : null;
     public int Count => _stars.Count;
+
+    /// <summary>The tracked stars where they were last seen (or expected), the lock star first, and whether the last frame found them.</summary>
+    public IReadOnlyList<(double X, double Y, bool Found)> Stars => _stars.Select(s => (s.LastX, s.LastY, s.Found)).ToList();
 
     /// <summary>
     /// Picks the guide stars: the lock star is the brightest by SNR that isn't crowded or near the edge (saturated
@@ -105,7 +109,11 @@ public sealed class GuideStarTracker
         }
 
         var lockFound = matches.Any(m => m.T == _stars[0]);
-        if (matches.Count == 0 || (!lockFound && matches.Count * 2 < _stars.Count)) return null;
+        if (matches.Count == 0 || (!lockFound && matches.Count * 2 < _stars.Count))
+        {
+            foreach (var t in _stars) t.Found = false;
+            return null;
+        }
 
         double sumW = 0, dx = 0, dy = 0;
         foreach (var (t, s) in matches)
@@ -122,7 +130,8 @@ public sealed class GuideStarTracker
         var found = matches.ToDictionary(m => m.T, m => m.S);
         foreach (var t in _stars)
         {
-            if (found.TryGetValue(t, out var s)) { (t.LastX, t.LastY, t.Snr) = (s.X, s.Y, s.Snr); }
+            t.Found = found.TryGetValue(t, out var s);
+            if (s is not null) { (t.LastX, t.LastY, t.Snr) = (s.X, s.Y, s.Snr); }
             else { (t.LastX, t.LastY) = (t.HomeX + dx, t.HomeY + dy); }
         }
 

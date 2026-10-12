@@ -30,12 +30,15 @@ public sealed record GuideCalibrationInfo(
 /// <summary>The guide star now: where it is, where it should be (lock), and how well it's seen.</summary>
 public sealed record GuideStarInfo(double X, double Y, double LockX, double LockY, double Snr, double Hfr, int Found, int Tracked);
 
+/// <summary>A tracked star in the guide frame (pixels): the lock star or a reference, and whether the last frame found it.</summary>
+public sealed record GuideStarMark(double X, double Y, bool Lock, bool Found);
+
 /// <param name="Activity">What it's doing in words ("West step 4", "Lost the guide star"), or null when idle.</param>
 /// <param name="Frame">Increments with every guide frame, so the browser knows when to fetch frame.png.</param>
 public sealed record NovaGuiderStatus(
     NovaGuiderSettings Settings, IReadOnlyList<string> Cameras, IReadOnlyList<GuideOutputChoice> Outputs,
     string? Camera, string? Activity, GuideCalibrationInfo? Calibration, GuideStarInfo? Star,
-    int Frame, int? FrameWidth, int? FrameHeight);
+    int Frame, int? FrameWidth, int? FrameHeight, IReadOnlyList<GuideStarMark> Stars);
 
 /// <summary>
 /// NOVA's own guider: exposes the guide camera in a loop, follows the guide stars, calibrates, and sends corrections
@@ -44,7 +47,7 @@ public sealed record NovaGuiderStatus(
 /// </summary>
 public sealed class NovaGuider : IAsyncDisposable
 {
-    private const int HistoryLength = 100;
+    private const int HistoryLength = 300; // 10 minutes of 2 s frames, for the Guiding tab's graph
     private const int LostFramesBeforeReselect = 3;
 
     private readonly EquipmentService _equipment;
@@ -73,6 +76,7 @@ public sealed class NovaGuider : IAsyncDisposable
     private string? _activity;
     private GuideMeasurement? _last;
     private RawImage? _frame;
+    private IReadOnlyList<DetectedStar> _frameStars = [];
     private int _frameId;
     private double? _scale;
 
@@ -162,8 +166,11 @@ public sealed class NovaGuider : IAsyncDisposable
                     ? new GuideStarInfo(Math.Round(m.X, 2), Math.Round(m.Y, 2), Math.Round(home.X, 2), Math.Round(home.Y, 2),
                         Math.Round(m.Snr, 1), Math.Round(m.Hfr, 2), m.Found, m.Tracked)
                     : null;
+                var marks = IsRunning
+                    ? _tracker.Stars.Select((s, i) => new GuideStarMark(Math.Round(s.X, 2), Math.Round(s.Y, 2), i == 0, s.Found)).ToList()
+                    : [];
                 return new NovaGuiderStatus(Settings, cameras, outputs, Camera?.Name, IsRunning ? _activity : null, info, star,
-                    _frameId, _frame?.Width, _frame?.Height);
+                    _frameId, _frame?.Width, _frame?.Height, marks);
             }
         }
     }
@@ -247,6 +254,24 @@ public sealed class NovaGuider : IAsyncDisposable
         await done.Task.WaitAsync(ct);
     }
 
+    /// <summary>
+    /// Makes the star nearest a point of the guide frame (pixels) the lock star, with the best others as references.
+    /// While guiding, guiding carries on from that star where it is now.
+    /// </summary>
+    public void SelectStar(double x, double y)
+    {
+        lock (_sync)
+        {
+            if (!IsRunning || _frame is null) throw new InvalidOperationException("Loop the guide camera first");
+            if (_mode == Mode.Calibrating) throw new InvalidOperationException("Not while calibrating");
+            if (!_tracker.SelectAt(_frameStars, _frame.Width, _frame.Height, x, y))
+                throw new InvalidOperationException("No usable star there");
+            _controller.Reset();
+            _lostFrames = 0;
+            _last = null;
+        }
+    }
+
     public void ClearCalibration()
     {
         lock (_sync) _saved = _saved with { Calibration = null };
@@ -262,6 +287,7 @@ public sealed class NovaGuider : IAsyncDisposable
         lock (_sync) calibrated = StoredFor(Camera?.Name) is not null;
         if (recalibrate || !calibrated) await CalibrateAsync(ct);
         _ = Output ?? throw new InvalidOperationException("No guide output: connect the mount (or choose a camera with an ST4 port)");
+        await WaitForStarAsync(ct); // a loop that has only just started has no star yet
 
         Task wait;
         lock (_sync)
@@ -278,6 +304,22 @@ public sealed class NovaGuider : IAsyncDisposable
             wait = StartSettle(settle);
         }
         await wait.WaitAsync(ct);
+    }
+
+    /// <summary>Waits until the loop has found a guide star: a few exposures' time, then gives up.</summary>
+    private async Task WaitForStarAsync(CancellationToken ct)
+    {
+        var deadline = DateTime.UtcNow.AddSeconds(Math.Max(10, 3 * Settings.ExposureSeconds + 5));
+        while (true)
+        {
+            lock (_sync)
+            {
+                if (_tracker.HasLock && _last is not null) return;
+            }
+            if (!IsRunning) throw new InvalidOperationException("Guiding stopped");
+            if (DateTime.UtcNow > deadline) throw new InvalidOperationException("No guide star found");
+            await Task.Delay(100, ct);
+        }
     }
 
     /// <summary>Moves the lock position by a random amount and waits until guiding has settled there.</summary>
@@ -400,6 +442,7 @@ public sealed class NovaGuider : IAsyncDisposable
         lock (_sync)
         {
             _frame = image;
+            _frameStars = stars;
             _frameId++;
             var preset = _optics?.All.FirstOrDefault(o => o.Camera == camera.Name)?.ImageScale;
             var binning = FitsMetadata.Number(image, "XBINNING") is > 0 and var b ? b : 1;

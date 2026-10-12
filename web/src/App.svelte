@@ -21,6 +21,7 @@
   import DriverSettings from './components/DriverSettings.svelte'
   import TargetsView from './components/TargetsView.svelte'
   import Phd2View from './components/Phd2View.svelte'
+  import GuidingView from './components/GuidingView.svelte'
   import RotationPrompt from './components/RotationPrompt.svelte'
   import FlatsPrompt from './components/FlatsPrompt.svelte'
   import { mainView } from './lib/inbox.svelte'
@@ -259,6 +260,11 @@
           title="PHD2's own window">PHD2</button
         >
       {/if}
+      {#if nova.status?.guider?.backend === 'nova'}
+        <button class:active={mainView.view === 'guiding'} aria-pressed={mainView.view === 'guiding'} onclick={() => (mainView.view = 'guiding')}
+          title="NOVA's guider: the guide frame, its stars and the graph">Guiding{#if nova.status.guider.state === 'LostLock'}<span class="dot"></span>{/if}</button
+        >
+      {/if}
       <button class:active={mainView.view === 'activity'} aria-pressed={mainView.view === 'activity'} onclick={() => (mainView.view = 'activity')}
         title="Everything NOVA has done and reported">Activity{#if unseenProblem}<span class="dot"></span>{/if}</button
       >
@@ -268,6 +274,7 @@
     <div class="view" class:hidden={mainView.view !== 'targets'}><TargetsView /></div>
     {#if mainView.view === 'polar'}<div class="view"><PolarView /></div>{/if}
     <div class="view" class:hidden={mainView.view !== 'phd2'}><Phd2View active={mainView.view === 'phd2'} /></div>
+    {#if mainView.view === 'guiding'}<div class="view"><GuidingView /></div>{/if}
     <div class="view" class:hidden={mainView.view !== 'activity'}><ActivityView /></div>
     <LogPanel />
   </section>

@@ -207,6 +207,7 @@ over SignalR at `/hub`. The main endpoints:
 | POST | `/api/guider/backend` | `{ "backend": "nova" }` (`phd2` or `nova`; saved in `guider.json`). Guide, dither, stop and the status follow it |
 | POST | `/api/guider/nova/settings` | NOVA's guider: `{ "camera": null, "output": null, "exposureSeconds": 2, "binning": 1, "calibrationStepMs": 0, "reverseDecAfterFlip": false, "algorithms": { "raHysteresis": 0.1, "raAggressiveness": 0.7, "raMinMove": 0.15, "decAggressiveness": 1, "decMinMove": 0.2, "decFastSwitch": true, "decMode": "Auto", "maxRaPulseMs": 2500, "maxDecPulseMs": 2500 } }` (`camera`/`output` null: automatic / the mount) |
 | POST | `/api/guider/loop` · `/calibrate` · `/calibration/clear` | NOVA's guider: loop the guide camera, calibrate, forget the calibration. State in the status under `guider.nova` |
-| GET | `/api/guider/frame.png` | NOVA's guider: the latest guide frame, stretched |
+| POST | `/api/guider/select` | NOVA's guider: guide on the star nearest `{ "x": 312, "y": 140 }` (guide frame pixels; while looping or guiding) |
+| GET | `/api/guider/frame.png` | NOVA's guider: the latest guide frame, stretched. Its tracked stars are in the status under `guider.nova.stars` |
 
 Hub events on `/hub`: `status`, `exposureProgress`, `imageReady`, `log`, `logHistory`.

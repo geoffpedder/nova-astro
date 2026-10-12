@@ -101,12 +101,42 @@ public class NovaGuiderTests : IDisposable
         Assert.Equal("nova", again.Guider.Backend);
         Assert.NotNull(again.Nova.Status.Calibration);
 
+        // Guide straight away with it, from a stopped guide camera: no calibration run, it waits for the first star.
+        using (var timeout = new CancellationTokenSource(TimeSpan.FromMinutes(1)))
+            await again.Guider.GuideAndWaitAsync(new SettleSettings(1.5, 1, 30), timeout.Token);
+        Assert.True(again.Guider.IsGuiding);
+        await again.Guider.StopAsync(CancellationToken.None);
+
         // A different binning needs its own calibration.
         again.Nova.UpdateSettings(again.Nova.Settings with { Binning = 2 });
         Assert.Null(again.Nova.Status.Calibration);
         again.Nova.UpdateSettings(again.Nova.Settings with { Binning = 1 });
         again.Nova.ClearCalibration();
         Assert.Null(again.Nova.Status.Calibration);
+    }
+
+    [Fact]
+    public async Task AClickedStarBecomesTheGuideStar()
+    {
+        await using var rig = await SetUpAsync();
+        Assert.Throws<InvalidOperationException>(() => rig.Nova.SelectStar(100, 100)); // not looping
+
+        using var timeout = new CancellationTokenSource(TimeSpan.FromMinutes(1));
+        await rig.Nova.LoopAsync(timeout.Token);
+        while (rig.Nova.Status.Stars.Count < 2) await Task.Delay(100, timeout.Token);
+        var marks = rig.Nova.Status.Stars;
+        Assert.True(marks[0].Lock);
+        var other = marks[1];
+
+        rig.Nova.SelectStar(other.X + 2, other.Y - 1);
+        var now = rig.Nova.Status.Stars[0];
+        Assert.True(now.Lock);
+        Assert.Equal(other.X, now.X, 1);
+        Assert.Equal(other.Y, now.Y, 1);
+
+        Assert.Throws<InvalidOperationException>(() => rig.Nova.SelectStar(-500, -500)); // no star there
+        await rig.Guider.StopAsync(CancellationToken.None);
+        Assert.Empty(rig.Nova.Status.Stars);
     }
 
     [Fact]

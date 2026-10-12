@@ -36,7 +36,9 @@
   }
 
   async function setBackend(backend: 'phd2' | 'nova') {
-    if (backend === 'nova' && mainView.view === 'phd2') mainView.view = 'image' // the PHD2 tab goes away
+    // Each guider has its own tab (PHD2's window, or NOVA's Guiding tab): show the one that stays.
+    if (backend === 'nova' && mainView.view === 'phd2') mainView.view = 'guiding'
+    if (backend === 'phd2' && mainView.view === 'guiding') mainView.view = 'image'
     await act(() => api.guiderBackend(backend))
   }
 
@@ -79,6 +81,7 @@
   </div>
 
   {#if isNova}
+    <button class="link screen open-tab" onclick={() => (mainView.view = 'guiding')} title="The guide frame, its stars and the graph, full size">Guiding tab</button>
     <NovaGuiderControls />
     {#if !connected}
       <p class="muted hint">No guide camera: plug one in and choose it above.</p>
@@ -175,6 +178,10 @@
   .segmented {
     display: flex;
     margin-bottom: 8px;
+  }
+  .open-tab {
+    display: block;
+    margin: -2px 0 6px auto;
   }
   .segmented button {
     flex: 1;

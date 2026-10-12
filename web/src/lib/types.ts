@@ -642,6 +642,8 @@ export interface NovaGuiderStatus {
   frame: number
   frameWidth: number | null
   frameHeight: number | null
+  /** The stars it follows (frame pixels): the guide star (lock) and the ones averaged with it. */
+  stars: { x: number; y: number; lock: boolean; found: boolean }[]
 }
 
 export interface DecDrift {

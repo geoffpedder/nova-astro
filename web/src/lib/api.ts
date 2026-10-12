@@ -215,6 +215,8 @@ export const api = {
   guiderCalibrate: () => post('/api/guider/calibrate'),
   guiderClearCalibration: () => post('/api/guider/calibration/clear'),
   guideFrameUrl: (frame: number) => `/api/guider/frame.png?f=${frame}`,
+  /** Guide on the star nearest this point of the guide frame (its pixels). */
+  guideSelectStar: (x: number, y: number) => post('/api/guider/select', { x, y }),
 
   /** size: longest side in pixels, 0 for full resolution. */
   // Image numbers start again from 1 when NOVA restarts, so the address also carries when the image was taken: a

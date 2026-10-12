@@ -251,6 +251,12 @@ PHD2 stays the default until it has proven itself under the sky, and you can swi
   out from the Guide scope optics and the mount's guide rate) and *Reverse Dec after flip*, for the few mounts whose
   Dec pulses change sense after a flip.
 
+**The Guiding tab** (it takes the PHD2 tab's place while NOVA is the guider) shows it all full size: the whole guide
+frame with the guide star (green square, the cross where it should be) and the stars averaged with it (yellow rings,
+dashed when the last frame missed them), the guide star close up, the RMS and peaks, the calibration, and a large
+graph of the last 300 steps (10 minutes of 2 s frames). It has the Loop, Calibrate, Guide, Stop and Dither buttons and
+the exposure. **Click a star** in the frame to guide on it instead; while guiding, guiding carries on from that star.
+
 Set the **Guide scope** optics, so the RMS and the calibration are in arcseconds. The Dec drift warning works the
 same as with PHD2.
 

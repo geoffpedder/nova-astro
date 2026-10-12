@@ -107,7 +107,19 @@ export function setupSteps(): SetupStep[] {
             ? `The last solve failed: ${solve.last.error ?? 'no match'}. It needs stars, so try at night with the scope pointed at the sky.`
             : "A short frame of the night sky, solved: proves the camera, optics and ASTAP work together.",
     },
-    {
+    guider.backend === 'nova'
+      ? {
+          key: 'guiding',
+          title: 'Guiding',
+          done: guider.connected && guider.nova?.calibration != null,
+          optional: true,
+          detail: !guider.connected
+            ? "NOVA's guider has no guide camera: plug one in and choose it in the Guider panel."
+            : guider.nova?.calibration == null
+              ? `Guide camera ${guider.nova?.camera}: calibrate it (Guiding tab) near the meridian and Dec 0.`
+              : `NOVA's guider, ${guider.nova?.camera}, calibrated.`,
+        }
+      : {
       key: 'guiding',
       title: 'Guiding',
       done: guider.connected && guider.profile != null,

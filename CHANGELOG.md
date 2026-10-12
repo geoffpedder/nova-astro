@@ -10,6 +10,9 @@ What changed in each release. The newest is first. A release's section here beco
   the guide star, Calibrate (Dec backlash taken up first, the result kept and adjusted for Dec and meridian flips),
   Guide with PHD2's Hysteresis (RA) and Resist Switch (Dec) algorithms, multi-star averaging, Dither, settling, lost
   star recovery and the Dec drift warning. Sequences use whichever guider is chosen.
+- **Guiding tab** for NOVA's guider: the whole guide frame with the guide star and the stars averaged with it marked
+  (click another star to guide on it), the guide star close up, RMS and peaks, the calibration, a large graph of the
+  last 300 steps, and all the buttons.
 
 ## [0.3.5] - 2026-10-11
 

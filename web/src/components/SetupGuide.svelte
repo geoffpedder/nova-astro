@@ -37,7 +37,8 @@
       else showPlace('equipment')
     } else if (key === 'optics') showPlace('camera', 'optics')
     else if (key === 'guiding') {
-      if (status?.guider.screenPort) mainView.view = 'phd2'
+      if (status?.guider.backend === 'nova') mainView.view = 'guiding'
+      else if (status?.guider.screenPort) mainView.view = 'phd2'
       else showPlace('guider')
     }
   }
@@ -49,6 +50,7 @@
     solve: '',
     guiding: 'Open PHD2',
   }
+  const guidingLabel = $derived(status?.guider.backend === 'nova' ? 'Open Guiding' : actionLabel.guiding)
 
   async function putAway() {
     setupGuide.open = false
@@ -94,7 +96,7 @@
               {/if}
             </div>
           {:else if (step.key !== 'optics' || status?.camera) && (step.key !== 'guiding' || status?.guider.screenPort || status?.guider.connected)}
-            <button class="secondary" onclick={() => go(step.key)}>{actionLabel[step.key]}</button>
+            <button class="secondary" onclick={() => go(step.key)}>{step.key === 'guiding' ? guidingLabel : actionLabel[step.key]}</button>
           {/if}
         {/if}
       </li>

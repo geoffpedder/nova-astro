@@ -64,6 +64,9 @@ public sealed record GuiderProfileRequest(int Id);
 /// <summary>"phd2" or "nova".</summary>
 public sealed record GuiderBackendRequest(string Backend);
 
+/// <summary>A point of the guide frame, in its pixels.</summary>
+public sealed record GuideStarRequest(double X, double Y);
+
 public sealed record GuiderEquipmentRequest(bool Connected);
 
 public sealed record DitherRequest(double Pixels = 5, bool RaOnly = false, double SettlePixels = 1.5, double SettleSeconds = 10, double SettleTimeout = 60);
@@ -849,6 +852,12 @@ public static class NovaApi
             guider.Nova?.ClearCalibration();
             return Results.NoContent();
         });
+        api.MapPost("/guider/select", (GuideStarRequest request, GuiderService guider) =>
+            ConflictOnRefusal(() =>
+            {
+                (guider.Nova ?? throw new InvalidOperationException("NOVA's own guider isn't available")).SelectStar(request.X, request.Y);
+                return Task.CompletedTask;
+            }));
         api.MapGet("/guider/frame.png", (GuiderService guider) =>
             guider.Nova?.FramePng() is { } png ? Results.File(png, "image/png") : Results.NotFound());
     }

@@ -583,6 +583,65 @@ export interface GuiderStatus {
   autoConnect: boolean
   /** A steady Dec drift guiding keeps correcting, once there are 5 minutes of guiding to tell from. */
   drift: DecDrift | null
+  /** Which guider is in use: PHD2 or NOVA's own. */
+  backend: 'phd2' | 'nova'
+  /** NOVA's own guider (also while PHD2 is in use, for switching). */
+  nova: NovaGuiderStatus | null
+}
+
+export type DecGuideMode = 'Auto' | 'North' | 'South' | 'Off'
+
+export interface GuideAlgorithmSettings {
+  raHysteresis: number
+  raAggressiveness: number
+  raMinMove: number
+  decAggressiveness: number
+  decMinMove: number
+  decFastSwitch: boolean
+  decMode: DecGuideMode
+  maxRaPulseMs: number
+  maxDecPulseMs: number
+}
+
+export interface NovaGuiderSettings {
+  /** Null: the first camera that isn't the imaging camera. */
+  camera: string | null
+  /** Null: the mount; otherwise a camera's ST4 port. */
+  output: string | null
+  exposureSeconds: number
+  binning: number
+  /** 0: worked out from the image scale and guide rate. */
+  calibrationStepMs: number
+  reverseDecAfterFlip: boolean
+  algorithms: GuideAlgorithmSettings
+}
+
+export interface GuideCalibrationInfo {
+  raAngle: number
+  decAngle: number
+  raRate: number
+  decRate: number
+  raArcsecPerSecond: number | null
+  decArcsecPerSecond: number | null
+  orthogonality: number
+  decDegrees: number
+  pierSide: 'East' | 'West' | null
+  utc: string
+  warning: string | null
+}
+
+export interface NovaGuiderStatus {
+  settings: NovaGuiderSettings
+  cameras: string[]
+  outputs: { name: string | null; label: string }[]
+  camera: string | null
+  activity: string | null
+  calibration: GuideCalibrationInfo | null
+  star: { x: number; y: number; lockX: number; lockY: number; snr: number; hfr: number; found: number; tracked: number } | null
+  /** Counts guide frames, so the view knows when to fetch the next. */
+  frame: number
+  frameWidth: number | null
+  frameHeight: number | null
 }
 
 export interface DecDrift {

@@ -1,4 +1,4 @@
-import type { AltitudeCurve, SkyField, SolvedFrame, TargetInfo, TonightFilters, TonightResult, Annotations, AutofocusSettings, MotionDirection, PolarAlignmentSettings, Sequence, CameraSettingsUpdate, DeviceKind, DeviceProperty, FitsHeaderCard, PreviewMode, StarOverlay, FlatsSettings, SolveInfo, DriverSetup, SetupCheck, NotificationSettings, NotificationSettingsView, FolderListing } from './types'
+import type { AltitudeCurve, SkyField, SolvedFrame, TargetInfo, TonightFilters, TonightResult, Annotations, AutofocusSettings, MotionDirection, PolarAlignmentSettings, Sequence, CameraSettingsUpdate, DeviceKind, DeviceProperty, FitsHeaderCard, PreviewMode, StarOverlay, FlatsSettings, SolveInfo, DriverSetup, SetupCheck, NotificationSettings, NotificationSettingsView, FolderListing, NovaGuiderSettings } from './types'
 
 import { signedOut } from './auth.svelte'
 
@@ -209,6 +209,12 @@ export const api = {
   guiderStop: () => post('/api/guider/stop'),
   guiderProfile: (id: number) => post('/api/guider/profile', { id }),
   guiderEquipment: (connected: boolean) => post('/api/guider/equipment', { connected }),
+  guiderBackend: (backend: 'phd2' | 'nova') => post('/api/guider/backend', { backend }),
+  novaGuiderSettings: (settings: NovaGuiderSettings) => post('/api/guider/nova/settings', settings),
+  guiderLoop: () => post('/api/guider/loop'),
+  guiderCalibrate: () => post('/api/guider/calibrate'),
+  guiderClearCalibration: () => post('/api/guider/calibration/clear'),
+  guideFrameUrl: (frame: number) => `/api/guider/frame.png?f=${frame}`,
 
   /** size: longest side in pixels, 0 for full resolution. */
   // Image numbers start again from 1 when NOVA restarts, so the address also carries when the image was taken: a

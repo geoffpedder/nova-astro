@@ -2,10 +2,13 @@
   import { mainView } from '../lib/inbox.svelte'
   import { api } from '../lib/api'
   import { act, nova } from '../lib/state.svelte'
+  import NovaGuiderControls from './NovaGuiderControls.svelte'
   import OpticsEditor from './OpticsEditor.svelte'
   import Panel from './Panel.svelte'
 
   const guider = $derived(nova.status?.guider)
+  // PHD2, or NOVA's own guider: Guide, Stop, Dither, the graph and RMS work the same for both.
+  const isNova = $derived(guider?.backend === 'nova')
   const connected = $derived(guider?.connected ?? false)
   const active = $derived(guider ? ['Guiding', 'Calibrating', 'Looping', 'LostLock', 'Selected'].includes(guider.state) : false)
   const stats = $derived(guider?.stats)
@@ -16,6 +19,7 @@
   // The guide camera: a camera other than the imaging one (connected ones first). Its optics go to its driver when
   // PHD2 connects it, for its FITS headers (and so INDI stops warning that the focal length is missing).
   const guideCamera = $derived.by(() => {
+    if (isNova && guider?.nova?.camera) return guider.nova.camera
     const others = (nova.status?.optics ?? []).filter((o) => o.camera !== nova.status?.camera?.name)
     return (others.find((o) => o.connected) ?? others[0])?.camera ?? null
   })
@@ -29,6 +33,11 @@
     if (state === 'LostLock') return 'danger'
     if (state === 'Calibrating' || state === 'Looping' || state === 'Selected') return 'warn'
     return 'muted'
+  }
+
+  async function setBackend(backend: 'phd2' | 'nova') {
+    if (backend === 'nova' && mainView.view === 'phd2') mainView.view = 'image' // the PHD2 tab goes away
+    await act(() => api.guiderBackend(backend))
   }
 
   async function toggleConnection() {
@@ -57,13 +66,24 @@
   const hasScreen = $derived(!!guider?.screenPort)
 </script>
 
-<Panel id="guider" title="Guider (PHD2)" kind="guider">
+<Panel id="guider" title="Guider" kind="guider">
   {#snippet badge()}
     <span class="badge {badgeClass(guider?.state, guider?.settling)}">
       {guider?.settling ? 'Settling' : (guider?.state ?? 'Disconnected')}
     </span>
   {/snippet}
 
+  <div class="segmented" role="group" aria-label="Guider">
+    <button class:on={!isNova} disabled={active} onclick={() => setBackend('phd2')} title="Guide with PHD2 (its own window in the PHD2 tab)">PHD2</button>
+    <button class:on={isNova} disabled={active} onclick={() => setBackend('nova')} title="Guide with NOVA's own guider">NOVA</button>
+  </div>
+
+  {#if isNova}
+    <NovaGuiderControls />
+    {#if !connected}
+      <p class="muted hint">No guide camera: plug one in and choose it above.</p>
+    {/if}
+  {:else}
   <div class="row head">
     <span class="muted host" title={guider?.version ? `PHD2 ${guider.version}` : ''}>
       {guider?.host ?? 'localhost:4400'}
@@ -104,6 +124,10 @@
     {#if !guider?.equipmentConnected}
       <p class="muted hint">PHD2's camera and mount aren't connected. <b>Connect equipment</b> (top right) connects them too.</p>
     {/if}
+  {/if}
+  {/if}
+
+  {#if connected}
     <div class="stats mono">
       <span class="muted">RMS</span>
       <span>RA {fmt(stats?.rmsRa)}{unit}</span>
@@ -147,6 +171,29 @@
 <style>
   .guide-optics {
     margin-top: 10px;
+  }
+  .segmented {
+    display: flex;
+    margin-bottom: 8px;
+  }
+  .segmented button {
+    flex: 1;
+    border-radius: 0;
+    color: var(--muted);
+    background: transparent;
+    border: 1px solid var(--panel-border);
+    padding: 4px 8px;
+    font-size: 12px;
+  }
+  .segmented button:first-child {
+    border-radius: var(--radius) 0 0 var(--radius);
+  }
+  .segmented button:last-child {
+    border-radius: 0 var(--radius) var(--radius) 0;
+  }
+  .segmented button.on {
+    color: var(--accent);
+    border-color: var(--accent);
   }
   .head {
     margin-bottom: 8px;

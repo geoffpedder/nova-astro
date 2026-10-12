@@ -8,7 +8,7 @@
 - [Plate solving](#plate-solving)
 - [Focusing](#focusing)
 - [Polar alignment](#polar-alignment)
-- [Guiding (PHD2)](#guiding-phd2)
+- [Guiding](#guiding)
 - [Targets and framing](#targets-and-framing)
 - [Sequences](#sequences)
 - [Flats](#flats)
@@ -196,7 +196,13 @@ For mounts without GoTo, tick *Turn RA by hand*: you turn RA yourself, and NOVA 
 enough (or press **Continue**). The settings also choose which way RA turns, the exposure, and whether to aim at
 the refracted pole.
 
-## Guiding (PHD2)
+## Guiding
+
+The Guider panel's switch at the top picks the guider: **PHD2** (the default) or **NOVA**, NOVA's own guider (new,
+see [below](#novas-own-guider)). Guide, Stop, Dither, the RMS and the graph work the same with either, and so do
+sequences: they guide, dither and wait for settling with whichever is chosen.
+
+### PHD2
 
 ![PHD2's window in NOVA's PHD2 tab](images/phd2-tab.webp)
 
@@ -217,8 +223,36 @@ star is drifting, which is what polar error does: the Guider panel and the activ
 least polar error that would cause it ("polar alignment at least 1.5° off"). Polar align again; no guide setting
 makes up for a large error.
 
-Calibrate PHD2 near the celestial equator and the meridian: **Layers → Calibration area** on the Targets chart
-shades that patch of sky (within 1.5 hours of the meridian and 20° of Dec 0).
+Calibrate near the celestial equator and the meridian (with either guider): **Layers → Calibration area** on the
+Targets chart shades that patch of sky (within 1.5 hours of the meridian and 20° of Dec 0).
+
+### NOVA's own guider
+
+NOVA can guide by itself, with no PHD2, no virtual screen and nothing to set up beyond the Guider panel. It's new:
+PHD2 stays the default until it has proven itself under the sky, and you can switch back at any time.
+
+- **Camera**: the guide camera (*Automatic* takes the first camera that isn't the imaging camera). **Pulses to**: the
+  mount (pulse guiding, as with the ZWO AM3/AM5), or a guide camera's ST4 port. **Exposure** (2 s is a good start)
+  and binning.
+- **Loop** exposes the guide camera and picks a guide star: the brightest one that isn't saturated, crowded or near
+  the edge, plus up to 8 more whose average cancels some of the seeing. The small view shows the star (yellow ring)
+  and where it should be (green cross).
+- **Calibrate** measures how guide pulses move the star: north until Dec backlash is taken up, west until the star has
+  moved 25 pixels and back east, then north and back south. The summary shows each axis's direction and speed and how
+  far from square they are; over 10° is a warning to calibrate again. **Guide** calibrates first when there's no
+  calibration yet. A calibration is kept (in `guider.json`) for that camera, output and binning, adjusted for where
+  the scope points (RA moves less sky towards the pole) and for meridian flips; **Clear** forgets it.
+- **Guide** locks on the star where it is and corrects every frame. RA uses PHD2's *Hysteresis* (70%
+  aggressiveness, 10% hysteresis, min move 0.15 px), Dec its *Resist Switch* (100%, 0.2 px), which corrects one way and
+  is slow to reverse, as Dec mostly drifts one way. Max pulse 2.5 s. **Dither** moves the lock position up to the
+  given pixels and waits for the star to settle there. Lost the star (clouds)? It keeps looking where the star should
+  be and carries on when it's back.
+- **Guiding settings** has those numbers, Dec corrections both ways, one way or off, the calibration step (0 works it
+  out from the Guide scope optics and the mount's guide rate) and *Reverse Dec after flip*, for the few mounts whose
+  Dec pulses change sense after a flip.
+
+Set the **Guide scope** optics, so the RMS and the calibration are in arcseconds. The Dec drift warning works the
+same as with PHD2.
 
 ## Targets and framing
 

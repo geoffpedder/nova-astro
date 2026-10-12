@@ -4,6 +4,13 @@ What changed in each release. The newest is first. A release's section here beco
 
 ## [Unreleased]
 
+### Added
+- **NOVA's own guider** (new; PHD2 stays the default): pick **NOVA** at the top of the Guider panel to guide with no
+  PHD2 at all. Guide camera and output (the mount's pulse guiding, or a camera's ST4 port), Loop with a live view of
+  the guide star, Calibrate (Dec backlash taken up first, the result kept and adjusted for Dec and meridian flips),
+  Guide with PHD2's Hysteresis (RA) and Resist Switch (Dec) algorithms, multi-star averaging, Dither, settling, lost
+  star recovery and the Dec drift warning. Sequences use whichever guider is chosen.
+
 ## [0.3.5] - 2026-10-11
 
 ### Added

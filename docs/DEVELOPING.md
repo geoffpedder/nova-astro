@@ -204,5 +204,9 @@ over SignalR at `/hub`. The main endpoints:
 | POST | `/api/guider/guide` | `{ "recalibrate": false, "settlePixels": 1.5, "settleSeconds": 10, "settleTimeout": 60 }` |
 | POST | `/api/guider/profile` · `/equipment` | `{ "id": 2 }` · `{ "connected": true }` |
 | POST | `/api/guider/dither` | `{ "pixels": 5, "raOnly": false }` (+ settle fields) |
+| POST | `/api/guider/backend` | `{ "backend": "nova" }` (`phd2` or `nova`; saved in `guider.json`). Guide, dither, stop and the status follow it |
+| POST | `/api/guider/nova/settings` | NOVA's guider: `{ "camera": null, "output": null, "exposureSeconds": 2, "binning": 1, "calibrationStepMs": 0, "reverseDecAfterFlip": false, "algorithms": { "raHysteresis": 0.1, "raAggressiveness": 0.7, "raMinMove": 0.15, "decAggressiveness": 1, "decMinMove": 0.2, "decFastSwitch": true, "decMode": "Auto", "maxRaPulseMs": 2500, "maxDecPulseMs": 2500 } }` (`camera`/`output` null: automatic / the mount) |
+| POST | `/api/guider/loop` · `/calibrate` · `/calibration/clear` | NOVA's guider: loop the guide camera, calibrate, forget the calibration. State in the status under `guider.nova` |
+| GET | `/api/guider/frame.png` | NOVA's guider: the latest guide frame, stretched |
 
 Hub events on `/hub`: `status`, `exposureProgress`, `imageReady`, `log`, `logHistory`.

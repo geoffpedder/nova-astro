@@ -19,7 +19,7 @@ network, with nothing to install there. It's inspired by [N.I.N.A.](https://nigh
 - **Sequences:** a whole night unattended, for several targets: centring, autofocus with per-filter offsets,
   guiding, dithering, meridian flips, flats, the camera's rotation matched for each target, and a stop at dawn.
 - **Focusing** (V-curve autofocus), **polar alignment** (three-point, or with the camera on the pole),
-  **guiding** through PHD2 (which runs on the mini PC and shows in a tab), a **flats wizard**, and a
+  **guiding** through PHD2 (which runs on the mini PC and shows in a tab) or NOVA's own guider, a **flats wizard**, and a
   **Stellarium** link.
 - **Built for the field:** no internet needed, a red night mode, and work that carries on when your laptop
   sleeps or the Wi-Fi drops, because everything runs on the mini PC. Optional messages to your phone when a

@@ -49,10 +49,16 @@
   })
   const lost = $derived(guider?.state === 'LostLock')
 
-  // Dark library: which exposures to take (the guide exposure and a few around it to start with) and how many each.
+  // Dark library: which exposures to take (highlighted) and how many each. Until the user picks: all of them for a
+  // first library, or the ones the library already has (taking darks again renews them), plus the guide exposure.
   const darkOptions = [0.5, 1, 1.5, 2, 2.5, 3, 4, 5]
   let darkPicked = $state<number[] | null>(null)
-  const darkExposures = $derived(darkPicked ?? [...new Set([1, 2, 3, s?.exposureSeconds ?? 2])].sort((a, b) => a - b))
+  const darkExposures = $derived(
+    darkPicked ??
+      (n?.darks
+        ? [...new Set([...n.darks.exposures, s?.exposureSeconds ?? 2])].sort((a, b) => a - b)
+        : [...new Set([...darkOptions, s?.exposureSeconds ?? 2])].sort((a, b) => a - b)),
+  )
   let darkFrames = $state(5)
   // Open by itself only the first time the panel shows and there's no library yet; after that it stays as the user
   // leaves it (status updates many times a second, so it mustn't be tied to the status).
@@ -174,6 +180,7 @@
       <label class="small"><input type="checkbox" checked={s.useDarks} onchange={(e) => save({ useDarks: e.currentTarget.checked })} /> Use</label>
       <button class="secondary clear" disabled={!n.darks || busyDarks} onclick={() => act(api.clearGuideDarks)}>Clear</button>
     </div>
+    {#if running && !busyDarks}<p class="muted small">Stop the guide camera (Stop) to take darks.</p>{/if}
   </details>
 
   <details class="settings">

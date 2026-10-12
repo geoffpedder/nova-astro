@@ -76,7 +76,7 @@
   <div class="head">
     <h2>Guiding</h2>
     <span class="badge {badgeClass}">{guider?.settling ? 'Settling' : phase}</span>
-    <span class="muted activity">{n?.activity ?? 'Stopped'}{n?.camera ? `, ${n.camera}` : ''}</span>
+    <span class="muted activity">{n?.darkProgress ? `Taking darks: ${n.darkProgress}` : (n?.activity ?? 'Stopped')}{n?.camera ? `, ${n.camera}` : ''}</span>
   </div>
 
   <div class="toolbar">
@@ -87,7 +87,7 @@
     <button disabled={guider?.settling || !guider?.connected} onclick={() => act(() => api.guide())}>
       {phase === 'Guiding' || phase === 'LostLock' ? 'Restart' : 'Guide'}
     </button>
-    <button class="danger" disabled={!running} onclick={() => act(api.guiderStop)}>Stop</button>
+    <button class="danger" disabled={!running && !n?.darkProgress} onclick={() => act(api.guiderStop)}>Stop</button>
     <span class="gap"></span>
     <label class="field">Exposure
       <input class="mono" type="number" min="0.05" max="30" step="0.5" value={s?.exposureSeconds ?? 2} onchange={saveExposure} /> s
@@ -156,6 +156,13 @@
         </div>
       {:else}
         <p class="muted small">Not calibrated yet: Guide calibrates first.</p>
+      {/if}
+      {#if n?.darks}
+        <p class="small mono" class:warn={!n.darks.inUse}>
+          Darks {n.darks.exposures.join(', ')} s{n.darks.inUse ? ', in use' : n.darks.gainMatches ? ', off' : ', other gain: not used'}
+        </p>
+      {:else if n}
+        <p class="small warn">No dark library: hot pixels can be taken for stars (Guider panel, Dark library).</p>
       {/if}
       <p class="muted small">Click a star in the frame to guide on it. Green square: the guide star; yellow rings: the stars averaged with it.</p>
     </aside>

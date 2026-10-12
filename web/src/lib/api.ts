@@ -214,6 +214,9 @@ export const api = {
   guiderLoop: () => post('/api/guider/loop'),
   guiderCalibrate: () => post('/api/guider/calibrate'),
   guiderClearCalibration: () => post('/api/guider/calibration/clear'),
+  /** Takes a dark library for the guide camera: frames darks at each exposure (s). The scope must be covered. */
+  guideDarks: (exposures: number[], frames: number) => post('/api/guider/darks/build', { exposures, frames }),
+  clearGuideDarks: () => post('/api/guider/darks/clear'),
   guideFrameUrl: (frame: number) => `/api/guider/frame.png?f=${frame}`,
   /** Guide on the star nearest this point of the guide frame (its pixels). */
   guideSelectStar: (x: number, y: number) => post('/api/guider/select', { x, y }),

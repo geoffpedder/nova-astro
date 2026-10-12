@@ -86,6 +86,17 @@ public sealed class GuiderService : IAsyncDisposable
     public bool Loop(out string? error) =>
         StartNova("Looping the guide camera", ct => _nova!.LoopAsync(ct), "Looping", out error);
 
+    /// <summary>NOVA's guider: take a dark library for the guide camera (the scope must be covered).</summary>
+    public bool BuildDarks(IReadOnlyList<double> exposures, int frames, out string? error)
+    {
+        if (IsNova && _nova!.DarkRequestProblem(exposures, frames) is { } problem)
+        {
+            error = problem;
+            return false;
+        }
+        return StartNova("Taking guide darks", ct => _nova!.BuildDarksAsync(exposures, frames, ct), "Guide darks done", out error);
+    }
+
     /// <summary>NOVA's guider: calibrate now.</summary>
     public bool Calibrate(out string? error) =>
         StartNova("Calibrating the guider", ct => _nova!.CalibrateAsync(ct), "Calibration done", out error);

@@ -614,6 +614,20 @@ export interface NovaGuiderSettings {
   calibrationStepMs: number
   reverseDecAfterFlip: boolean
   algorithms: GuideAlgorithmSettings
+  /** Subtract the guide camera's dark library from every guide frame. */
+  useDarks: boolean
+}
+
+/** The guide camera's dark library at the current binning. */
+export interface GuideDarkInfo {
+  exposures: number[]
+  frames: number
+  utc: string
+  gain: number | null
+  /** Taken at the camera's gain now (darks at another gain aren't used). */
+  gainMatches: boolean
+  hotPixels: number
+  inUse: boolean
 }
 
 export interface GuideCalibrationInfo {
@@ -644,6 +658,9 @@ export interface NovaGuiderStatus {
   frameHeight: number | null
   /** The stars it follows (frame pixels): the guide star (lock) and the ones averaged with it. */
   stars: { x: number; y: number; lock: boolean; found: boolean }[]
+  darks: GuideDarkInfo | null
+  /** While taking darks: which one ("Dark 2 s, 3 of 5"). */
+  darkProgress: string | null
 }
 
 export interface DecDrift {

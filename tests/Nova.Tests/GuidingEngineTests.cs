@@ -321,6 +321,49 @@ public class GuidingEngineTests
     }
 
     [Fact]
+    public void DarksTakeOutHotPixelsAndKeepTheBackground()
+    {
+        static RawImage Frame(params (int I, float V)[] extra)
+        {
+            var pixels = Enumerable.Repeat(1000f, 100).ToArray();
+            foreach (var (i, v) in extra) pixels[i] = v;
+            return new RawImage(10, 10, pixels, 16);
+        }
+
+        // Median of three: a cosmic ray in one dark goes, the hot pixel (in all three) stays.
+        var master = DarkFrames.Combine([Frame((5, 5000), (50, 9000)), Frame((5, 5000)), Frame((5, 5200))]);
+        Assert.Equal(5000, master.Pixels[5]);
+        Assert.Equal(1000, master.Pixels[50]);
+        Assert.Equal(1, DarkFrames.HotPixels(master));
+
+        // A light frame: the hot pixel and a star; subtracting leaves the star and the 1000 background.
+        var light = Frame((5, 5000), (60, 3000));
+        light.Headers["EXPTIME"] = "2";
+        var clean = DarkFrames.Subtract(light, master);
+        Assert.Equal(1000, clean.Pixels[5]);
+        Assert.Equal(3000, clean.Pixels[60]);
+        Assert.Equal(1000, clean.Pixels[0]);
+        Assert.Equal("2", clean.Headers["EXPTIME"]);
+
+        // Twice the dark's exposure: twice its hot signal.
+        var longer = DarkFrames.Subtract(Frame((5, 9000)), master, 2);
+        Assert.Equal(1000, longer.Pixels[5]);
+
+        Assert.Throws<ArgumentException>(() => DarkFrames.Subtract(new RawImage(5, 20, new float[100], 16), master));
+    }
+
+    [Fact]
+    public void ChoosesTheMatchingOrNearestDark()
+    {
+        Assert.Null(DarkFrames.Choose([], 2));
+        Assert.Equal((1, 1.0), DarkFrames.Choose([1, 2, 4], 2));
+        var (index, ratio) = DarkFrames.Choose([1, 2, 4], 3)!.Value; // nearer 4 than 2 (by ratio)
+        Assert.Equal(2, index);
+        Assert.Equal(0.75, ratio, 6);
+        Assert.Equal((0, 0.5), DarkFrames.Choose([1, 2, 4], 0.5));
+    }
+
+    [Fact]
     public async Task SimulatedMountMovesWithGuidePulsesAndHasBacklash()
     {
         await using var simulator = new SimulatorProvider();

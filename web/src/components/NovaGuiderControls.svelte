@@ -1,6 +1,7 @@
 <script lang="ts">
   import { api } from '../lib/api'
   import { act, nova } from '../lib/state.svelte'
+  import { ask } from '../lib/confirm.svelte'
   import type { GuideAlgorithmSettings, NovaGuiderSettings } from '../lib/types'
 
   // NOVA's own guider: guide camera and output, the guide star view, Loop / Calibrate, the calibration and settings.
@@ -44,6 +45,25 @@
   })
   const lost = $derived(guider?.state === 'LostLock')
 
+  // Dark library: which exposures to take (the guide exposure and a few around it to start with) and how many each.
+  const darkOptions = [0.5, 1, 1.5, 2, 2.5, 3, 4, 5]
+  let darkPicked = $state<number[] | null>(null)
+  const darkExposures = $derived(darkPicked ?? [...new Set([1, 2, 3, s?.exposureSeconds ?? 2])].sort((a, b) => a - b))
+  let darkFrames = $state(5)
+  const busyDarks = $derived(!!n?.darkProgress)
+  function toggleDark(e: number) {
+    darkPicked = darkExposures.includes(e) ? darkExposures.filter((x) => x !== e) : [...darkExposures, e].sort((a, b) => a - b)
+  }
+  async function buildDarks() {
+    const total = Math.round(darkExposures.reduce((sum, e) => sum + e, 0) * darkFrames)
+    const ok = await ask('Cover the guide scope', {
+      message: `NOVA takes ${darkFrames} darks at each of ${darkExposures.join(', ')} s (about ${total} s of exposures). ` +
+        'Put the cap on the guide scope, or cover it, first: any light spoils them.',
+      confirm: 'Take darks',
+    })
+    if (ok) act(() => api.guideDarks(darkExposures, darkFrames))
+  }
+
   const when = (utc: string) => new Date(utc).toLocaleString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })
   const rate = (px: number, arcsec: number | null) => (arcsec != null ? `${arcsec.toFixed(1)}″/s` : `${px.toFixed(1)} px/s`)
 </script>
@@ -82,13 +102,13 @@
     </svg>
   {/if}
   <p class="activity muted">
-    {n.activity ?? 'Stopped'}{n.star ? `, ${n.star.found} of ${n.star.tracked} stars` : ''}
+    {n.darkProgress ? `Taking darks: ${n.darkProgress}` : (n.activity ?? 'Stopped')}{n.star ? `, ${n.star.found} of ${n.star.tracked} stars` : ''}
   </p>
 
   <div class="row">
-    <button class="secondary" disabled={guider?.state === 'Looping'} onclick={() => act(api.guiderLoop)}
+    <button class="secondary" disabled={guider?.state === 'Looping' || busyDarks} onclick={() => act(api.guiderLoop)}
       title="Expose the guide camera in a loop and pick a guide star, without correcting">Loop</button>
-    <button class="secondary" disabled={guider?.state === 'Calibrating'} onclick={() => act(api.guiderCalibrate)}
+    <button class="secondary" disabled={guider?.state === 'Calibrating' || busyDarks} onclick={() => act(api.guiderCalibrate)}
       title="Measure how guide pulses move the star (near the meridian and Dec 0 is best)">Calibrate</button>
   </div>
 
@@ -104,6 +124,33 @@
   {:else}
     <p class="muted small">Not calibrated yet: Guide calibrates first (or press Calibrate).</p>
   {/if}
+
+  <details class="settings" open={!n.darks}>
+    <summary>Dark library{n.darks ? `: ${n.darks.exposures.join(', ')} s` : ''}</summary>
+    <p class="small">
+      {#if n.darks}
+        <span class="mono">{n.darks.exposures.join(', ')} s, {n.darks.frames} each, {when(n.darks.utc)}{n.darks.gain != null ? `, gain ${n.darks.gain}` : ''}, {n.darks.hotPixels} hot pixels</span>
+        {#if !n.darks.gainMatches}<br /><span class="warn">Taken at another gain: not used until you take them again.</span>{/if}
+      {:else}
+        <span class="muted">None yet for {n.camera ?? 'the guide camera'}{s.binning > 1 ? ` at ${s.binning}×${s.binning}` : ''}: hot pixels can be taken for stars.
+          Take darks once (scope covered); they're subtracted from every guide frame.</span>
+      {/if}
+    </p>
+    <div class="chips" role="group" aria-label="Dark exposures">
+      {#each darkOptions as e (e)}
+        <button class="chip" class:on={darkExposures.includes(e)} onclick={() => toggleDark(e)}>{e} s</button>
+      {/each}
+    </div>
+    <div class="row darks-row">
+      <input class="mono frames" type="number" min="1" max="50" bind:value={darkFrames} aria-label="Darks per exposure" />
+      <span class="muted small">each</span>
+      <button class="secondary" disabled={running || busyDarks || !darkExposures.length} onclick={buildDarks}
+        title={running ? 'Stop the guide camera first' : 'Take the darks (with the guide scope covered)'}>Take darks</button>
+      <span class="spacer"></span>
+      <label class="small"><input type="checkbox" checked={s.useDarks} onchange={(e) => save({ useDarks: e.currentTarget.checked })} /> Use</label>
+      <button class="secondary clear" disabled={!n.darks || busyDarks} onclick={() => act(api.clearGuideDarks)}>Clear</button>
+    </div>
+  </details>
 
   <details class="settings">
     <summary>Guiding settings</summary>
@@ -219,6 +266,33 @@
   .clear {
     font-size: 11px;
     padding: 1px 8px;
+  }
+  .chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+    margin-bottom: 6px;
+  }
+  .chip {
+    font-size: 11px;
+    padding: 2px 8px;
+    color: var(--muted);
+    background: transparent;
+    border: 1px solid var(--panel-border);
+  }
+  .chip.on {
+    color: var(--accent);
+    border-color: var(--accent);
+  }
+  .darks-row {
+    align-items: center;
+    gap: 6px;
+  }
+  .frames {
+    width: 52px;
+  }
+  .spacer {
+    flex: 1;
   }
   .warn {
     color: var(--warn);

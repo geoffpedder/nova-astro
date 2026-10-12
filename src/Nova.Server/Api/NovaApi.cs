@@ -64,6 +64,9 @@ public sealed record GuiderProfileRequest(int Id);
 /// <summary>"phd2" or "nova".</summary>
 public sealed record GuiderBackendRequest(string Backend);
 
+/// <summary>Dark exposures (seconds) for the guide camera, and how many darks to take at each.</summary>
+public sealed record GuideDarksRequest(double[] Exposures, int Frames = 5);
+
 /// <summary>A point of the guide frame, in its pixels.</summary>
 public sealed record GuideStarRequest(double X, double Y);
 
@@ -850,6 +853,13 @@ public static class NovaApi
         api.MapPost("/guider/calibration/clear", (GuiderService guider) =>
         {
             guider.Nova?.ClearCalibration();
+            return Results.NoContent();
+        });
+        api.MapPost("/guider/darks/build", (GuideDarksRequest request, GuiderService guider) =>
+            OperationResult(guider.BuildDarks(request.Exposures, request.Frames, out var error), error));
+        api.MapPost("/guider/darks/clear", (GuiderService guider) =>
+        {
+            guider.Nova?.ClearDarks();
             return Results.NoContent();
         });
         api.MapPost("/guider/select", (GuideStarRequest request, GuiderService guider) =>

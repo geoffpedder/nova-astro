@@ -10,6 +10,9 @@ What changed in each release. The newest is first. A release's section here beco
   the guide star, Calibrate (Dec backlash taken up first, the result kept and adjusted for Dec and meridian flips),
   Guide with PHD2's Hysteresis (RA) and Resist Switch (Dec) algorithms, multi-star averaging, Dither, settling, lost
   star recovery and the Dec drift warning. Sequences use whichever guider is chosen.
+- **Dark library for the guide camera** (NOVA's guider): take darks once with the guide scope covered, and they're
+  subtracted from every guide frame, so hot pixels and warm clusters aren't taken for guide stars. Kept per camera,
+  binning and gain; the nearest exposure is scaled when there's no exact match.
 - **Guiding tab** for NOVA's guider: the whole guide frame with the guide star and the stars averaged with it marked
   (click another star to guide on it), the guide star close up, RMS and peaks, the calibration, a large graph of the
   last 300 steps, and all the buttons.

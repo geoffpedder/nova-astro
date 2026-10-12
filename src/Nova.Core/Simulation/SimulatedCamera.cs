@@ -227,6 +227,34 @@ internal sealed class SimulatedCamera(
     /// <summary>How much the seeing wanders from frame to frame (arcseconds on top of 3"); 0 for steady seeing (tests).</summary>
     internal double SeeingVariation { get; set; } = 0.8;
 
+    /// <summary>
+    /// Hot pixels on the sensor, a quarter of them warm 2×2 clusters (which look like faint stars). They're dark
+    /// current, so they show in darks as well, always in the same places. 0 = a perfect sensor.
+    /// </summary>
+    internal int HotPixels { get; set; }
+
+    private (int W, int H, int Count, double[] Rates)? _hot;
+
+    /// <summary>Electrons per second for each (binned) pixel from hot pixels: the same pattern every frame.</summary>
+    private double[] HotRates(int w, int h)
+    {
+        if (_hot is { } cached && cached.W == w && cached.H == h && cached.Count == HotPixels) return cached.Rates;
+        var random = new Random(4242);
+        var rates = new double[w * h];
+        for (var i = 0; i < HotPixels; i++)
+        {
+            var x = random.Next(1, w - 2);
+            var y = random.Next(1, h - 2);
+            var rate = 300 + random.NextDouble() * 3000;
+            if (i % 4 == 0)
+                foreach (var (dx, dy) in new[] { (0, 0), (1, 0), (0, 1), (1, 1) }) rates[(y + dy) * w + x + dx] += rate / 2;
+            else
+                rates[y * w + x] += rate;
+        }
+        _hot = (w, h, HotPixels, rates);
+        return rates;
+    }
+
     private ushort[] Render(EquatorialCoordinates center, double exposure, FrameSettings settings, int w, int h, bool bayer, double pa)
     {
         var random = new Random();
@@ -249,6 +277,8 @@ internal sealed class SimulatedCamera(
         // Dark current doubles every ~6 °C.
         var dark = settings.FrameType == FrameType.Bias ? 0 : 0.1 * Math.Pow(2, (settings.Temperature - 20) / 6) * exposure * binArea;
 
+        var hot = HotPixels > 0 && settings.FrameType != FrameType.Bias ? HotRates(w, h) : null;
+
         const double readNoise = 8;
         var aduPerElectron = settings.Gain / 100;
         var bias = 100 + settings.Offset * 10;
@@ -256,7 +286,7 @@ internal sealed class SimulatedCamera(
         var tint = settings.FrameType == FrameType.Flat ? FlatColor : SkyColor;
         for (var i = 0; i < output.Length; i++)
         {
-            var electrons = (bayer ? sky * tint[Channel(i % w, i / w)] : sky) + dark + signal[i];
+            var electrons = (bayer ? sky * tint[Channel(i % w, i / w)] : sky) + dark + signal[i] + (hot is null ? 0 : hot[i] * exposure);
             var noise = Gaussian(random) * Math.Sqrt(electrons + readNoise * readNoise);
             output[i] = (ushort)Math.Clamp(bias + (electrons + noise) * aduPerElectron, 0, 65535);
         }

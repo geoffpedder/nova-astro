@@ -140,6 +140,47 @@ public class NovaGuiderTests : IDisposable
     }
 
     [Fact]
+    public async Task DarksStopHotPixelsBeingTakenForStars()
+    {
+        await using var rig = await SetUpAsync();
+        var camera = (SimulatedCamera)rig.Nova.Camera!;
+        camera.HotPixels = 200;
+        // The scope covered: a dark frame is all the guide camera sees.
+        await camera.ApplyAsync(new CameraSettingsUpdate(FrameType: FrameType.Dark), CancellationToken.None);
+        using var timeout = new CancellationTokenSource(TimeSpan.FromMinutes(1));
+
+        async Task<int> LoopAndCountStars()
+        {
+            await rig.Nova.LoopAsync(timeout.Token);
+            var frame = rig.Nova.Status.Frame;
+            while (rig.Nova.Status.Frame < frame + 3) await Task.Delay(50, timeout.Token);
+            var count = rig.Nova.Status.Stars.Count;
+            await rig.Nova.StopAsync();
+            return count;
+        }
+
+        // Without darks the warm clusters look like stars, and the loop locks on one.
+        Assert.True(await LoopAndCountStars() > 0);
+
+        // Build the library (refused while looping), then the same covered frames show nothing to guide on.
+        await rig.Nova.LoopAsync(timeout.Token);
+        Assert.False(rig.Guider.BuildDarks([0.2], 3, out var refused));
+        Assert.Contains("Stop the guide camera", refused);
+        await rig.Nova.StopAsync();
+        await rig.Nova.BuildDarksAsync([0.2, 0.4], 3, timeout.Token);
+        var darks = rig.Nova.Status.Darks!;
+        Assert.Equal([0.2, 0.4], darks.Exposures);
+        Assert.True(darks.InUse);
+        Assert.True(darks.HotPixels >= 100, $"{darks.HotPixels} hot pixels");
+        Assert.Equal(FrameType.Light, camera.Controls.FrameType); // the build ends back on light frames
+        await camera.ApplyAsync(new CameraSettingsUpdate(FrameType: FrameType.Dark), CancellationToken.None);
+        Assert.Equal(0, await LoopAndCountStars());
+
+        rig.Nova.ClearDarks();
+        Assert.Null(rig.Nova.Status.Darks);
+    }
+
+    [Fact]
     public async Task SwitchingBackendsAndRefusals()
     {
         await using var rig = await SetUpAsync();

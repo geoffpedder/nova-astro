@@ -158,7 +158,7 @@
 
     <div class="row">
       <button disabled={guider?.settling} onclick={() => act(() => api.guide())}>{active ? 'Restart' : 'Guide'}</button>
-      <button class="danger" disabled={!active && !guider?.settling} onclick={() => act(api.guiderStop)}>Stop</button>
+      <button class="danger" disabled={!active && !guider?.settling && !guider?.nova?.darkProgress} onclick={() => act(api.guiderStop)}>Stop</button>
       <div class="spacer"></div>
       <input class="mono dither" type="number" min="0.5" max="50" step="0.5" bind:value={ditherPixels} aria-label="Dither amount (pixels)" />
       <button class="secondary" disabled={guider?.state !== 'Guiding' || guider?.settling} onclick={() => act(() => api.dither(ditherPixels))}>
@@ -178,6 +178,12 @@
   .segmented {
     display: flex;
     margin-bottom: 8px;
+  }
+  .link {
+    background: transparent;
+    border: none;
+    padding: 0;
+    cursor: pointer;
   }
   .open-tab {
     display: block;

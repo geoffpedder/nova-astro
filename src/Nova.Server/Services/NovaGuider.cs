@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using Microsoft.Extensions.Options;
@@ -12,9 +13,10 @@ namespace Nova.Server.Services;
 /// <param name="Output">Where guide pulses go: null = the mount, otherwise a camera's ST4 port (by camera name).</param>
 /// <param name="CalibrationStepMs">Each calibration pulse (ms); 0 = worked out from the image scale and guide rate.</param>
 /// <param name="ReverseDecAfterFlip">For mounts whose Dec pulses change sense after a meridian flip.</param>
+/// <param name="UseDarks">Subtract the guide camera's dark library (when it has one) from every guide frame.</param>
 public sealed record NovaGuiderSettings(
     string? Camera = null, string? Output = null, double ExposureSeconds = 2, int Binning = 1, int CalibrationStepMs = 0,
-    bool ReverseDecAfterFlip = false, GuideAlgorithmSettings? Algorithms = null)
+    bool ReverseDecAfterFlip = false, GuideAlgorithmSettings? Algorithms = null, bool UseDarks = true)
 {
     public GuideAlgorithmSettings Algorithms { get; init; } = Algorithms ?? new GuideAlgorithmSettings();
 }
@@ -38,7 +40,14 @@ public sealed record GuideStarMark(double X, double Y, bool Lock, bool Found);
 public sealed record NovaGuiderStatus(
     NovaGuiderSettings Settings, IReadOnlyList<string> Cameras, IReadOnlyList<GuideOutputChoice> Outputs,
     string? Camera, string? Activity, GuideCalibrationInfo? Calibration, GuideStarInfo? Star,
-    int Frame, int? FrameWidth, int? FrameHeight, IReadOnlyList<GuideStarMark> Stars);
+    int Frame, int? FrameWidth, int? FrameHeight, IReadOnlyList<GuideStarMark> Stars,
+    GuideDarkInfo? Darks = null, string? DarkProgress = null);
+
+/// <summary>The guide camera's dark library (at the current binning).</summary>
+/// <param name="GainMatches">Taken at the camera's gain now (darks at another gain aren't used).</param>
+/// <param name="InUse">Being subtracted from the guide frames.</param>
+public sealed record GuideDarkInfo(
+    IReadOnlyList<double> Exposures, int Frames, DateTime Utc, double? Gain, bool GainMatches, int HotPixels, bool InUse);
 
 /// <summary>
 /// NOVA's own guider: exposes the guide camera in a loop, follows the guide stars, calibrates, and sends corrections
@@ -54,6 +63,9 @@ public sealed class NovaGuider : IAsyncDisposable
     private readonly OpticsService? _optics;
     private readonly ActivityLog _log;
     private readonly string _file;
+    private readonly string _darkFolder;
+    private readonly Dictionary<string, RawImage> _darkCache = new(StringComparer.Ordinal);
+    private string? _darkProgress;
     private readonly object _sync = new();
     private readonly GuideStarTracker _tracker = new();
     private readonly GuideController _controller = new();
@@ -88,6 +100,7 @@ public sealed class NovaGuider : IAsyncDisposable
         _optics = optics;
         _log = log;
         _file = Path.Combine(options.Value.ResolveConfigDirectory(), "guider.json");
+        _darkFolder = Path.Combine(options.Value.ResolveConfigDirectory(), "guide-darks");
         _saved = Load();
         _controller.Settings = _saved.Nova.Algorithms;
     }
@@ -170,7 +183,7 @@ public sealed class NovaGuider : IAsyncDisposable
                     ? _tracker.Stars.Select((s, i) => new GuideStarMark(Math.Round(s.X, 2), Math.Round(s.Y, 2), i == 0, s.Found)).ToList()
                     : [];
                 return new NovaGuiderStatus(Settings, cameras, outputs, Camera?.Name, IsRunning ? _activity : null, info, star,
-                    _frameId, _frame?.Width, _frame?.Height, marks);
+                    _frameId, _frame?.Width, _frame?.Height, marks, DarkInfo(Camera), _darkProgress);
             }
         }
     }
@@ -360,6 +373,155 @@ public sealed class NovaGuider : IAsyncDisposable
 
     public async ValueTask DisposeAsync() => await StopAsync();
 
+    // ---- Dark library ----
+
+    /// <summary>Why a dark library request can't be done, or null when it can.</summary>
+    public string? DarkRequestProblem(IReadOnlyList<double> exposures, int frames)
+    {
+        if (exposures.Count == 0) return "Choose at least one exposure";
+        if (exposures.Any(e => e is < 0.05 or > 30)) return "Dark exposures must be 0.05–30 s";
+        if (frames is < 1 or > 50) return "Take 1–50 darks per exposure";
+        if (IsRunning) return "Stop the guide camera first (darks need the scope covered)";
+        if (_darkProgress is not null) return "Already taking darks";
+        return Camera is null ? "No guide camera: choose one in the Guider panel" : null;
+    }
+
+    /// <summary>
+    /// Takes <paramref name="frames"/> darks at each exposure (scope covered!), combines them into a master dark per
+    /// exposure and keeps them for this camera and binning, replacing older ones at the same exposure.
+    /// </summary>
+    public async Task BuildDarksAsync(IReadOnlyList<double> exposures, int frames, CancellationToken ct)
+    {
+        if (DarkRequestProblem(exposures, frames) is { } problem) throw new InvalidOperationException(problem);
+        var camera = Camera!;
+        _darkProgress = "Starting";
+        try
+        {
+            if (!camera.IsConnected)
+            {
+                await camera.ConnectAsync(ct);
+                _equipment.NotifyDevicesChanged();
+            }
+            if (camera.Controls.Binning is { } binning && (int)binning.Value != Settings.Binning)
+                await camera.ApplyAsync(new CameraSettingsUpdate(Binning: Settings.Binning), ct);
+            await SetFrameTypeAsync(camera, FrameType.Dark, ct);
+            var gain = camera.Controls.Gain?.Value;
+            Directory.CreateDirectory(_darkFolder);
+
+            foreach (var exposure in exposures.Distinct().Order())
+            {
+                var taken = new List<RawImage>();
+                for (var i = 1; i <= frames; i++)
+                {
+                    _darkProgress = $"Dark {exposure:0.##} s, {i} of {frames}";
+                    taken.Add((await camera.ExposeAsync(new ExposureRequest(exposure), null, ct)).Image);
+                }
+                var master = DarkFrames.Combine(taken);
+                var name = $"{Safe(camera.Name)}-bin{Settings.Binning}-{exposure.ToString("0.###", CultureInfo.InvariantCulture)}s.fits";
+                var path = Path.Combine(_darkFolder, name);
+                var pixels = master.Pixels.Select(p => (ushort)Math.Clamp(Math.Round(p), 0, 65535)).ToArray();
+                await File.WriteAllBytesAsync(path, Fits.WriteUInt16(master.Width, master.Height, pixels,
+                    [new FitsCard("IMAGETYP", "Dark Frame"), new FitsCard("EXPTIME", exposure), new FitsCard("NCOMBINE", frames)]), ct);
+                var dark = new StoredDark(camera.Name, Settings.Binning, gain, exposure, frames, DateTime.UtcNow, DarkFrames.HotPixels(master), name);
+                lock (_sync)
+                {
+                    _saved = _saved with
+                    {
+                        Darks = [.. _saved.Darks.Where(d => !(d.Camera == dark.Camera && d.Binning == dark.Binning && Math.Abs(d.ExposureSeconds - exposure) < 0.001)), dark],
+                    };
+                    _darkCache[name] = master;
+                    SaveLocked();
+                }
+            }
+            _log.Info($"Guide darks taken: {string.Join(", ", exposures.Distinct().Order().Select(e => $"{e:0.##} s"))}, {frames} each");
+        }
+        finally
+        {
+            _darkProgress = null;
+            try
+            {
+                await SetFrameTypeAsync(camera, FrameType.Light, CancellationToken.None);
+            }
+            catch (Exception ex)
+            {
+                _log.Warn($"Couldn't set {camera.Name} back to light frames: {ex.Message}");
+            }
+        }
+
+        static string Safe(string name) => string.Concat(name.Select(c => char.IsLetterOrDigit(c) ? c : '-'));
+    }
+
+    /// <summary>Forgets this guide camera's darks (all binnings) and deletes their files.</summary>
+    public void ClearDarks()
+    {
+        var camera = Camera?.Name;
+        lock (_sync)
+        {
+            foreach (var d in _saved.Darks.Where(d => d.Camera == camera))
+            {
+                _darkCache.Remove(d.File);
+                try { File.Delete(Path.Combine(_darkFolder, d.File)); } catch (IOException) { }
+            }
+            _saved = _saved with { Darks = _saved.Darks.Where(d => d.Camera != camera).ToList() };
+            SaveLocked();
+        }
+        _log.Info("Guide darks cleared");
+    }
+
+    private static async Task SetFrameTypeAsync(ICamera camera, FrameType type, CancellationToken ct)
+    {
+        if (camera.Controls.FrameType is null || camera.Controls.FrameType == type) return;
+        await camera.ApplyAsync(new CameraSettingsUpdate(FrameType: type), ct);
+    }
+
+    /// <summary>This camera's darks at the current binning that fit its gain now (all of them when the gain isn't known).</summary>
+    private List<StoredDark> UsableDarks(ICamera camera)
+    {
+        var gain = camera.Controls.Gain?.Value;
+        lock (_sync)
+            return _saved.Darks.Where(d => d.Camera == camera.Name && d.Binning == Settings.Binning &&
+                                           (d.Gain is null || gain is null || Math.Abs(d.Gain.Value - gain.Value) < 0.5)).ToList();
+    }
+
+    private GuideDarkInfo? DarkInfo(ICamera? camera)
+    {
+        if (camera is null) return null;
+        List<StoredDark> all;
+        lock (_sync) all = _saved.Darks.Where(d => d.Camera == camera.Name && d.Binning == Settings.Binning).ToList();
+        if (all.Count == 0) return null;
+        var usable = UsableDarks(camera);
+        return new GuideDarkInfo(all.Select(d => d.ExposureSeconds).Order().ToList(), all.Min(d => d.Frames), all.Max(d => d.Utc),
+            all[0].Gain, usable.Count == all.Count, all.Max(d => d.HotPixels), Settings.UseDarks && usable.Count > 0);
+    }
+
+    /// <summary>The frame with the matching dark taken out (or the nearest exposure's, scaled); as it was without one.</summary>
+    private RawImage WithoutDark(ICamera camera, RawImage image, double exposure)
+    {
+        if (!Settings.UseDarks) return image;
+        var darks = UsableDarks(camera);
+        if (DarkFrames.Choose(darks.Select(d => d.ExposureSeconds).ToList(), exposure) is not { } choice) return image;
+        var stored = darks[choice.Index];
+        RawImage? dark;
+        lock (_sync)
+        {
+            if (!_darkCache.TryGetValue(stored.File, out dark))
+            {
+                try
+                {
+                    dark = Fits.Read(File.ReadAllBytes(Path.Combine(_darkFolder, stored.File)));
+                    _darkCache[stored.File] = dark;
+                }
+                catch (Exception ex) when (ex is IOException or FormatException or UnauthorizedAccessException)
+                {
+                    _log.Warn($"Can't read the guide dark {stored.File}: {ex.Message}");
+                    _saved = _saved with { Darks = _saved.Darks.Where(d => d != stored).ToList() };
+                    return image;
+                }
+            }
+        }
+        return dark.Width == image.Width && dark.Height == image.Height ? DarkFrames.Subtract(image, dark, choice.Ratio) : image;
+    }
+
     // ---- The loop ----
 
     private IGuideOutput? Output =>
@@ -373,6 +535,7 @@ public sealed class NovaGuider : IAsyncDisposable
     private async Task EnsureLoopAsync(CancellationToken ct)
     {
         if (IsRunning) return;
+        if (_darkProgress is not null) throw new InvalidOperationException("Taking guide darks: wait until they're done, or Stop");
         var camera = Camera ?? throw new InvalidOperationException("No guide camera: choose one in the Guider panel");
         if (!camera.IsConnected)
         {
@@ -407,8 +570,9 @@ public sealed class NovaGuider : IAsyncDisposable
             {
                 var exposure = Settings.ExposureSeconds;
                 var frame = await camera.ExposeAsync(new ExposureRequest(exposure), null, ct);
-                var stars = StarDetector.Analyze(frame.Image, new StarDetectionOptions(MinSnr: 6, MaxStars: 60)).Stars;
-                var pulses = Process(camera, frame.Image, stars, DateTime.UtcNow);
+                var image = WithoutDark(camera, frame.Image, exposure);
+                var stars = StarDetector.Analyze(image, new StarDetectionOptions(MinSnr: 6, MaxStars: 60)).Stars;
+                var pulses = Process(camera, image, stars, DateTime.UtcNow);
                 if (pulses.Count > 0 && Output is { } output)
                     await Task.WhenAll(pulses.Select(p => output.PulseAsync(p.Direction, TimeSpan.FromMilliseconds(p.Milliseconds), ct)));
             }
@@ -605,8 +769,13 @@ public sealed class NovaGuider : IAsyncDisposable
 
     private sealed record StoredCalibration(string Camera, string? Output, int Binning, GuideCalibration Calibration, string? Warning);
 
-    private sealed record GuiderFile(string Backend = "phd2", NovaGuiderSettings? Nova = null, StoredCalibration? Calibration = null)
+    private sealed record StoredDark(
+        string Camera, int Binning, double? Gain, double ExposureSeconds, int Frames, DateTime Utc, int HotPixels, string File);
+
+    private sealed record GuiderFile(
+        string Backend = "phd2", NovaGuiderSettings? Nova = null, StoredCalibration? Calibration = null, IReadOnlyList<StoredDark>? Darks = null)
     {
+        public IReadOnlyList<StoredDark> Darks { get; init; } = Darks ?? [];
         public NovaGuiderSettings Nova { get; init; } = Nova ?? new NovaGuiderSettings();
     }
 

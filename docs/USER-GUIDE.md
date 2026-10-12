@@ -247,6 +247,14 @@ PHD2 stays the default until it has proven itself under the sky, and you can swi
   is slow to reverse, as Dec mostly drifts one way. Max pulse 2.5 s. **Dither** moves the lock position up to the
   given pixels and waits for the star to settle there. Lost the star (clouds)? It keeps looking where the star should
   be and carries on when it's back.
+- **Dark library**: hot pixels, and especially warm clusters of them, look like faint stars that never move; a guider
+  locked on one can't calibrate or guide. Take darks once per guide camera: put the cap on the guide scope, pick the
+  exposures you guide at (the guide exposure and a few around it) and how many each (5), and press **Take darks**.
+  NOVA combines each set into a master dark (the median, so stray cosmic rays go) and subtracts the matching one from
+  every guide frame, or the nearest exposure's, scaled. They're kept per camera and binning (in `guide-darks` in the
+  settings folder) with the gain they were taken at: change the gain and they're not used until you take them again.
+  **Use** turns them off; **Clear** deletes them. Taking them again after a few months does no harm, as sensors gain
+  hot pixels with age.
 - **Guiding settings** has those numbers, Dec corrections both ways, one way or off, the calibration step (0 works it
   out from the Guide scope optics and the mount's guide rate) and *Reverse Dec after flip*, for the few mounts whose
   Dec pulses change sense after a flip.

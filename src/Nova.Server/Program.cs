@@ -55,6 +55,7 @@ builder.Services.AddSingleton<PasswordService>();
 builder.Services.AddSingleton<ActivityLog>();
 builder.Services.AddSingleton<EquipmentService>();
 builder.Services.AddSingleton<ImagingService>();
+builder.Services.AddSingleton<NovaGuider>();
 builder.Services.AddSingleton<GuiderService>();
 builder.Services.AddSingleton<OpticsService>();
 builder.Services.AddSingleton<CameraLinkService>();

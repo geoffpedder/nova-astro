@@ -61,6 +61,9 @@ public sealed record GuideRequest(bool Recalibrate = false, double SettlePixels 
 
 public sealed record GuiderProfileRequest(int Id);
 
+/// <summary>"phd2" or "nova".</summary>
+public sealed record GuiderBackendRequest(string Backend);
+
 public sealed record GuiderEquipmentRequest(bool Connected);
 
 public sealed record DitherRequest(double Pixels = 5, bool RaOnly = false, double SettlePixels = 1.5, double SettleSeconds = 10, double SettleTimeout = 60);
@@ -134,7 +137,7 @@ public static class NovaApi
             }
 
             // One button for everything: also have PHD2 connect its guide camera and mount.
-            if (guider.IsConnected && !guider.Status.EquipmentConnected)
+            if (guider.Backend == "phd2" && guider.IsConnected && !guider.Status.EquipmentConnected)
             {
                 try
                 {
@@ -149,7 +152,8 @@ public static class NovaApi
         });
         api.MapPost("/equipment/disconnect", async (EquipmentService equipment, GuiderService guider, ActivityLog log, CancellationToken ct) =>
         {
-            if (guider.IsConnected && guider.Status.EquipmentConnected)
+            if (guider.Backend == "nova") await guider.StopAsync(ct);
+            else if (guider.IsConnected && guider.Status.EquipmentConnected)
             {
                 try
                 {
@@ -821,6 +825,32 @@ public static class NovaApi
             await guider.StopAsync(ct);
             return Results.NoContent();
         });
+
+        // Guider: PHD2 or NOVA's own
+        api.MapPost("/guider/backend", (GuiderBackendRequest request, GuiderService guider, CancellationToken ct) =>
+            ConflictOnRefusal(() => guider.SetBackendAsync(request.Backend, ct)));
+        api.MapPost("/guider/nova/settings", (NovaGuiderSettings settings, GuiderService guider) =>
+        {
+            if (guider.Nova is not { } nova) return Results.NotFound();
+            try
+            {
+                nova.UpdateSettings(settings);
+                return Results.NoContent();
+            }
+            catch (ArgumentException ex)
+            {
+                return Results.Problem(ex.Message, statusCode: StatusCodes.Status400BadRequest);
+            }
+        });
+        api.MapPost("/guider/loop", (GuiderService guider) => OperationResult(guider.Loop(out var error), error));
+        api.MapPost("/guider/calibrate", (GuiderService guider) => OperationResult(guider.Calibrate(out var error), error));
+        api.MapPost("/guider/calibration/clear", (GuiderService guider) =>
+        {
+            guider.Nova?.ClearCalibration();
+            return Results.NoContent();
+        });
+        api.MapGet("/guider/frame.png", (GuiderService guider) =>
+            guider.Nova?.FramePng() is { } png ? Results.File(png, "image/png") : Results.NotFound());
     }
 
     /// <summary>

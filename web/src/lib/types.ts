@@ -616,6 +616,8 @@ export interface NovaGuiderSettings {
   algorithms: GuideAlgorithmSettings
   /** Subtract the guide camera's dark library from every guide frame. */
   useDarks: boolean
+  /** The guide camera's gain, set before every frame; null leaves it as the driver has it. */
+  gain: number | null
 }
 
 /** The guide camera's dark library at the current binning. */
@@ -661,6 +663,8 @@ export interface NovaGuiderStatus {
   darks: GuideDarkInfo | null
   /** While taking darks: which one ("Dark 2 s, 3 of 5"). */
   darkProgress: string | null
+  /** The guide camera's gain now and its range (when connected). */
+  cameraGain: { value: number; min: number; max: number; step: number } | null
 }
 
 export interface DecDrift {

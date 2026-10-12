@@ -14,9 +14,10 @@ namespace Nova.Server.Services;
 /// <param name="CalibrationStepMs">Each calibration pulse (ms); 0 = worked out from the image scale and guide rate.</param>
 /// <param name="ReverseDecAfterFlip">For mounts whose Dec pulses change sense after a meridian flip.</param>
 /// <param name="UseDarks">Subtract the guide camera's dark library (when it has one) from every guide frame.</param>
+/// <param name="Gain">The guide camera's gain, set before every frame; null leaves it as the driver has it.</param>
 public sealed record NovaGuiderSettings(
     string? Camera = null, string? Output = null, double ExposureSeconds = 2, int Binning = 1, int CalibrationStepMs = 0,
-    bool ReverseDecAfterFlip = false, GuideAlgorithmSettings? Algorithms = null, bool UseDarks = true)
+    bool ReverseDecAfterFlip = false, GuideAlgorithmSettings? Algorithms = null, bool UseDarks = true, double? Gain = null)
 {
     public GuideAlgorithmSettings Algorithms { get; init; } = Algorithms ?? new GuideAlgorithmSettings();
 }
@@ -36,12 +37,13 @@ public sealed record GuideStarInfo(double X, double Y, double LockX, double Lock
 public sealed record GuideStarMark(double X, double Y, bool Lock, bool Found);
 
 /// <param name="Activity">What it's doing in words ("West step 4", "Lost the guide star"), or null when idle.</param>
+/// <param name="CameraGain">The guide camera's gain now and its range, when it's connected and has one.</param>
 /// <param name="Frame">Increments with every guide frame, so the browser knows when to fetch frame.png.</param>
 public sealed record NovaGuiderStatus(
     NovaGuiderSettings Settings, IReadOnlyList<string> Cameras, IReadOnlyList<GuideOutputChoice> Outputs,
     string? Camera, string? Activity, GuideCalibrationInfo? Calibration, GuideStarInfo? Star,
     int Frame, int? FrameWidth, int? FrameHeight, IReadOnlyList<GuideStarMark> Stars,
-    GuideDarkInfo? Darks = null, string? DarkProgress = null);
+    GuideDarkInfo? Darks = null, string? DarkProgress = null, NumberSetting? CameraGain = null);
 
 /// <summary>The guide camera's dark library (at the current binning).</summary>
 /// <param name="GainMatches">Taken at the camera's gain now (darks at another gain aren't used).</param>
@@ -147,6 +149,9 @@ public sealed class NovaGuider : IAsyncDisposable
         if (settings.ExposureSeconds is < 0.05 or > 30) throw new ArgumentException("The guide exposure must be 0.05–30 s");
         if (settings.Binning is < 1 or > 4) throw new ArgumentException("Guide binning must be 1–4");
         if (settings.CalibrationStepMs is < 0 or > 10_000) throw new ArgumentException("The calibration step must be 0–10000 ms");
+        if (settings.Gain is < 0 or > 10_000) throw new ArgumentException("The guide camera gain must be 0–10000");
+        if (settings.Gain is { } gain && Camera is { IsConnected: true, Controls.Gain: { } range } && (gain < range.Min || gain > range.Max))
+            throw new ArgumentException($"The guide camera's gain goes from {range.Min:0.##} to {range.Max:0.##}");
         var a = settings.Algorithms;
         if (a.RaAggressiveness is < 0 or > 2 || a.DecAggressiveness is < 0 or > 2 || a.RaHysteresis is < 0 or >= 1 ||
             a.RaMinMove < 0 || a.DecMinMove < 0 || a.MaxRaPulseMs is < 50 or > 10_000 || a.MaxDecPulseMs is < 50 or > 10_000)
@@ -183,7 +188,8 @@ public sealed class NovaGuider : IAsyncDisposable
                     ? _tracker.Stars.Select((s, i) => new GuideStarMark(Math.Round(s.X, 2), Math.Round(s.Y, 2), i == 0, s.Found)).ToList()
                     : [];
                 return new NovaGuiderStatus(Settings, cameras, outputs, Camera?.Name, IsRunning ? _activity : null, info, star,
-                    _frameId, _frame?.Width, _frame?.Height, marks, DarkInfo(Camera), _darkProgress);
+                    _frameId, _frame?.Width, _frame?.Height, marks, DarkInfo(Camera), _darkProgress,
+                    Camera is { IsConnected: true } c ? c.Controls.Gain : null);
             }
         }
     }
@@ -405,6 +411,7 @@ public sealed class NovaGuider : IAsyncDisposable
             if (camera.Controls.Binning is { } binning && (int)binning.Value != Settings.Binning)
                 await camera.ApplyAsync(new CameraSettingsUpdate(Binning: Settings.Binning), ct);
             await SetFrameTypeAsync(camera, FrameType.Dark, ct);
+            await ApplyGainAsync(camera, ct); // darks must be at the gain they'll be used with
             var gain = camera.Controls.Gain?.Value;
             Directory.CreateDirectory(_darkFolder);
 
@@ -466,6 +473,13 @@ public sealed class NovaGuider : IAsyncDisposable
             SaveLocked();
         }
         _log.Info("Guide darks cleared");
+    }
+
+    /// <summary>Sets the guide camera's gain to the setting, when there is one and the camera differs.</summary>
+    private async Task ApplyGainAsync(ICamera camera, CancellationToken ct)
+    {
+        if (Settings.Gain is not { } gain || camera.Controls.Gain is not { } current || Math.Abs(current.Value - gain) < 0.01) return;
+        await camera.ApplyAsync(new CameraSettingsUpdate(Gain: Math.Clamp(gain, current.Min, current.Max)), ct);
     }
 
     private static async Task SetFrameTypeAsync(ICamera camera, FrameType type, CancellationToken ct)
@@ -569,6 +583,7 @@ public sealed class NovaGuider : IAsyncDisposable
             while (!ct.IsCancellationRequested)
             {
                 var exposure = Settings.ExposureSeconds;
+                await ApplyGainAsync(camera, ct); // a changed setting takes effect from the next frame
                 var frame = await camera.ExposeAsync(new ExposureRequest(exposure), null, ct);
                 var image = WithoutDark(camera, frame.Image, exposure);
                 var stars = StarDetector.Analyze(image, new StarDetectionOptions(MinSnr: 6, MaxStars: 60)).Stars;

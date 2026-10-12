@@ -89,6 +89,14 @@
         {#each [1, 2, 3, 4] as b (b)}<option value={b}>{b}×{b}</option>{/each}
       </select>
     </div>
+    <label for="ng-gain">Gain</label>
+    <div class="pair">
+      <input id="ng-gain" class="mono" type="number" step="1" min={n.cameraGain?.min} max={n.cameraGain?.max}
+        value={s.gain ?? ''} placeholder={n.cameraGain ? String(Math.round(n.cameraGain.value)) : 'driver'}
+        onchange={(e) => save({ gain: e.currentTarget.value === '' ? null : num(e) })}
+        title="Set before every guide frame (and for darks). Empty: leave it as the driver has it" />
+      <span class="muted small">{#if n.cameraGain}{Math.round(n.cameraGain.min)}–{Math.round(n.cameraGain.max)}{#if s.gain == null}, as the driver has it{/if}{:else}connect to see its range{/if}</span>
+    </div>
   </div>
 
   {#if view}

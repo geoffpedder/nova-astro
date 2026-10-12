@@ -233,7 +233,8 @@ PHD2 stays the default until it has proven itself under the sky, and you can swi
 
 - **Camera**: the guide camera (*Automatic* takes the first camera that isn't the imaging camera). **Pulses to**: the
   mount (pulse guiding, as with the ZWO AM3/AM5), or a guide camera's ST4 port. **Exposure** (2 s is a good start)
-  and binning.
+  and binning. **Gain**: set on the guide camera before every frame (its range shows beside it); empty leaves it as
+  the driver has it. Darks are taken at this gain too.
 - **Loop** exposes the guide camera and picks a guide star: the brightest one that isn't saturated, crowded or near
   the edge, plus up to 8 more whose average cancels some of the seeing. The small view shows the star (yellow ring)
   and where it should be (green cross).

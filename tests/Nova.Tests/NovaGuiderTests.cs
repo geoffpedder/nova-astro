@@ -181,6 +181,28 @@ public class NovaGuiderTests : IDisposable
     }
 
     [Fact]
+    public async Task SetsTheGuideCamerasGain()
+    {
+        await using var rig = await SetUpAsync();
+        var camera = rig.Nova.Camera!;
+        await camera.ConnectAsync(CancellationToken.None);
+        var range = rig.Nova.Status.CameraGain!;
+        var wanted = range.Value == 150 ? 120 : 150;
+
+        rig.Nova.UpdateSettings(rig.Nova.Settings with { Gain = wanted });
+        using var timeout = new CancellationTokenSource(TimeSpan.FromMinutes(1));
+        await rig.Nova.LoopAsync(timeout.Token);
+        var frame = rig.Nova.Status.Frame;
+        while (rig.Nova.Status.Frame < frame + 1) await Task.Delay(50, timeout.Token);
+        Assert.Equal(wanted, camera.Controls.Gain!.Value);
+        Assert.Equal(wanted, rig.Nova.Status.CameraGain!.Value);
+        await rig.Nova.StopAsync();
+
+        Assert.Throws<ArgumentException>(() => rig.Nova.UpdateSettings(rig.Nova.Settings with { Gain = range.Max + 1 }));
+        rig.Nova.UpdateSettings(rig.Nova.Settings with { Gain = null }); // back to the driver's
+    }
+
+    [Fact]
     public async Task SwitchingBackendsAndRefusals()
     {
         await using var rig = await SetUpAsync();

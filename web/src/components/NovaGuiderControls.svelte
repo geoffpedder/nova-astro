@@ -50,6 +50,15 @@
   let darkPicked = $state<number[] | null>(null)
   const darkExposures = $derived(darkPicked ?? [...new Set([1, 2, 3, s?.exposureSeconds ?? 2])].sort((a, b) => a - b))
   let darkFrames = $state(5)
+  // Open by itself only the first time the panel shows and there's no library yet; after that it stays as the user
+  // leaves it (status updates many times a second, so it mustn't be tied to the status).
+  let darksOpen = $state(false)
+  let darksOpenDecided = false
+  $effect(() => {
+    if (darksOpenDecided || !n) return
+    darksOpenDecided = true
+    darksOpen = !n.darks
+  })
   const busyDarks = $derived(!!n?.darkProgress)
   function toggleDark(e: number) {
     darkPicked = darkExposures.includes(e) ? darkExposures.filter((x) => x !== e) : [...darkExposures, e].sort((a, b) => a - b)
@@ -133,7 +142,7 @@
     <p class="muted small">Not calibrated yet: Guide calibrates first (or press Calibrate).</p>
   {/if}
 
-  <details class="settings" open={!n.darks}>
+  <details class="settings" bind:open={darksOpen}>
     <summary>Dark library{n.darks ? `: ${n.darks.exposures.join(', ')} s` : ''}</summary>
     <p class="small">
       {#if n.darks}

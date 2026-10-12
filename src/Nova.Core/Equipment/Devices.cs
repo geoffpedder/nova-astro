@@ -52,6 +52,25 @@ public interface IDevice
     Task DisconnectAsync(CancellationToken ct);
 }
 
+/// <summary>Which way a guide pulse moves the telescope on the sky (north/south in Dec, east/west in RA).</summary>
+public enum GuideDirection { North, South, East, West }
+
+/// <summary>
+/// Something that can nudge the mount by guide pulses: the mount itself (pulse guiding) or a camera's ST4 port.
+/// A pulse moves the axis at the guide rate for its duration, on top of tracking.
+/// </summary>
+public interface IGuideOutput : IDevice
+{
+    /// <summary>Whether this device takes guide pulses (its driver has the timed-guide commands).</summary>
+    bool CanPulseGuide { get; }
+
+    /// <summary>The guide rate as a fraction of sidereal (0.5 = 7.5″/s), if the driver reports it.</summary>
+    double? GuideRateSidereal { get; }
+
+    /// <summary>Sends one pulse and completes when it's done.</summary>
+    Task PulseAsync(GuideDirection direction, TimeSpan duration, CancellationToken ct);
+}
+
 public enum CameraState { Idle, Exposing, Downloading, Error }
 
 public sealed record ExposureRequest(double DurationSeconds);

@@ -118,8 +118,77 @@ public interface IPolarAlignmentKnobs
     void Turn(double altitudeArcmin, double azimuthArcmin);
 }
 
-internal sealed class SimulatedMount : IMount, IPolarAlignmentKnobs
+internal sealed class SimulatedMount : IMount, IPolarAlignmentKnobs, IGuideOutput
 {
+    // ---- Tracking error and guiding (off unless switched on, so other tests see a perfect drive) ----
+
+    /// <summary>
+    /// Periodic error in RA: a strain-wave-like sum of a slow and a fast wave, as (amplitude ″, period s) pairs.
+    /// Empty = none.
+    /// </summary>
+    public (double Arcsec, double Seconds)[] PeriodicError { get; set; } = [];
+
+    /// <summary>Seeing: a random shift of the whole view per frame (″ RMS per axis); 0 = steady.</summary>
+    public double SeeingJitterArcsec { get; set; }
+
+    /// <summary>Dec backlash: this much of a reversed Dec move is lost (″).</summary>
+    public double DecBacklashArcsec { get; set; }
+
+    /// <summary>The guide rate, as a fraction of sidereal.</summary>
+    public double GuideRate { get; set; } = 0.5;
+
+    private const double SiderealArcsecPerSecond = 15.041;
+    private readonly DateTime _trackingEpoch = DateTime.UtcNow;
+    private double _guideRaArcsec;   // on the sky, + = east
+    private double _guideDecArcsec;  // + = north
+    private int _lastDecDirection;   // +1 north, −1 south, 0 none yet
+    private double _backlashLeft;
+    private readonly Random _seeing = new(17);
+
+    public bool CanPulseGuide => true;
+    public double? GuideRateSidereal => GuideRate;
+
+    /// <summary>A guide pulse: moves the axis at the guide rate for its duration (applied when it ends).</summary>
+    public async Task PulseAsync(GuideDirection direction, TimeSpan duration, CancellationToken ct)
+    {
+        EnsureConnected();
+        await Task.Delay(duration, ct);
+        var move = GuideRate * SiderealArcsecPerSecond * duration.TotalSeconds;
+        lock (_guideLock)
+        {
+            switch (direction)
+            {
+                case GuideDirection.East: _guideRaArcsec += move; break;
+                case GuideDirection.West: _guideRaArcsec -= move; break;
+                default:
+                    var sign = direction == GuideDirection.North ? 1 : -1;
+                    if (_lastDecDirection != 0 && sign != _lastDecDirection) _backlashLeft = DecBacklashArcsec;
+                    _lastDecDirection = sign;
+                    var taken = Math.Min(_backlashLeft, move);
+                    _backlashLeft -= taken;
+                    _guideDecArcsec += sign * (move - taken);
+                    break;
+            }
+        }
+    }
+
+    private readonly object _guideLock = new();
+
+    /// <summary>The periodic error now (″, + = east) and the seeing shift for one frame (″, east and north).</summary>
+    private (double Ra, double Dec) TrackingError(DateTime utc)
+    {
+        var t = (utc - _trackingEpoch).TotalSeconds;
+        var pe = PeriodicError.Sum(w => w.Arcsec * Math.Sin(2 * Math.PI * t / w.Seconds));
+        double Gauss()
+        {
+            var u1 = 1 - _seeing.NextDouble();
+            var u2 = _seeing.NextDouble();
+            return Math.Sqrt(-2 * Math.Log(u1)) * Math.Cos(2 * Math.PI * u2);
+        }
+        var (jx, jy) = SeeingJitterArcsec > 0 ? (Gauss() * SeeingJitterArcsec, Gauss() * SeeingJitterArcsec) : (0, 0);
+        lock (_guideLock) return (pe + _guideRaArcsec + jx, _guideDecArcsec + jy);
+    }
+
     // Where the simulator pretends to be until a site is set.
     private static readonly GeoLocation DefaultSite = new(51.48, 0, 0);
     private const double SlewRateDegreesPerSecond = 4;
@@ -147,6 +216,17 @@ internal sealed class SimulatedMount : IMount, IPolarAlignmentKnobs
     private EquatorialCoordinates MountPointing => new(
         (Coordinates.RaHours + _pointingError.RaHours + 24) % 24, Math.Clamp(Coordinates.DecDegrees + _pointingError.DecDegrees, -90, 90));
 
+    /// <summary>The aim with tracking error and guiding added (″ on the sky converted to RA hours at this Dec).</summary>
+    private EquatorialCoordinates AimAt(DateTime utc)
+    {
+        var aim = MountPointing;
+        if (PeriodicError.Length == 0 && SeeingJitterArcsec == 0 && _guideRaArcsec == 0 && _guideDecArcsec == 0) return aim;
+        var (ra, dec) = TrackingError(utc);
+        var cosDec = Math.Max(0.01, Math.Cos(aim.DecDegrees * Math.PI / 180));
+        return new EquatorialCoordinates(((aim.RaHours + ra / 3600 / 15 / cosDec) % 24 + 24) % 24,
+            Math.Clamp(aim.DecDegrees + dec / 3600, -90, 90));
+    }
+
     public EquatorialCoordinates TrueCoordinates => TrueCoordinatesAt(DateTime.UtcNow);
 
     /// <summary>
@@ -155,7 +235,7 @@ internal sealed class SimulatedMount : IMount, IPolarAlignmentKnobs
     /// </summary>
     public EquatorialCoordinates TrueCoordinatesAt(DateTime utc)
     {
-        var aim = MountPointing;
+        var aim = AimAt(utc);
         if (_polarAltitude == 0 && _polarAzimuth == 0) return aim;
         var site = Location ?? DefaultSite;
         var pole = Horizon.AltAz(Horizon.VisiblePole(site));

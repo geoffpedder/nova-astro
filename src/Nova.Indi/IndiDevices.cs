@@ -89,6 +89,38 @@ public abstract class IndiDevice(IndiClient client, string name) : IDevice
         if (!IsConnected) throw new InvalidOperationException($"{Name} is not connected");
     }
 
+    // ---- Pulse guiding (INDI's guider interface: mounts, and cameras with an ST4 port) ----
+    private const string GuideNs = "TELESCOPE_TIMED_GUIDE_NS";
+    private const string GuideWe = "TELESCOPE_TIMED_GUIDE_WE";
+
+    /// <summary>Whether the driver has the timed-guide commands.</summary>
+    public bool CanPulseGuide => HasProperty(GuideNs) && HasProperty(GuideWe);
+
+    /// <summary>GUIDE_RATE (fraction of sidereal), when the driver has it: RA's, else Dec's.</summary>
+    public double? GuideRateSidereal =>
+        Client.GetProperty(Name, "GUIDE_RATE") is { } p
+            ? (p["GUIDE_RATE_WE"] ?? p["GUIDE_RATE_NS"])?.Number is { } rate && rate > 0 ? rate : null
+            : null;
+
+    /// <summary>One guide pulse: TIMED_GUIDE_N/S/E/W for that many milliseconds, waiting until the driver has done it.</summary>
+    public Task PulseAsync(GuideDirection direction, TimeSpan duration, CancellationToken ct)
+    {
+        EnsureConnected();
+        if (!CanPulseGuide) throw new NotSupportedException($"{Name} can't pulse guide");
+        var ms = Math.Round(Math.Max(0, duration.TotalMilliseconds));
+        var (property, on, off) = direction switch
+        {
+            GuideDirection.North => (GuideNs, "TIMED_GUIDE_N", "TIMED_GUIDE_S"),
+            GuideDirection.South => (GuideNs, "TIMED_GUIDE_S", "TIMED_GUIDE_N"),
+            GuideDirection.East => (GuideWe, "TIMED_GUIDE_E", "TIMED_GUIDE_W"),
+            _ => (GuideWe, "TIMED_GUIDE_W", "TIMED_GUIDE_E"),
+        };
+        return SendAndWaitAsync(property,
+            () => Client.SetNumbersAsync(Name, property, ct, (on, ms), (off, 0)),
+            () => Client.SetNumbersAsync(Name, property, CancellationToken.None, (on, 0), (off, 0)),
+            duration + TimeSpan.FromSeconds(5), ct);
+    }
+
     /// <summary>
     /// Sends a command and waits for the property to go Busy and then settle. Drivers stream periodic
     /// "Ok" updates, so waiting only for "Ok" could match an update sent before the command arrived.
@@ -121,7 +153,7 @@ public abstract class IndiDevice(IndiClient client, string name) : IDevice
     }
 }
 
-public sealed class IndiCamera(IndiClient client, string name) : IndiDevice(client, name), ICamera
+public sealed class IndiCamera(IndiClient client, string name) : IndiDevice(client, name), ICamera, IGuideOutput
 {
     private const string ImageBlob = "CCD1";
 
@@ -372,7 +404,7 @@ public sealed class IndiCamera(IndiClient client, string name) : IndiDevice(clie
     }
 }
 
-public sealed class IndiMount(IndiClient client, string name) : IndiDevice(client, name), IMount
+public sealed class IndiMount(IndiClient client, string name) : IndiDevice(client, name), IMount, IGuideOutput
 {
     private const string Coords = "EQUATORIAL_EOD_COORD"; // JNow
 

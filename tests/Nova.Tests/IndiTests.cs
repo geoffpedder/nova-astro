@@ -189,6 +189,54 @@ public class IndiClientTests
         Assert.Contains("failed to connect", error.Message);
     }
 
+    [Fact]
+    public async Task SendsGuidePulsesToTheMountAndAnSt4Camera()
+    {
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(15));
+        string[] guider(string device) =>
+        [
+            $$"""<defNumberVector device="{{device}}" name="TELESCOPE_TIMED_GUIDE_NS" state="Idle" perm="rw"><defNumber name="TIMED_GUIDE_N" format="%g" min="0" max="60000" step="1">0</defNumber><defNumber name="TIMED_GUIDE_S" format="%g" min="0" max="60000" step="1">0</defNumber></defNumberVector>""",
+            $$"""<defNumberVector device="{{device}}" name="TELESCOPE_TIMED_GUIDE_WE" state="Idle" perm="rw"><defNumber name="TIMED_GUIDE_W" format="%g" min="0" max="60000" step="1">0</defNumber><defNumber name="TIMED_GUIDE_E" format="%g" min="0" max="60000" step="1">0</defNumber></defNumberVector>""",
+        ];
+        string[] definitions =
+        [
+            """<defTextVector device="ZWO AM5" name="DRIVER_INFO" state="Idle" perm="ro"><defText name="DRIVER_INTERFACE">5</defText></defTextVector>""",
+            """<defSwitchVector device="ZWO AM5" name="CONNECTION" state="Ok" perm="rw" rule="OneOfMany"><defSwitch name="CONNECT">On</defSwitch><defSwitch name="DISCONNECT">Off</defSwitch></defSwitchVector>""",
+            """<defNumberVector device="ZWO AM5" name="GUIDE_RATE" state="Ok" perm="rw"><defNumber name="GUIDE_RATE_WE" format="%g" min="0.1" max="0.9" step="0.1">0.5</defNumber><defNumber name="GUIDE_RATE_NS" format="%g" min="0.1" max="0.9" step="0.1">0.5</defNumber></defNumberVector>""",
+            .. guider("ZWO AM5"),
+            """<defTextVector device="ZWO CCD ASI120MM Mini" name="DRIVER_INFO" state="Idle" perm="ro"><defText name="DRIVER_INTERFACE">6</defText></defTextVector>""",
+            """<defSwitchVector device="ZWO CCD ASI120MM Mini" name="CONNECTION" state="Ok" perm="rw" rule="OneOfMany"><defSwitch name="CONNECT">On</defSwitch><defSwitch name="DISCONNECT">Off</defSwitch></defSwitchVector>""",
+            .. guider("ZWO CCD ASI120MM Mini"),
+        ];
+        // The driver goes Busy for the pulse, then Ok.
+        using var server = new FakeIndiServer(definitions, line =>
+        {
+            var match = System.Text.RegularExpressions.Regex.Match(line, "device=\"([^\"]+)\" name=\"(TELESCOPE_TIMED_GUIDE_(?:NS|WE))\"");
+            if (!match.Success) return [];
+            var (device, property) = (match.Groups[1].Value, match.Groups[2].Value);
+            return [$"""<setNumberVector device="{device}" name="{property}" state="Busy"></setNumberVector>""",
+                    $"""<setNumberVector device="{device}" name="{property}" state="Ok"></setNumberVector>"""];
+        });
+        await using var provider = new IndiEquipmentProvider("127.0.0.1", server.Port);
+        await provider.ConnectAsync(cts.Token);
+
+        var mount = Assert.IsAssignableFrom<IGuideOutput>(provider.GetMount("ZWO AM5"));
+        Assert.True(mount.CanPulseGuide);
+        Assert.Equal(0.5, mount.GuideRateSidereal);
+        await mount.PulseAsync(GuideDirection.North, TimeSpan.FromMilliseconds(250), cts.Token);
+        await mount.PulseAsync(GuideDirection.West, TimeSpan.FromMilliseconds(1200), cts.Token);
+
+        var camera = Assert.IsAssignableFrom<IGuideOutput>(provider.GetCamera("ZWO CCD ASI120MM Mini"));
+        Assert.True(camera.CanPulseGuide);
+        await camera.PulseAsync(GuideDirection.East, TimeSpan.FromMilliseconds(80), cts.Token);
+
+        var sent = await WaitForLinesAsync(server, 3);
+        Assert.Contains(sent, l => l.Contains("device=\"ZWO AM5\"") && l.Contains("TELESCOPE_TIMED_GUIDE_NS")
+                                   && l.Contains("<oneNumber name=\"TIMED_GUIDE_N\">250</oneNumber>") && l.Contains("<oneNumber name=\"TIMED_GUIDE_S\">0</oneNumber>"));
+        Assert.Contains(sent, l => l.Contains("TELESCOPE_TIMED_GUIDE_WE") && l.Contains("<oneNumber name=\"TIMED_GUIDE_W\">1200</oneNumber>"));
+        Assert.Contains(sent, l => l.Contains("device=\"ZWO CCD ASI120MM Mini\"") && l.Contains("<oneNumber name=\"TIMED_GUIDE_E\">80</oneNumber>"));
+    }
+
     /// <summary>A connected ZWO-style camera: gain and offset live in CCD_CONTROLS, not CCD_GAIN.</summary>
     private static readonly string[] AsiCamera =
     [

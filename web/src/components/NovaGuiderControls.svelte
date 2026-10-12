@@ -2,6 +2,9 @@
   import { api } from '../lib/api'
   import { act, nova } from '../lib/state.svelte'
   import { ask } from '../lib/confirm.svelte'
+  import CalibrationGraph from './CalibrationGraph.svelte'
+
+  let showGraph = $state(false)
   import type { GuideAlgorithmSettings, NovaGuiderSettings } from '../lib/types'
 
   // NOVA's own guider: guide camera and output, the guide star view, Loop / Calibrate, the calibration and settings.
@@ -135,8 +138,11 @@
       <span>RA {calibration.raAngle.toFixed(0)}° at {rate(calibration.raRate, calibration.raArcsecPerSecond)}</span>
       <span>Dec {calibration.decAngle.toFixed(0)}° at {rate(calibration.decRate, calibration.decArcsecPerSecond)}</span>
       <span class:warn={calibration.orthogonality > 10}>{calibration.orthogonality.toFixed(1)}° from square</span>
+      <button class="secondary clear" onclick={() => (showGraph = !showGraph)} aria-pressed={showGraph}
+        title="Where the star went during calibration, as PHD2 shows it">{showGraph ? 'Hide graph' : 'Graph'}</button>
       <button class="secondary clear" onclick={() => act(api.guiderClearCalibration)} title="Forget it: the next Guide calibrates again">Clear</button>
     </div>
+    {#if showGraph}<div class="graph"><CalibrationGraph {calibration} /></div>{/if}
     {#if calibration.warning}<p class="warn small">{calibration.warning}</p>{/if}
   {:else}
     <p class="muted small">Not calibrated yet: Guide calibrates first (or press Calibrate).</p>
@@ -283,6 +289,10 @@
   .clear {
     font-size: 11px;
     padding: 1px 8px;
+  }
+  .graph {
+    max-width: 260px;
+    margin: 0 auto 8px;
   }
   .chips {
     display: flex;

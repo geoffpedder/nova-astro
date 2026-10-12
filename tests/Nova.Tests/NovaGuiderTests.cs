@@ -65,6 +65,7 @@ public class NovaGuiderTests : IDisposable
         // The simulated guide camera has north up and east left: West moves the stars right-ish… whichever way,
         // the axes must be near square (the periodic error tilts them a little) and the rate match the 4× guide rate.
         Assert.True(cal.Orthogonality < 10, $"{cal.Orthogonality}° from square");
+        Assert.Contains(cal.Points!, p => p.Phase == "North");
         Assert.InRange(cal.DecArcsecPerSecond!.Value, 54, 66); // 4 × 15.04″/s
         Assert.NotNull(status.Nova.Star);
         Assert.Equal("arcsec", status.Stats.Units);

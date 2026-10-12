@@ -13,6 +13,9 @@ What changed in each release. The newest is first. A release's section here beco
 - **Dark library for the guide camera** (NOVA's guider): take darks once with the guide scope covered, and they're
   subtracted from every guide frame, so hot pixels and warm clusters aren't taken for guide stars. Kept per camera,
   binning and gain; the nearest exposure is scaled when there's no exact match.
+- **Calibration graph** (NOVA's guider), as PHD2 draws it: the star's path through the West/East and North/South
+  steps with the fitted directions, to see at a glance how square the calibration is. In the Guiding tab and behind
+  **Graph** in the Guider panel.
 - **Guide camera gain** in the Guider panel (NOVA's guider), with the camera's range; set before every guide frame
   and for darks, instead of digging in the driver settings.
 - **Guiding tab** for NOVA's guider: the whole guide frame with the guide star and the stars averaged with it marked

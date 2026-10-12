@@ -28,7 +28,8 @@ public sealed record GuideOutputChoice(string? Name, string Label);
 /// <summary>The calibration for display: angles in degrees, rates in px/s (and ″/s when the scale is known).</summary>
 public sealed record GuideCalibrationInfo(
     double RaAngle, double DecAngle, double RaRate, double DecRate, double? RaArcsecPerSecond, double? DecArcsecPerSecond,
-    double Orthogonality, double DecDegrees, PierSide? PierSide, DateTime Utc, string? Warning);
+    double Orthogonality, double DecDegrees, PierSide? PierSide, DateTime Utc, string? Warning,
+    IReadOnlyList<CalibrationPoint>? Points = null);
 
 /// <summary>The guide star now: where it is, where it should be (lock), and how well it's seen.</summary>
 public sealed record GuideStarInfo(double X, double Y, double LockX, double LockY, double Snr, double Hfr, int Found, int Tracked);
@@ -178,7 +179,7 @@ public sealed class NovaGuider : IAsyncDisposable
             lock (_sync)
             {
                 var stored = StoredFor(Camera?.Name);
-                var info = stored is null ? null : Describe(stored.Calibration, stored.Warning);
+                var info = stored is null ? null : Describe(stored.Calibration, stored.Warning) with { Points = stored.Points };
                 var lockHome = _tracker.LockHome;
                 var star = _last is { } m && lockHome is { } home
                     ? new GuideStarInfo(Math.Round(m.X, 2), Math.Round(m.Y, 2), Math.Round(home.X, 2), Math.Round(home.Y, 2),
@@ -715,7 +716,10 @@ public sealed class NovaGuider : IAsyncDisposable
         (_calibrator, _calibrationDone, _mode) = (null, null, Mode.Looping);
         if (calibrator.Result is { } result)
         {
-            _saved = _saved with { Calibration = new StoredCalibration(camera.Name, Settings.Output, Settings.Binning, result, calibrator.Warning) };
+            _saved = _saved with
+            {
+                Calibration = new StoredCalibration(camera.Name, Settings.Output, Settings.Binning, result, calibrator.Warning, [.. calibrator.Points]),
+            };
             SaveLocked();
             var info = Describe(result, null);
             _log.Info($"Guider calibrated: RA {info.RaAngle:0}° at {Rate(info.RaRate, info.RaArcsecPerSecond)}, " +
@@ -782,7 +786,8 @@ public sealed class NovaGuider : IAsyncDisposable
 
     // ---- Settings file ----
 
-    private sealed record StoredCalibration(string Camera, string? Output, int Binning, GuideCalibration Calibration, string? Warning);
+    private sealed record StoredCalibration(
+        string Camera, string? Output, int Binning, GuideCalibration Calibration, string? Warning, IReadOnlyList<CalibrationPoint>? Points = null);
 
     private sealed record StoredDark(
         string Camera, int Binning, double? Gain, double ExposureSeconds, int Frames, DateTime Utc, int HotPixels, string File);

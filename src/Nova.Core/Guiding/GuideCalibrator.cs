@@ -2,6 +2,13 @@ using Nova.Core.Equipment;
 
 namespace Nova.Core.Guiding;
 
+/// <summary>
+/// Where the star was during calibration (pixels from where the West steps started, image axes): which phase it was
+/// in ("West", "East", "North", "South") and its position after each step. Plotted, the West/East and North/South
+/// points make two lines; square to each other means a good calibration (PHD2's calibration graph).
+/// </summary>
+public sealed record CalibrationPoint(string Phase, double X, double Y);
+
 /// <summary>What the calibrator wants next: a pulse, then a frame to see where the star went.</summary>
 public sealed record CalibrationStep(GuideDirection Direction, int Milliseconds, string Phase);
 
@@ -28,6 +35,8 @@ public sealed class GuideCalibrator
     private double _startX, _startY;
     private bool _started;
     private (double Dx, double Dy) _west, _north;
+    private readonly List<CalibrationPoint> _points = [];
+    private double _originX, _originY;
 
     /// <param name="stepMs">Each pulse (ms): see <see cref="StepMilliseconds"/>.</param>
     /// <param name="targetPixels">How far each axis should move the star (PHD2 uses 25).</param>
@@ -50,6 +59,8 @@ public sealed class GuideCalibrator
     public GuideCalibration? Result { get; private set; }
     /// <summary>A note on a calibration that worked but looks doubtful (axes far from square, very different rates).</summary>
     public string? Warning { get; private set; }
+    /// <summary>The star's positions through the RA and Dec steps, for a calibration graph.</summary>
+    public IReadOnlyList<CalibrationPoint> Points => _points;
     public string Status => _phase switch
     {
         Phase.Backlash => $"Clearing Dec backlash ({_steps})",
@@ -79,8 +90,10 @@ public sealed class GuideCalibrator
         if (!_started)
         {
             (_startX, _startY, _started) = (x, y, true);
+            if (_phase == Phase.West) Begin(Phase.West, x, y);
             return Pulse(_phase == Phase.Backlash ? GuideDirection.North : GuideDirection.West);
         }
+        if (_phase is not Phase.Backlash) Record(x, y);
 
         var (dx, dy) = (x - _startX, y - _startY);
         var moved = Math.Sqrt(dx * dx + dy * dy);
@@ -144,7 +157,15 @@ public sealed class GuideCalibrator
         return new CalibrationStep(direction, _stepMs, _phase.ToString());
     }
 
-    private void Begin(Phase phase, double x, double y) => (_phase, _steps, _startX, _startY) = (phase, 0, x, y);
+    private void Begin(Phase phase, double x, double y)
+    {
+        (_phase, _steps, _startX, _startY) = (phase, 0, x, y);
+        if (phase == Phase.West) (_originX, _originY) = (x, y);
+        if (phase is Phase.West or Phase.North) Record(x, y); // where the line starts
+    }
+
+    private void Record(double x, double y) =>
+        _points.Add(new CalibrationPoint(_phase.ToString(), Math.Round(x - _originX, 2), Math.Round(y - _originY, 2)));
 
     private CalibrationStep? Fail(string error)
     {

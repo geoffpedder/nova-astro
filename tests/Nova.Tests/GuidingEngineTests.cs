@@ -91,6 +91,26 @@ public class GuidingEngineTests
     }
 
     [Fact]
+    public void CalibrationRecordsThePathForAGraph()
+    {
+        var sky = new FakeSky(30, 4, 300, 4, backlashPx: 2);
+        var calibrator = new GuideCalibrator(500, 0, null);
+        for (var step = calibrator.Next(sky.X, sky.Y); step is not null; step = calibrator.Next(sky.X, sky.Y))
+            sky.Pulse(step.Direction, step.Milliseconds);
+        Assert.True(calibrator.IsDone);
+
+        var points = calibrator.Points;
+        Assert.Equal(["West", "East", "North", "South"], points.Select(p => p.Phase).Distinct());
+        Assert.Equal(new CalibrationPoint("West", 0, 0), points[0]); // measured from where the West steps began
+        // The West points lie along the RA direction (30°), the North ones along Dec (300°), from where they started.
+        var west = points.Where(p => p.Phase == "West").Last();
+        Assert.Equal(30, Math.Atan2(west.Y, west.X) * 180 / Math.PI, 1);
+        var north = points.Where(p => p.Phase == "North").ToList();
+        var angle = Math.Atan2(north[^1].Y - north[0].Y, north[^1].X - north[0].X) * 180 / Math.PI;
+        Assert.Equal(-60, angle, 1);
+    }
+
+    [Fact]
     public void CalibrationFailsWhenTheStarDoesNotMove()
     {
         var calibrator = new GuideCalibrator(500, 0, null, maxSteps: 10);

@@ -240,7 +240,9 @@ PHD2 stays the default until it has proven itself under the sky, and you can swi
   and where it should be (green cross).
 - **Calibrate** measures how guide pulses move the star: north until Dec backlash is taken up, west until the star has
   moved 25 pixels and back east, then north and back south. The summary shows each axis's direction and speed and how
-  far from square they are; over 10° is a warning to calibrate again. **Guide** calibrates first when there's no
+  far from square they are; over 10° is a warning to calibrate again. **Graph** (and the Guiding tab) draws it as PHD2
+  does: where the star went after each West/East step (blue) and North/South step (red). Two straight lines crossing
+  square is a good calibration; a bent or short Dec line usually means Dec backlash. **Guide** calibrates first when there's no
   calibration yet. A calibration is kept (in `guider.json`) for that camera, output and binning, adjusted for where
   the scope points (RA moves less sky towards the pole) and for meridian flips; **Clear** forgets it.
 - **Guide** locks on the star where it is and corrects every frame. RA uses PHD2's *Hysteresis* (70%

@@ -1,6 +1,7 @@
 <script lang="ts">
   import { api } from '../lib/api'
   import { act, nova } from '../lib/state.svelte'
+  import CalibrationGraph from './CalibrationGraph.svelte'
 
   // NOVA's own guider, full size: the whole guide frame with the stars it follows (click one to guide on it), the
   // lock star close up, the buttons, and a large graph of the last 10 minutes or so.
@@ -152,8 +153,9 @@
           <span class="muted">Dec {calibration.decDegrees.toFixed(0)}°{calibration.pierSide ? `, pier ${calibration.pierSide.toLowerCase()}` : ''}</span>
           <span>RA {calibration.raAngle.toFixed(0)}° at {rate(calibration.raRate, calibration.raArcsecPerSecond)}</span>
           <span>Dec {calibration.decAngle.toFixed(0)}° at {rate(calibration.decRate, calibration.decArcsecPerSecond)}</span>
-          <span class:warn={calibration.orthogonality > 10}>{calibration.orthogonality.toFixed(1)}° from square</span>
         </div>
+        <CalibrationGraph {calibration} />
+        {#if calibration.warning}<p class="small warn">{calibration.warning}</p>{/if}
       {:else}
         <p class="muted small">Not calibrated yet: Guide calibrates first.</p>
       {/if}
@@ -263,6 +265,10 @@
     display: flex;
     flex-direction: column;
     gap: 8px;
+    overflow-y: auto;
+  }
+  aside > :global(*) {
+    flex-shrink: 0;
   }
   .zoom {
     width: 100%;

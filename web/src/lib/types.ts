@@ -644,6 +644,8 @@ export interface GuideCalibrationInfo {
   pierSide: 'East' | 'West' | null
   utc: string
   warning: string | null
+  /** Where the star went after each calibration step (pixels from where the West steps began), for the graph. */
+  points: { phase: 'West' | 'East' | 'North' | 'South'; x: number; y: number }[] | null
 }
 
 export interface NovaGuiderStatus {

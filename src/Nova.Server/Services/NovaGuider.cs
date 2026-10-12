@@ -232,12 +232,25 @@ public sealed class NovaGuider : IAsyncDisposable
         }
     }
 
-    /// <summary>The latest guide frame as a PNG (stretched), or null before the first.</summary>
-    public byte[]? FramePng()
+    /// <summary>
+    /// The latest guide frame as a PNG, or null before the first. Guide frames are short and faint, so the usual auto
+    /// stretch (background at a quarter brightness) mostly shows noise: <paramref name="stretch"/> "low" keeps the
+    /// background black with just the stars, "medium" (the default) shows a little background, "high" is the full
+    /// auto stretch, for finding faint stars.
+    /// </summary>
+    public byte[]? FramePng(string? stretch = null)
     {
         RawImage? frame;
         lock (_sync) frame = _frame;
-        return frame is null ? null : Preview.Render(frame, maxSize: 2000).Png;
+        if (frame is null) return null;
+        var (background, clipping) = stretch?.ToLowerInvariant() switch
+        {
+            "low" => (0.02, -0.5),
+            "high" => (0.25, -2.8),
+            _ => (0.06, -1.0),
+        };
+        var stats = Preview.ComputeStatistics(frame.Pixels);
+        return Png.EncodeGray8(frame.Width, frame.Height, Preview.AutoStretch(frame.Pixels, stats, background, clipping));
     }
 
     /// <summary>Exposes the guide camera in a loop and follows the brightest suitable star (no corrections).</summary>

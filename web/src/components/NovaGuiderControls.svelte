@@ -1,6 +1,7 @@
 <script lang="ts">
   import { api } from '../lib/api'
   import { act, nova } from '../lib/state.svelte'
+  import { guideView } from '../lib/guideView.svelte'
   import { ask } from '../lib/confirm.svelte'
   import CalibrationGraph from './CalibrationGraph.svelte'
 
@@ -30,7 +31,7 @@
   $effect(() => {
     const frame = n?.frame ?? 0
     if (!frame) return
-    const url = api.guideFrameUrl(frame)
+    const url = api.guideFrameUrl(frame, guideView.stretch)
     const img = new Image()
     img.onload = () => (shown = url)
     img.src = url

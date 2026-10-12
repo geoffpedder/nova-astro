@@ -209,6 +209,6 @@ over SignalR at `/hub`. The main endpoints:
 | POST | `/api/guider/loop` · `/calibrate` · `/calibration/clear` | NOVA's guider: loop the guide camera, calibrate, forget the calibration. State in the status under `guider.nova` |
 | POST | `/api/guider/darks/build` · `/darks/clear` | NOVA's guider: take a dark library for the guide camera `{ "exposures": [1, 2, 3], "frames": 5 }` (scope covered; Stop cancels), or delete it. In the status under `guider.nova.darks` / `darkProgress` |
 | POST | `/api/guider/select` | NOVA's guider: guide on the star nearest `{ "x": 312, "y": 140 }` (guide frame pixels; while looping or guiding) |
-| GET | `/api/guider/frame.png` | NOVA's guider: the latest guide frame, stretched. Its tracked stars are in the status under `guider.nova.stars` |
+| GET | `/api/guider/frame.png` | NOVA's guider: the latest guide frame, stretched (`?stretch=low`, `medium` (default) or `high`). Its tracked stars are in the status under `guider.nova.stars` |
 
 Hub events on `/hub`: `status`, `exposureProgress`, `imageReady`, `log`, `logHistory`.

@@ -1,6 +1,7 @@
 <script lang="ts">
   import { api } from '../lib/api'
   import { act, nova } from '../lib/state.svelte'
+  import { guideView, setGuideStretch, type GuideStretch } from '../lib/guideView.svelte'
   import CalibrationGraph from './CalibrationGraph.svelte'
 
   // NOVA's own guider, full size: the whole guide frame with the stars it follows (click one to guide on it), the
@@ -28,7 +29,7 @@
   $effect(() => {
     const frame = n?.frame ?? 0
     if (!frame) return
-    const url = api.guideFrameUrl(frame)
+    const url = api.guideFrameUrl(frame, guideView.stretch)
     const img = new Image()
     img.onload = () => (shown = url)
     img.src = url
@@ -90,6 +91,11 @@
     </button>
     <button class="danger" disabled={!running && !n?.darkProgress} onclick={() => act(api.guiderStop)}>Stop</button>
     <span class="gap"></span>
+    <div class="segmented" role="group" aria-label="Stretch" title="How bright the guide frame is shown: Low is just the stars, High shows faint ones (and the noise)">
+      {#each ['low', 'medium', 'high'] as level (level)}
+        <button class:on={guideView.stretch === level} onclick={() => setGuideStretch(level as GuideStretch)}>{level === 'medium' ? 'Med' : level[0].toUpperCase() + level.slice(1)}</button>
+      {/each}
+    </div>
     <label class="field">Exposure
       <input class="mono" type="number" min="0.05" max="30" step="0.5" value={s?.exposureSeconds ?? 2} onchange={saveExposure} /> s
     </label>
@@ -220,6 +226,27 @@
   }
   .gap {
     flex: 1;
+  }
+  .segmented {
+    display: flex;
+  }
+  .segmented button {
+    border-radius: 0;
+    color: var(--muted);
+    background: transparent;
+    border: 1px solid var(--panel-border);
+    padding: 3px 8px;
+    font-size: 12px;
+  }
+  .segmented button:first-child {
+    border-radius: var(--radius) 0 0 var(--radius);
+  }
+  .segmented button:last-child {
+    border-radius: 0 var(--radius) var(--radius) 0;
+  }
+  .segmented button.on {
+    color: var(--accent);
+    border-color: var(--accent);
   }
   .field {
     display: flex;

@@ -4,6 +4,12 @@ What changed in each release. The newest is first. A release's section here beco
 
 ## [Unreleased]
 
+### Fixed
+- **Noise measured on coarse frames:** a ZWO guide camera's 12-bit values (multiples of 16) on a quiet background
+  left most pixels on one exact value, so NOVA measured no noise at all. Star detection then took hundreds of noise
+  specks for stars, and the stretch showed the frame as white noise whatever the setting. Affected any frame like
+  that, guide frames most.
+
 ### Added
 - **NOVA's own guider** (new; PHD2 stays the default): pick **NOVA** at the top of the Guider panel to guide with no
   PHD2 at all. Guide camera and output (the mount's pulse guiding, or a camera's ST4 port), Loop with a live view of

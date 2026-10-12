@@ -100,6 +100,19 @@ public class StarDetectorTests
     }
 
     [Fact]
+    public void FindsJustTheStarsInAQuantisedGuideFrame()
+    {
+        // A ZWO guide camera: 12-bit values in 16-bit (multiples of 16) on a quiet background, so most of the
+        // background is one exact value. The noise must still be measured, or every speck above it is a "star".
+        var image = Synthetic(640, 480, 1.5, Grid(640, 480, 120, 30_000), background: 400, noise: 6, seed: 3);
+        for (var i = 0; i < image.Pixels.Length; i++) image.Pixels[i] = MathF.Round(image.Pixels[i] / 16) * 16;
+        var expected = Grid(640, 480, 120, 30_000).Count();
+
+        var analysis = StarDetector.Analyze(image);
+        Assert.InRange(analysis.Stars.Count, expected - 2, expected);
+    }
+
+    [Fact]
     public async Task SimulatedStarsGrowWhenDefocused()
     {
         await using var simulator = new SimulatorProvider();

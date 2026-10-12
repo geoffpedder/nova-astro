@@ -85,6 +85,45 @@ public class PreviewTests
         Assert.Equal(255, stretched[0]);
     }
 
+    /// <summary>
+    /// A ZWO guide camera's frame: 12-bit data in 16-bit (every value a multiple of 16), a dark background with little
+    /// noise, so most pixels hold exactly the same value and the MAD comes out as 0. A few stars.
+    /// </summary>
+    private static float[] QuantisedGuideFrame()
+    {
+        var random = new Random(2);
+        var pixels = new float[200_000];
+        for (var i = 0; i < pixels.Length; i++)
+        {
+            var g = Math.Sqrt(-2 * Math.Log(1 - random.NextDouble())) * Math.Cos(2 * Math.PI * random.NextDouble());
+            pixels[i] = (float)(Math.Round((400 + g * 6) / 16) * 16);
+        }
+        for (var s = 0; s < 20; s++) pixels[random.Next(pixels.Length)] = 20_000;
+        return pixels;
+    }
+
+    [Fact]
+    public void NoiseIsMeasuredOnQuantisedFrames()
+    {
+        var pixels = QuantisedGuideFrame();
+        var stats = Preview.ComputeStatistics(pixels);
+        // Most pixels are 400 exactly, yet there is noise: about 6 ADU (σ), so a MAD of about 4.
+        Assert.InRange(stats.Mad, 2, 10);
+    }
+
+    [Fact]
+    public void GentleAndFullStretchDifferOnQuantisedFrames()
+    {
+        var pixels = QuantisedGuideFrame();
+        var stats = Preview.ComputeStatistics(pixels);
+        double Bright(byte[] image) => image.Count(v => v > 128) / (double)image.Length;
+        var gentle = Preview.AutoStretch(pixels, stats, 0.02, -0.5);
+        var full = Preview.AutoStretch(pixels, stats);
+        Assert.True(Bright(gentle) < 0.01, $"{Bright(gentle):P1} of a gentle stretch is bright: noise shown as stars");
+        Assert.True(Bright(gentle) < Bright(full) || Bright(full) < 0.01);
+        Assert.NotEqual(gentle.Order().ElementAt(gentle.Length / 2), full.Order().ElementAt(full.Length / 2)); // backgrounds differ
+    }
+
     [Fact]
     public void RendersPng()
     {

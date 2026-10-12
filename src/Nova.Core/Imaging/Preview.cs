@@ -125,7 +125,25 @@ public static class Preview
         var deviations = new int[HistogramBins];
         for (var i = 0; i < HistogramBins; i++)
             if (histogram[i] != 0) deviations[Math.Abs(i - medianBin)] += histogram[i];
-        var madBins = FindMedianBin(deviations, pixels.Length);
+        double madBins = FindMedianBin(deviations, pixels.Length);
+
+        // Coarse data (a 12-bit camera's values are multiples of 16; 8-bit frames) with a quiet background: over half
+        // the pixels share the median's exact value, so the MAD is 0 although there is noise, and a stretch then
+        // turns everything one step above the background white. Estimate it from the spread of the central 95%
+        // instead (RMS, as a MAD: × 0.6745 for Gaussian noise).
+        if (madBins == 0)
+        {
+            var limit = (long)(pixels.Length * 0.95);
+            long counted = 0;
+            double squares = 0;
+            for (var d = 0; d < HistogramBins && counted < limit; d++)
+            {
+                var n = Math.Min(deviations[d], limit - counted);
+                squares += n * (double)d * d;
+                counted += n;
+            }
+            if (counted > 0) madBins = 0.6745 * Math.Sqrt(squares / counted);
+        }
 
         return new ImageStatistics(min, max, sum / pixels.Length, min + medianBin / scale, madBins / scale);
     }

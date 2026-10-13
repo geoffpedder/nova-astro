@@ -235,6 +235,35 @@ public class NovaGuiderTests : IDisposable
     }
 
     [Fact]
+    public async Task GuidingAssistantMeasuresTheSeeingAndAppliesItsAdvice()
+    {
+        await using var rig = await SetUpAsync();
+        using var timeout = new CancellationTokenSource(TimeSpan.FromMinutes(2));
+        await rig.Nova.CalibrateAsync(timeout.Token); // so it measures along RA and Dec
+        rig.Mount.SeeingJitterArcsec = 2;             // the star jumps ~2″ (half a guide pixel) per frame and axis
+
+        Assert.False(rig.Guider.Assistant(10, out var tooShort));
+        Assert.Contains("30", tooShort);
+        await rig.Nova.AssistantAsync(30, timeout.Token);
+
+        var result = rig.Nova.Status.Assistant!;
+        Assert.Equal("RA/Dec", result.Axes);
+        Assert.Equal("arcsec", result.Units);
+        Assert.InRange(result.JitterRa, 1.3, 2.8);
+        Assert.InRange(result.JitterDec, 1.3, 2.8);
+        Assert.True(result.Frames > 20, $"{result.Frames} frames");
+        Assert.Equal(4, result.RecommendedExposure); // over 1.5″ of jitter: longer exposures average it
+        Assert.InRange(result.RecommendedRaMinMove, 0.2, 0.5); // 0.65 × ~0.5 px
+        Assert.Equal((result.JitterRa, result.JitterDec), rig.Nova.Seeing);
+
+        rig.Nova.ApplyAssistant();
+        Assert.Equal(result.RecommendedRaMinMove, rig.Nova.Settings.Algorithms.RaMinMove);
+        Assert.Equal(result.RecommendedDecMinMove, rig.Nova.Settings.Algorithms.DecMinMove);
+        Assert.Equal(4, rig.Nova.Settings.ExposureSeconds);
+        await rig.Nova.StopAsync();
+    }
+
+    [Fact]
     public async Task SwitchingBackendsAndRefusals()
     {
         await using var rig = await SetUpAsync();

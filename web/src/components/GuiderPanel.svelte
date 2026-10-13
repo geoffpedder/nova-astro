@@ -149,6 +149,9 @@
       <div class="legend muted">
         <span class="ra-key">— RA</span><span class="dec-key">— Dec</span>{#if chart.dithers.length}<span class="dither-key">┆ dither</span>{/if}<span>±{fmt(chart.limit, 1)}{unit}</span>
       </div>
+      {#if guider?.diagnosis}
+        <p class="diagnosis" class:warn={guider.diagnosis.axes.some((a) => a.verdict === 'chasing' || a.verdict === 'lagging')}>{guider.diagnosis.summary}</p>
+      {/if}
     {/if}
 
     <div class="row">
@@ -295,6 +298,14 @@
   }
   .dither {
     width: 60px;
+  }
+  .diagnosis {
+    margin: -4px 0 8px;
+    font-size: 12px;
+    color: var(--muted);
+  }
+  .diagnosis.warn {
+    color: var(--warn);
   }
   .spacer {
     flex: 1;

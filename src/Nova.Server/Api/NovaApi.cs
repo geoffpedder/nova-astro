@@ -67,6 +67,9 @@ public sealed record GuiderBackendRequest(string Backend);
 /// <summary>Dark exposures (seconds) for the guide camera, and how many darks to take at each.</summary>
 public sealed record GuideDarksRequest(double[] Exposures, int Frames = 5);
 
+/// <summary>How long the guiding assistant follows the star unguided.</summary>
+public sealed record GuidingAssistantRequest(double Seconds = 120);
+
 /// <summary>A point of the guide frame, in its pixels.</summary>
 public sealed record GuideStarRequest(double X, double Y);
 
@@ -866,6 +869,14 @@ public static class NovaApi
             ConflictOnRefusal(() =>
             {
                 (guider.Nova ?? throw new InvalidOperationException("NOVA's own guider isn't available")).SelectStar(request.X, request.Y);
+                return Task.CompletedTask;
+            }));
+        api.MapPost("/guider/assistant", (GuidingAssistantRequest request, GuiderService guider) =>
+            OperationResult(guider.Assistant(request.Seconds, out var error), error));
+        api.MapPost("/guider/assistant/apply", (GuiderService guider) =>
+            ConflictOnRefusal(() =>
+            {
+                (guider.Nova ?? throw new InvalidOperationException("NOVA's own guider isn't available")).ApplyAssistant();
                 return Task.CompletedTask;
             }));
         api.MapGet("/guider/logs", (GuiderService guider) => guider.Nova?.GuideLogs() ?? []);

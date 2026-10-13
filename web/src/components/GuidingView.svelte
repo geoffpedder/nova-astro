@@ -81,6 +81,24 @@
   const steps = 300
   const chart = $derived(guideGraph(guider?.history ?? [], steps, 300, 100))
 
+  // Guiding assistant: how long to follow the star unguided.
+  let assistantSeconds = $state(120)
+  const assistant = $derived(n?.assistant)
+  const assistantRunning = $derived(!!n?.activity?.startsWith('Guiding assistant'))
+  const au = $derived(assistant?.units === 'arcsec' ? '″' : ' px')
+
+  // The verdict on recent guiding, and what guiding does to the stars: guiding blur combines with seeing (and
+  // focus, optics) roughly in quadrature, so the latest frame's FWHM shows how big a part it plays.
+  const diagnosis = $derived(guider?.diagnosis)
+  const latest = $derived(nova.status?.latestImage)
+  const frameFwhm = $derived(latest && !latest.openedFile ? latest.stars.fwhmArcsec : null)
+  const withoutGuiding = $derived(
+    diagnosis?.blurArcsec != null && frameFwhm != null && frameFwhm > diagnosis.blurArcsec
+      ? Math.sqrt(frameFwhm * frameFwhm - diagnosis.blurArcsec * diagnosis.blurArcsec)
+      : null,
+  )
+  const diagnosisWarn = $derived(diagnosis?.axes.some((a) => a.verdict === 'chasing' || a.verdict === 'lagging') ?? false)
+
   const when = (utc: string) => new Date(utc).toLocaleString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })
   const rate = (px: number, arcsec: number | null) => (arcsec != null ? `${arcsec.toFixed(1)}″/s` : `${px.toFixed(1)} px/s`)
 </script>
@@ -97,6 +115,13 @@
       title="Expose the guide camera in a loop and pick a guide star, without correcting">Loop</button>
     <button class="secondary" disabled={phase === 'Calibrating'} onclick={() => act(api.guiderCalibrate)}
       title="Measure how guide pulses move the star (near the meridian and Dec 0 is best)">Calibrate</button>
+    <span class="assist">
+      <button class="secondary" disabled={assistantRunning || phase === 'Calibrating'} onclick={() => act(() => api.guiderAssistant(assistantSeconds))}
+        title="Follow the star with corrections off and measure the seeing, drift and periodic error; then recommends settings (guiding pauses)">Assistant</button>
+      <select bind:value={assistantSeconds} aria-label="How long the assistant measures" title="How long the assistant measures">
+        <option value={60}>1 min</option><option value={120}>2 min</option><option value={180}>3 min</option><option value={300}>5 min</option>
+      </select>
+    </span>
     <button disabled={guider?.settling || !guider?.connected} onclick={() => act(() => api.guide())}>
       {phase === 'Guiding' || phase === 'LostLock' ? 'Restart' : 'Guide'}
     </button>
@@ -164,6 +189,17 @@
         <span></span><span>Dec {fmt(stats?.peakDec)}{unit}</span>
         <span></span><span class="muted">{stats?.samples ?? 0} steps</span>
       </div>
+      {#if assistant}
+        <div class="assistant-result mono">
+          <span class="muted">Assistant {when(assistant.utc)}, {Math.round(assistant.seconds)} s</span>
+          <span>Seeing {assistant.jitterRa.toFixed(2)}{au} {assistant.axes === 'RA/Dec' ? 'RA' : 'X'}, {assistant.jitterDec.toFixed(2)}{au} {assistant.axes === 'RA/Dec' ? 'Dec' : 'Y'}</span>
+          <span>Drift {assistant.driftRa.toFixed(2)}, {assistant.driftDec.toFixed(2)}{au}/min</span>
+          {#if assistant.axes === 'RA/Dec'}<span>RA wander {assistant.periodicRa.toFixed(1)}{au} p-p</span>{/if}
+          {#if assistant.polarErrorArcmin != null}<span>Polar error ≥ {assistant.polarErrorArcmin >= 60 ? `${(assistant.polarErrorArcmin / 60).toFixed(1)}°` : `${assistant.polarErrorArcmin.toFixed(0)}′`}</span>{/if}
+          <span class="rec">Suggests min move RA {assistant.recommendedRaMinMove.toFixed(2)}, Dec {assistant.recommendedDecMinMove.toFixed(2)} px{assistant.recommendedExposure != null ? `, ${assistant.recommendedExposure} s exposures` : ''}</span>
+          <button class="secondary apply" disabled={assistantRunning} onclick={() => act(api.guiderApplyAssistant)}>Apply</button>
+        </div>
+      {/if}
       {#if calibration}
         <div class="calibration mono">
           <span class="muted">Calibrated {when(calibration.utc)}</span>
@@ -197,6 +233,14 @@
     </aside>
   </div>
 
+  {#if diagnosis}
+    <p class="diagnosis" class:warn={diagnosisWarn}>
+      {diagnosis.summary}.
+      {#if diagnosis.blurArcsec != null}
+        <span class="muted">Guiding adds about {diagnosis.blurArcsec.toFixed(1)}″ to star FWHM{#if frameFwhm != null}; the latest frame's stars are {frameFwhm.toFixed(1)}″{#if withoutGuiding != null && frameFwhm - withoutGuiding >= 0.1} (about {withoutGuiding.toFixed(1)}″ without it){/if}{/if}.</span>
+      {/if}
+    </p>
+  {/if}
   {#if drift?.significant}
     <p class="drift">Dec drifting {drift.arcsecPerMinute.toFixed(0)}″/min: polar alignment at least {polar(drift.polarErrorArcmin)} off</p>
   {/if}
@@ -349,6 +393,34 @@
   .small {
     font-size: 12px;
     margin: 0;
+  }
+  .assist {
+    display: inline-flex;
+    gap: 4px;
+  }
+  .assist select {
+    font-size: 12px;
+  }
+  .assistant-result {
+    display: flex;
+    flex-direction: column;
+    font-size: 12px;
+    border: 1px solid var(--panel-border);
+    border-radius: var(--radius);
+    padding: 6px 8px;
+  }
+  .assistant-result .rec {
+    margin-top: 2px;
+  }
+  .assistant-result .apply {
+    align-self: flex-start;
+    margin-top: 4px;
+    font-size: 11px;
+    padding: 1px 10px;
+  }
+  .diagnosis {
+    margin: 0;
+    font-size: 13px;
   }
   .logs {
     display: flex;

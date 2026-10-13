@@ -588,6 +588,35 @@ export interface GuiderStatus {
   backend: 'phd2' | 'nova'
   /** NOVA's own guider (also while PHD2 is in use, for switching). */
   nova: NovaGuiderStatus | null
+  /** Whether the recent guiding is seeing-limited or settings could improve it (after 30 steady steps). */
+  diagnosis: GuideDiagnosis | null
+}
+
+export interface GuideDiagnosis {
+  /** One line for under the graph. */
+  summary: string
+  axes: { axis: string; rms: number; lag1: number; verdict: 'seeing-limited' | 'chasing' | 'lagging' | 'random'; text: string }[]
+  /** How much guiding widens the stars (FWHM, ″): 2.355 × total RMS. */
+  blurArcsec: number | null
+}
+
+/** What the guiding assistant measured with corrections off (distances in `units`; min moves in pixels). */
+export interface GuidingAssistantResult {
+  utc: string
+  seconds: number
+  frames: number
+  axes: 'RA/Dec' | 'X/Y'
+  units: 'arcsec' | 'px'
+  jitterRa: number
+  jitterDec: number
+  driftRa: number
+  driftDec: number
+  periodicRa: number
+  polarErrorArcmin: number | null
+  recommendedRaMinMove: number
+  recommendedDecMinMove: number
+  recommendedExposure: number | null
+  summary: string
 }
 
 export type DecGuideMode = 'Auto' | 'North' | 'South' | 'Off'
@@ -680,6 +709,8 @@ export interface NovaGuiderStatus {
   darkProgress: string | null
   /** The guide camera's gain now and its range (when connected). */
   cameraGain: { value: number; min: number; max: number; step: number } | null
+  /** The guiding assistant's last result for this guide camera. */
+  assistant: GuidingAssistantResult | null
 }
 
 export interface DecDrift {

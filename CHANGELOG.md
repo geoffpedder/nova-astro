@@ -22,6 +22,11 @@ What changed in each release. The newest is first. A release's section here beco
 - **Guiding tab** for NOVA's guider: the whole guide frame with the guide star and the stars averaged with it marked
   (click another star to guide on it), the guide star close up, RMS and peaks, the calibration, a large graph of the
   last 300 steps, and all the buttons.
+- **Seeing or settings?** Under the guiding graphs, a verdict on recent guiding: seeing-limited, within the min move,
+  see-sawing (lower the aggressiveness) or lagging (raise it), and how much guiding adds to star size next to the
+  latest frame's FWHM.
+- **Guiding assistant** (NOVA's guider), like PHD2's: corrections off for a few minutes to measure the seeing, drift,
+  polar error and periodic error; suggests min moves (and longer exposures in poor seeing), with **Apply**.
 - **Exposure progress in the header:** while a sequence runs, a thin bar along the bottom of its status box fills as
   the current exposure goes.
 - **Guide logs** for NOVA's guider, in PHD2's guide-log format (so PHD2's log viewers can open them): every

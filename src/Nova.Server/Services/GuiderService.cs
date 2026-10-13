@@ -11,7 +11,7 @@ public sealed record GuiderStatus(
     string Host, bool Connected, GuiderState State, bool Settling, string? Version,
     double? PixelScale, double? Snr, double? Hfd, GuideStats Stats, IReadOnlyList<GuidePoint> History,
     IReadOnlyList<Phd2Profile> Profiles, Phd2Profile? Profile, bool EquipmentConnected, int? ScreenPort, bool AutoConnect,
-    DecDrift? Drift, string Backend = "phd2", NovaGuiderStatus? Nova = null);
+    DecDrift? Drift, string Backend = "phd2", NovaGuiderStatus? Nova = null, GuideDiagnosis? Diagnosis = null);
 
 /// <summary>
 /// The guider everything else uses (sequences, notifications, the Guider panel), in front of one of two backends:
@@ -51,7 +51,7 @@ public sealed class GuiderService : IAsyncDisposable
     /// <summary>NOVA's own guider (for its settings, calibration and guide frame), or null when not available.</summary>
     public NovaGuider? Nova => _nova;
 
-    public GuiderStatus Status => IsNova
+    public GuiderStatus Status => WithDiagnosis(IsNova
         ? new(
             "NOVA", _nova!.IsReady, _nova.State, _nova.IsSettling, null,
             _nova.PixelScale, _nova.Snr, _nova.Hfd, _nova.Stats, _nova.History,
@@ -60,7 +60,32 @@ public sealed class GuiderService : IAsyncDisposable
             Host, _phd2.IsConnected, _phd2.State, _phd2.IsSettling, _phd2.Version,
             _phd2.PixelScale, _phd2.Snr, _phd2.Hfd, _phd2.Stats, _phd2.History,
             _phd2.Profiles, _phd2.Profile, _phd2.EquipmentConnected, _options.Phd2ScreenPort > 0 ? _options.Phd2ScreenPort : null,
-            WantsConnection, _phd2.Drift, "phd2", _nova?.Status);
+            WantsConnection, _phd2.Drift, "phd2", _nova?.Status));
+
+    /// <summary>
+    /// Adds the verdict on the recent guiding (seeing-limited, or settings worth changing): against the seeing NOVA's
+    /// guiding assistant measured when NOVA guides, from the errors' pattern alone with PHD2.
+    /// </summary>
+    private GuiderStatus WithDiagnosis(GuiderStatus status)
+    {
+        var seeing = IsNova && status.Stats.Units == "arcsec" ? _nova!.Seeing : null;
+        // NOVA's min moves (pixels) in the history's units; PHD2 doesn't say what it uses.
+        double? scale = status.Stats.Units == "arcsec" ? status.PixelScale : 1;
+        var a = _nova?.Settings.Algorithms;
+        var (minRa, minDec) = IsNova && a is not null && scale is { } s ? (a.RaMinMove * s, a.DecMinMove * s) : ((double?)null, (double?)null);
+        return status with { Diagnosis = GuidingDiagnosis.Diagnose(status.History, status.Stats.Units, seeing?.Ra, seeing?.Dec, minRa, minDec) };
+    }
+
+    /// <summary>NOVA's guider: run the guiding assistant (corrections off) for this long.</summary>
+    public bool Assistant(double seconds, out string? error)
+    {
+        if (seconds is < 30 or > 900)
+        {
+            error = "Run the assistant for 30–900 seconds";
+            return false;
+        }
+        return StartNova("Guiding assistant", ct => _nova!.AssistantAsync(seconds, ct), "Guiding assistant done", out error);
+    }
 
     /// <summary>Whether guiding can be started: PHD2 is connected, or NOVA's guider has a guide camera.</summary>
     public bool IsConnected => IsNova ? _nova!.IsReady : _phd2.IsConnected;

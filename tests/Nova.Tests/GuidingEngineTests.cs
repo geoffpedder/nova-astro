@@ -380,6 +380,78 @@ public class GuidingEngineTests
         }
     }
 
+    private static double Gauss(Random r) => Math.Sqrt(-2 * Math.Log(1 - r.NextDouble())) * Math.Cos(2 * Math.PI * r.NextDouble());
+
+    [Fact]
+    public void GuidingAssistantSeparatesSeeingDriftAndPeriodicError()
+    {
+        // Two minutes of 2 s frames, unguided: seeing 0.3 px RMS per axis, Dec drifting 0.5 px a minute, RA a slow
+        // ±1.5 px wave (periodic error), at 2″ a pixel.
+        var random = new Random(7);
+        var assistant = new GuidingAssistant();
+        for (var t = 0.0; t <= 120; t += 2)
+            assistant.Add(t, 1.5 * Math.Sin(2 * Math.PI * t / 120) + 0.3 * Gauss(random), 0.5 * t / 60 + 0.3 * Gauss(random));
+
+        var result = assistant.Result(DateTime.UtcNow, 2, calibrated: true, exposureSeconds: 2)!;
+        Assert.Equal("arcsec", result.Units);
+        Assert.Equal("RA/Dec", result.Axes);
+        Assert.InRange(result.JitterRa, 0.45, 0.75);        // 0.3 px × 2″
+        Assert.InRange(result.JitterDec, 0.45, 0.75);
+        Assert.InRange(result.DriftDec, 0.8, 1.2);          // 0.5 px/min × 2″
+        Assert.InRange(result.PeriodicRa, 3.0, 6.5);        // the ±1.5 px wave: 6″ peak to peak, less smoothing
+        Assert.InRange(result.PolarErrorArcmin!.Value, 3, 5); // 1″/min ÷ 0.26″/min per arcminute ≈ 4′
+        Assert.InRange(result.RecommendedRaMinMove, 0.12, 0.3);
+        Assert.Null(result.RecommendedExposure); // good seeing: no reason to change the exposure
+        Assert.Contains("Seeing jitter", result.Summary);
+
+        // Poor seeing (1.2″ a frame) asks for longer exposures to average it.
+        var poor = new GuidingAssistant();
+        for (var t = 0.0; t <= 120; t += 2) poor.Add(t, 0.6 * Gauss(random), 0.6 * Gauss(random));
+        Assert.Equal(3, poor.Result(DateTime.UtcNow, 2, true, 2)!.RecommendedExposure);
+
+        Assert.Null(new GuidingAssistant().Result(DateTime.UtcNow, 2, true, 2)); // too few frames
+    }
+
+    [Fact]
+    public void DiagnosisTellsSeeingFromSettings()
+    {
+        var random = new Random(11);
+        List<GuidePoint> Series(Func<int, double> ra, Func<int, double> dec) =>
+            Enumerable.Range(0, 60).Select(i => new GuidePoint(ra(i), dec(i))).ToList();
+
+        // Random errors the size of the measured seeing: nothing to gain.
+        var seeing = Series(_ => 0.5 * Gauss(random), _ => 0.5 * Gauss(random));
+        var d = GuidingDiagnosis.Diagnose(seeing, "arcsec", 0.5, 0.5)!;
+        Assert.StartsWith("Seeing-limited", d.Summary);
+        Assert.Equal(2.355 * Math.Sqrt(d.Axes[0].Rms * d.Axes[0].Rms + d.Axes[1].Rms * d.Axes[1].Rms), d.BlurArcsec!.Value, 1);
+
+        // Same errors without a seeing measurement: random, run the assistant.
+        Assert.Contains("guiding assistant", GuidingDiagnosis.Diagnose(seeing, "arcsec", null, null)!.Summary);
+
+        // RA see-saws (overshooting): flagged with the advice, whatever the seeing.
+        var seesaw = Series(i => (i % 2 == 0 ? 1 : -1) * (1 + 0.2 * Gauss(random)), _ => 0.3 * Gauss(random));
+        var c = GuidingDiagnosis.Diagnose(seesaw, "arcsec", 0.3, 0.3)!;
+        Assert.Equal("chasing", c.Axes[0].Verdict);
+        Assert.Contains("lower aggressiveness", c.Summary);
+
+        // RA wanders slowly (corrections too timid).
+        var wander = Series(i => 1.5 * Math.Sin(i / 6.0) + 0.1 * Gauss(random), _ => 0.3 * Gauss(random));
+        var l = GuidingDiagnosis.Diagnose(wander, "arcsec", 0.3, 0.3)!;
+        Assert.Equal("lagging", l.Axes[0].Verdict);
+        Assert.Contains("higher aggressiveness", l.Summary);
+
+        // Tiny slow wander within the min move: left alone on purpose, so not "lagging".
+        var tiny = Series(i => 0.15 * Math.Sin(i / 6.0), i => 0.1 * Math.Sin(i / 8.0));
+        Assert.Equal("lagging", GuidingDiagnosis.Diagnose(tiny, "arcsec", null, null)!.Axes[0].Verdict);
+        var fine = GuidingDiagnosis.Diagnose(tiny, "arcsec", null, null, minMoveRa: 0.6, minMoveDec: 0.8)!;
+        Assert.Equal(["fine", "fine"], fine.Axes.Select(a => a.Verdict));
+        Assert.Contains("nothing to gain", fine.Summary);
+
+        // Settling steps don't count, and too few steps give no verdict.
+        Assert.Null(GuidingDiagnosis.Diagnose(seeing.Take(20).ToList(), "arcsec", 0.5, 0.5));
+        Assert.Null(GuidingDiagnosis.Diagnose(seeing.Select(p => p with { Settling = true }).ToList(), "arcsec", 0.5, 0.5));
+    }
+
     [Fact]
     public void DitherSettlingIsMarkedAndLeftOutOfTheRms()
     {

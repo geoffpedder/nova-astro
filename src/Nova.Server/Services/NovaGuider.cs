@@ -48,7 +48,8 @@ public sealed record NovaGuiderStatus(
     NovaGuiderSettings Settings, IReadOnlyList<string> Cameras, IReadOnlyList<GuideOutputChoice> Outputs,
     string? Camera, string? Activity, GuideCalibrationInfo? Calibration, GuideStarInfo? Star,
     int Frame, int? FrameWidth, int? FrameHeight, IReadOnlyList<GuideStarMark> Stars,
-    GuideDarkInfo? Darks = null, string? DarkProgress = null, NumberSetting? CameraGain = null);
+    GuideDarkInfo? Darks = null, string? DarkProgress = null, NumberSetting? CameraGain = null,
+    GuidingAssistantResult? Assistant = null);
 
 /// <summary>The guide camera's dark library (at the current binning).</summary>
 /// <param name="GainMatches">Taken at the camera's gain now (darks at another gain aren't used).</param>
@@ -90,6 +91,10 @@ public sealed class NovaGuider : IAsyncDisposable
     private Mode _mode = Mode.Looping;
     private GuideCalibrator? _calibrator;
     private TaskCompletionSource? _calibrationDone;
+    private GuidingAssistant? _assistant;
+    private DateTime _assistantStart;
+    private double _assistantSeconds;
+    private TaskCompletionSource? _assistantDone;
     private SettleTracker? _settle;
     private TaskCompletionSource? _settled;
     private bool _rehome;
@@ -102,7 +107,7 @@ public sealed class NovaGuider : IAsyncDisposable
     private int _frameId;
     private double? _scale;
 
-    private enum Mode { Looping, Calibrating, Guiding }
+    private enum Mode { Looping, Calibrating, Guiding, Assistant }
 
     public NovaGuider(EquipmentService equipment, OpticsService? optics, IOptions<NovaOptions> options, ActivityLog log)
     {
@@ -231,7 +236,7 @@ public sealed class NovaGuider : IAsyncDisposable
                     : [];
                 return new NovaGuiderStatus(Settings, cameras, outputs, Camera?.Name, IsRunning ? _activity : null, info, star,
                     _frameId, _frame?.Width, _frame?.Height, marks, DarkInfo(Camera), _darkProgress,
-                    Camera is { IsConnected: true } c ? c.Controls.Gain : null);
+                    Camera is { IsConnected: true } c ? c.Controls.Gain : null, AssistantFor(Camera?.Name));
             }
         }
     }
@@ -340,6 +345,51 @@ public sealed class NovaGuider : IAsyncDisposable
             _last = null;
         }
     }
+
+    /// <summary>
+    /// The guiding assistant: follows the star with corrections off for <paramref name="seconds"/> and measures the
+    /// seeing jitter, the drift and RA's periodic error, then recommends min moves and an exposure (see
+    /// <see cref="GuidingAssistant"/>). Guiding stops while it runs (no pulses); Stop ends it early.
+    /// </summary>
+    public async Task AssistantAsync(double seconds, CancellationToken ct)
+    {
+        if (seconds is < 30 or > 900) throw new ArgumentException("Run the assistant for 30–900 seconds");
+        await EnsureLoopAsync(ct);
+        await WaitForStarAsync(ct);
+        var done = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        lock (_sync)
+        {
+            FailWaiters(new OperationCanceledException("The guiding assistant started"));
+            _guideLog.EndGuiding(DateTime.UtcNow);
+            (_assistant, _assistantStart, _assistantSeconds, _assistantDone) = (new GuidingAssistant(), DateTime.UtcNow, seconds, done);
+            _rehome = true; // measure from where the star is now
+            _mode = Mode.Assistant;
+            _activity = "Guiding assistant";
+        }
+        _log.Info($"Guiding assistant: following the star unguided for {seconds:0} s…");
+        await done.Task.WaitAsync(ct);
+    }
+
+    /// <summary>Takes the last assistant run's recommendations: the min moves and (when it gave one) the exposure.</summary>
+    public void ApplyAssistant()
+    {
+        var result = AssistantFor(Camera?.Name) ?? throw new InvalidOperationException("Run the guiding assistant first");
+        var s = Settings;
+        UpdateSettings(s with
+        {
+            ExposureSeconds = result.RecommendedExposure ?? s.ExposureSeconds,
+            Algorithms = s.Algorithms with { RaMinMove = result.RecommendedRaMinMove, DecMinMove = result.RecommendedDecMinMove },
+        });
+        _log.Info($"Guiding assistant's settings applied: min move RA {result.RecommendedRaMinMove:0.00} px, Dec {result.RecommendedDecMinMove:0.00} px" +
+                  (result.RecommendedExposure is { } e ? $", exposure {e:0.#} s" : ""));
+    }
+
+    /// <summary>The last assistant result for this guide camera.</summary>
+    private GuidingAssistantResult? AssistantFor(string? camera) => _saved.Assistant is { } a && a.Camera == camera ? a.Result : null;
+
+    /// <summary>The seeing jitter per axis (″) from the assistant, when it measured along RA and Dec in arcseconds.</summary>
+    public (double Ra, double Dec)? Seeing =>
+        AssistantFor(Camera?.Name) is { Units: "arcsec", Axes: "RA/Dec" } r ? (r.JitterRa, r.JitterDec) : null;
 
     public void ClearCalibration()
     {
@@ -724,6 +774,16 @@ public sealed class NovaGuider : IAsyncDisposable
                     _activity = "Looping";
                     break;
 
+                case Mode.Assistant:
+                    State = GuiderState.Looping;
+                    var cal = Current();
+                    var (alongRa, alongDec) = cal is null ? (m.Dx, m.Dy) : cal.ToAxes(m.Dx, m.Dy);
+                    var elapsed = (utc - _assistantStart).TotalSeconds;
+                    _assistant!.Add(elapsed, alongRa, alongDec);
+                    _activity = $"Guiding assistant: {elapsed:0} of {_assistantSeconds:0} s";
+                    if (elapsed >= _assistantSeconds) message = FinishAssistant(camera, utc, cal is not null);
+                    break;
+
                 case Mode.Calibrating:
                     State = GuiderState.Calibrating;
                     if (_calibrator!.Next(m.X, m.Y) is { } step) pulses.Add(new GuidePulse(step.Direction, step.Milliseconds));
@@ -819,8 +879,34 @@ public sealed class NovaGuider : IAsyncDisposable
         (_settle, _settled) = (null, null);
     }
 
+    /// <summary>Works out and keeps the assistant's result, and goes back to looping. Returns its summary to log.</summary>
+    private string? FinishAssistant(ICamera camera, DateTime utc, bool calibrated)
+    {
+        var result = _assistant!.Result(utc, PixelScale, calibrated, Settings.ExposureSeconds);
+        var done = _assistantDone;
+        (_assistant, _assistantDone, _mode) = (null, null, Mode.Looping);
+        _activity = "Looping";
+        if (result is null)
+        {
+            done?.TrySetException(new InvalidOperationException("The guiding assistant lost the star too often to measure anything"));
+            return null;
+        }
+        _saved = _saved with { Assistant = new StoredAssistant(camera.Name, result) };
+        SaveLocked();
+        done?.TrySetResult();
+        _log.Info($"Guiding assistant: {result.Summary}. Recommends min move RA {result.RecommendedRaMinMove:0.00} px, " +
+                  $"Dec {result.RecommendedDecMinMove:0.00} px" + (result.RecommendedExposure is { } e ? $", exposure {e:0.#} s" : ""));
+        return null;
+    }
+
     private void FailWaiters(Exception ex)
     {
+        if (_assistant is not null)
+        {
+            _assistantDone?.TrySetException(ex);
+            (_assistant, _assistantDone) = (null, null);
+            if (_mode == Mode.Assistant) _mode = Mode.Looping;
+        }
         if (_calibrator is { } calibrator)
             _guideLog.EndCalibration(DateTime.UtcNow, calibrator.Points, null, ex.Message, PixelScale);
         _settled?.TrySetException(ex);
@@ -961,8 +1047,11 @@ public sealed class NovaGuider : IAsyncDisposable
     private sealed record StoredDark(
         string Camera, int Binning, double? Gain, double ExposureSeconds, int Frames, DateTime Utc, int HotPixels, string File);
 
+    private sealed record StoredAssistant(string Camera, GuidingAssistantResult Result);
+
     private sealed record GuiderFile(
-        string Backend = "phd2", NovaGuiderSettings? Nova = null, StoredCalibration? Calibration = null, IReadOnlyList<StoredDark>? Darks = null)
+        string Backend = "phd2", NovaGuiderSettings? Nova = null, StoredCalibration? Calibration = null, IReadOnlyList<StoredDark>? Darks = null,
+        StoredAssistant? Assistant = null)
     {
         public IReadOnlyList<StoredDark> Darks { get; init; } = Darks ?? [];
         public NovaGuiderSettings Nova { get; init; } = Nova ?? new NovaGuiderSettings();

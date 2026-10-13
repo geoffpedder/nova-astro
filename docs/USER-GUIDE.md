@@ -271,6 +271,19 @@ guiding settles after it are shaded and left out of the RMS, so a dither doesn't
 the exposure, and how bright to show the frame: **Low** (black background, just the stars), **Med** (the default)
 or **High** (the full auto stretch, for finding faint stars, noise and all); each browser remembers it. **Click a star** in the frame to guide on it instead; while guiding, guiding carries on from that star.
 
+**Seeing or settings?** Under the graph (and under the Guider panel's graph, with PHD2 too) NOVA says what limits the
+guiding, once there are 30 steady steps: *seeing-limited* (errors the size of the seeing: nothing to gain),
+*within the min move* (the guider is leaving small errors alone on purpose), *see-saws* (corrections overshoot or chase
+the seeing: lower the aggressiveness or raise the min move), or *lags* (slow wander the corrections don't catch:
+raise the aggressiveness). It also says how much guiding adds to star size (FWHM ≈ 2.35 × the total RMS) next to the
+latest frame's FWHM, to show whether it matters.
+
+The **Assistant** button (Guiding tab) is PHD2's Guiding Assistant: for 1–5 minutes it follows the star with
+corrections off and measures the seeing (the frame-to-frame jitter no guider can follow), the drift (Dec drift gives
+the least polar error) and RA's slower wander (periodic error). It suggests min moves just above the seeing jitter, and
+longer exposures when the seeing is poor; **Apply** takes them. Run it after calibrating, so it measures along RA and
+Dec, and with the scope near where you'll image.
+
 **Guide logs**: NOVA's guider writes a log of every calibration (each step and the result) and every guide frame
 (offsets, the error on each axis, the pulses sent, the star's brightness and SNR), with dithers, settling, lost stars
 and settings changed mid-run. It's in PHD2's guide-log format, so the tools made for PHD2's logs can open it. One file

@@ -214,6 +214,9 @@ export const api = {
   guiderLoop: () => post('/api/guider/loop'),
   guiderCalibrate: () => post('/api/guider/calibrate'),
   guiderClearCalibration: () => post('/api/guider/calibration/clear'),
+  /** NOVA's guider: follow the star unguided for this long and measure seeing, drift and periodic error. */
+  guiderAssistant: (seconds: number) => post('/api/guider/assistant', { seconds }),
+  guiderApplyAssistant: () => post('/api/guider/assistant/apply'),
   /** Takes a dark library for the guide camera: frames darks at each exposure (s). The scope must be covered. */
   guideDarks: (exposures: number[], frames: number) => post('/api/guider/darks/build', { exposures, frames }),
   clearGuideDarks: () => post('/api/guider/darks/clear'),

@@ -264,6 +264,54 @@ public class NovaGuiderTests : IDisposable
     }
 
     [Fact]
+    public async Task SavesLoadsAndDeletesGuideProfiles()
+    {
+        await using var rig = await SetUpAsync();
+        var nova = rig.Nova;
+        var mine = nova.Settings with { ExposureSeconds = 1.5, Algorithms = nova.Settings.Algorithms with { RaAggressiveness = 0.55 } };
+        nova.UpdateSettings(mine);
+        nova.SaveProfile("  Windy night ");
+        Assert.Equal("Windy night", nova.Status.Profile);
+        Assert.Contains(nova.Status.Profiles!, p => p is { Name: "Windy night", BuiltIn: false });
+        Assert.Contains(nova.Status.Profiles!, p => p is { Name: "ZWO AM mount", BuiltIn: true });
+
+        // A built-in preset: its exposure, gain and algorithms; the camera stays.
+        nova.LoadProfile("ZWO AM mount");
+        Assert.Equal("ZWO AM mount", nova.Status.Profile);
+        Assert.Equal(1.5, nova.Settings.ExposureSeconds);
+        Assert.Equal(60, nova.Settings.Gain);
+        Assert.Equal(0.7, nova.Settings.Algorithms.RaAggressiveness);
+        Assert.Equal("Simulated Guide Camera", nova.Settings.Camera);
+
+        // Changed by hand: no profile matches until one is loaded again.
+        nova.UpdateSettings(nova.Settings with { ExposureSeconds = 2.5 });
+        Assert.Null(nova.Status.Profile);
+        nova.LoadProfile("windy night"); // names match either case
+        Assert.Equal(mine, nova.Settings);
+        Assert.Equal("Windy night", nova.Status.Profile);
+
+        Assert.Throws<ArgumentException>(() => nova.SaveProfile("Poor seeing")); // a built-in's name
+        Assert.Throws<ArgumentException>(() => nova.SaveProfile(" "));
+        Assert.Throws<ArgumentException>(() => nova.LoadProfile("Nope"));
+        Assert.Throws<ArgumentException>(() => nova.DeleteProfile("NOVA defaults")); // built-in
+
+        // A profile with another binning can't be loaded while the guide camera runs.
+        nova.UpdateSettings(mine with { Binning = 2 });
+        nova.SaveProfile("Binned");
+        nova.UpdateSettings(mine);
+        using var timeout = new CancellationTokenSource(TimeSpan.FromMinutes(1));
+        await nova.LoopAsync(timeout.Token);
+        Assert.Throws<InvalidOperationException>(() => nova.LoadProfile("Binned"));
+        await nova.StopAsync();
+        nova.LoadProfile("Binned");
+        Assert.Equal(2, nova.Settings.Binning);
+
+        nova.DeleteProfile("Windy night");
+        Assert.DoesNotContain(nova.Status.Profiles!, p => p.Name == "Windy night");
+        Assert.Equal("", nova.Status.Defaults!.Mount); // the simulator's mount isn't a ZWO AM
+    }
+
+    [Fact]
     public async Task SwitchingBackendsAndRefusals()
     {
         await using var rig = await SetUpAsync();

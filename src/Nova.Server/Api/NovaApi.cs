@@ -67,6 +67,9 @@ public sealed record GuiderBackendRequest(string Backend);
 /// <summary>Dark exposures (seconds) for the guide camera, and how many darks to take at each.</summary>
 public sealed record GuideDarksRequest(double[] Exposures, int Frames = 5);
 
+/// <summary>A guide settings profile, by name.</summary>
+public sealed record GuideProfileRequest(string Name);
+
 /// <summary>How long the guiding assistant follows the star unguided.</summary>
 public sealed record GuidingAssistantRequest(double Seconds = 120);
 
@@ -871,6 +874,10 @@ public static class NovaApi
                 (guider.Nova ?? throw new InvalidOperationException("NOVA's own guider isn't available")).SelectStar(request.X, request.Y);
                 return Task.CompletedTask;
             }));
+        // NOVA's guider: profiles (the user's own, and built-in presets)
+        api.MapPost("/guider/nova/profiles/save", (GuideProfileRequest request, GuiderService guider) => ProfileCall(guider, n => n.SaveProfile(request.Name)));
+        api.MapPost("/guider/nova/profiles/load", (GuideProfileRequest request, GuiderService guider) => ProfileCall(guider, n => n.LoadProfile(request.Name)));
+        api.MapPost("/guider/nova/profiles/delete", (GuideProfileRequest request, GuiderService guider) => ProfileCall(guider, n => n.DeleteProfile(request.Name)));
         api.MapPost("/guider/assistant", (GuidingAssistantRequest request, GuiderService guider) =>
             OperationResult(guider.Assistant(request.Seconds, out var error), error));
         api.MapPost("/guider/assistant/apply", (GuiderService guider) =>
@@ -927,6 +934,24 @@ public static class NovaApi
     }
 
     /// <summary>Runs a request, turning refusals (e.g. PHD2 "camera not found", "solve an image first") into a 409 with the message.</summary>
+    private static IResult ProfileCall(GuiderService guider, Action<NovaGuider> call)
+    {
+        if (guider.Nova is not { } nova) return Results.NotFound();
+        try
+        {
+            call(nova);
+            return Results.NoContent();
+        }
+        catch (ArgumentException ex)
+        {
+            return Results.Problem(ex.Message, statusCode: StatusCodes.Status400BadRequest);
+        }
+        catch (InvalidOperationException ex)
+        {
+            return Results.Problem(ex.Message, statusCode: StatusCodes.Status409Conflict);
+        }
+    }
+
     private static async Task<IResult> ConflictOnRefusal(Func<Task> call)
     {
         try

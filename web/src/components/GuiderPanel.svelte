@@ -1,6 +1,6 @@
 <script lang="ts">
   import { mainView } from '../lib/inbox.svelte'
-  import { api } from '../lib/api'
+  import { api, settleOf } from '../lib/api'
   import { act, nova } from '../lib/state.svelte'
   import NovaGuiderControls from './NovaGuiderControls.svelte'
   import OpticsEditor from './OpticsEditor.svelte'
@@ -27,6 +27,12 @@
 
   let ditherPixels = $state(5)
   let busy = $state(false)
+  // The dither amount starts at the mount's default (smaller for a ZWO AM) until changed here.
+  let ditherTouched = false
+  $effect(() => {
+    const d = guider?.defaults?.ditherPixels
+    if (d != null && !ditherTouched) ditherPixels = d
+  })
 
   const badgeClass = (state: string | undefined, settling: boolean | undefined) => {
     if (settling) return 'warn'
@@ -155,11 +161,11 @@
     {/if}
 
     <div class="row">
-      <button disabled={guider?.settling} onclick={() => act(() => api.guide())}>{active ? 'Restart' : 'Guide'}</button>
+      <button disabled={guider?.settling} onclick={() => act(() => api.guide(false, settleOf(guider?.defaults)))}>{active ? 'Restart' : 'Guide'}</button>
       <button class="danger" disabled={!active && !guider?.settling && !guider?.nova?.darkProgress} onclick={() => act(api.guiderStop)}>Stop</button>
       <div class="spacer"></div>
-      <input class="mono dither" type="number" min="0.5" max="50" step="0.5" bind:value={ditherPixels} aria-label="Dither amount (pixels)" />
-      <button class="secondary" disabled={guider?.state !== 'Guiding' || guider?.settling} onclick={() => act(() => api.dither(ditherPixels))}>
+      <input class="mono dither" type="number" min="0.5" max="50" step="0.5" bind:value={ditherPixels} oninput={() => (ditherTouched = true)} aria-label="Dither amount (guide pixels)" />
+      <button class="secondary" disabled={guider?.state !== 'Guiding' || guider?.settling} onclick={() => act(() => api.dither(ditherPixels, settleOf(guider?.defaults)))}>
         Dither
       </button>
     </div>

@@ -49,7 +49,11 @@ public sealed record NovaGuiderStatus(
     string? Camera, string? Activity, GuideCalibrationInfo? Calibration, GuideStarInfo? Star,
     int Frame, int? FrameWidth, int? FrameHeight, IReadOnlyList<GuideStarMark> Stars,
     GuideDarkInfo? Darks = null, string? DarkProgress = null, NumberSetting? CameraGain = null,
-    GuidingAssistantResult? Assistant = null);
+    GuidingAssistantResult? Assistant = null, bool CameraConnected = false,
+    IReadOnlyList<GuideProfileInfo>? Profiles = null, string? Profile = null, GuideDefaults? Defaults = null);
+
+/// <summary>A guide settings profile to choose from: the user's own (everything, equipment included) or built in.</summary>
+public sealed record GuideProfileInfo(string Name, bool BuiltIn, string? Description);
 
 /// <summary>The guide camera's dark library (at the current binning).</summary>
 /// <param name="GainMatches">Taken at the camera's gain now (darks at another gain aren't used).</param>
@@ -131,6 +135,101 @@ public sealed class NovaGuider : IAsyncDisposable
             }
             else _log.Warn(problem);
         };
+        equipment.DevicesChanged += (_, _) => ApplyMountDefaults();
+    }
+
+    /// <summary>Dither and settle defaults for the mount in use (smaller and tighter for ZWO's AM mounts).</summary>
+    public GuideDefaults Defaults => GuidePresets.DefaultsFor(_equipment.Mount?.Name);
+
+    /// <summary>
+    /// The first time a ZWO AM mount shows up, sets the guide settings for it (the "ZWO AM mount" preset), unless they
+    /// were already changed from NOVA's defaults: then they're left alone and the log points at the preset.
+    /// </summary>
+    private void ApplyMountDefaults()
+    {
+        var mount = _equipment.Mount?.Name;
+        if (!GuidePresets.IsZwoAm(mount)) return;
+        bool untouched;
+        lock (_sync)
+        {
+            if (_saved.MountDefaults == "zwo-am") return;
+            untouched = _saved.Nova with { Camera = null, Output = null } == new NovaGuiderSettings();
+            _saved = _saved with { MountDefaults = "zwo-am" };
+            if (untouched)
+            {
+                _saved = _saved with { Nova = WithPreset(GuidePresets.ZwoAm, _saved.Nova) };
+                _controller.Settings = _saved.Nova.Algorithms;
+            }
+            SaveLocked();
+        }
+        _log.Info(untouched
+            ? $"{mount}: guide settings set for a ZWO AM mount (1.5 s exposures, gain 60; dithers 2.5 px, settle within 0.7 px)"
+            : $"{mount}: the 'ZWO AM mount' guide profile suits it (your guide settings were left as they are)");
+    }
+
+    private static NovaGuiderSettings WithPreset(GuidePreset preset, NovaGuiderSettings s) =>
+        s with { ExposureSeconds = preset.ExposureSeconds, Gain = preset.Gain, Algorithms = preset.Algorithms };
+
+    // ---- Profiles ----
+
+    /// <summary>Saves the current settings (equipment included) under a name, replacing one of the same name.</summary>
+    public void SaveProfile(string name)
+    {
+        name = name.Trim();
+        if (name.Length is 0 or > 40) throw new ArgumentException("A profile name is 1–40 characters");
+        if (GuidePresets.All.Any(p => p.Name.Equals(name, StringComparison.OrdinalIgnoreCase)))
+            throw new ArgumentException($"'{name}' is a built-in profile's name");
+        lock (_sync)
+        {
+            _saved = _saved with { Profiles = [.. _saved.Profiles.Where(p => !p.Name.Equals(name, StringComparison.OrdinalIgnoreCase)), new GuideProfile(name, Settings)] };
+            SaveLocked();
+        }
+        _log.Info($"Guide profile '{name}' saved");
+    }
+
+    /// <summary>
+    /// Switches to a profile: one of the user's (all its settings, equipment included) or a built-in one (its exposure,
+    /// gain and algorithms; the equipment stays). Switching camera, output or binning needs the guide camera stopped.
+    /// </summary>
+    public void LoadProfile(string name)
+    {
+        NovaGuiderSettings next;
+        GuideProfile? mine;
+        lock (_sync) mine = _saved.Profiles.FirstOrDefault(p => p.Name.Equals(name, StringComparison.OrdinalIgnoreCase));
+        if (mine is not null)
+        {
+            next = mine.Settings;
+            if (IsRunning && (next.Camera != Settings.Camera || next.Output != Settings.Output || next.Binning != Settings.Binning))
+                throw new InvalidOperationException("Stop the guide camera to switch to a profile with another camera, output or binning");
+        }
+        else
+        {
+            var preset = GuidePresets.All.FirstOrDefault(p => p.Name.Equals(name, StringComparison.OrdinalIgnoreCase))
+                ?? throw new ArgumentException($"There's no guide profile '{name}'");
+            next = WithPreset(preset, Settings);
+        }
+        UpdateSettings(next);
+        _log.Info($"Guide profile '{mine?.Name ?? name}' loaded");
+    }
+
+    public void DeleteProfile(string name)
+    {
+        lock (_sync)
+        {
+            if (!_saved.Profiles.Any(p => p.Name.Equals(name, StringComparison.OrdinalIgnoreCase)))
+                throw new ArgumentException($"There's no saved guide profile '{name}' (built-in ones can't be deleted)");
+            _saved = _saved with { Profiles = _saved.Profiles.Where(p => !p.Name.Equals(name, StringComparison.OrdinalIgnoreCase)).ToList() };
+            SaveLocked();
+        }
+        _log.Info($"Guide profile '{name}' deleted");
+    }
+
+    /// <summary>The profile the current settings are exactly: one of the user's, else a built-in one; null when changed since.</summary>
+    private string? MatchingProfile()
+    {
+        var s = Settings;
+        return _saved.Profiles.FirstOrDefault(p => p.Settings == s)?.Name
+               ?? GuidePresets.All.FirstOrDefault(p => WithPreset(p, s) == s)?.Name;
     }
 
     /// <summary>Where frames go (the mini PC or a USB drive); guide logs go into the same night folders.</summary>
@@ -236,7 +335,11 @@ public sealed class NovaGuider : IAsyncDisposable
                     : [];
                 return new NovaGuiderStatus(Settings, cameras, outputs, Camera?.Name, IsRunning ? _activity : null, info, star,
                     _frameId, _frame?.Width, _frame?.Height, marks, DarkInfo(Camera), _darkProgress,
-                    Camera is { IsConnected: true } c ? c.Controls.Gain : null, AssistantFor(Camera?.Name));
+                    Camera is { IsConnected: true } c ? c.Controls.Gain : null, AssistantFor(Camera?.Name),
+                    Camera?.IsConnected ?? false,
+                    [.. _saved.Profiles.Select(p => new GuideProfileInfo(p.Name, false, null)),
+                     .. GuidePresets.All.Select(p => new GuideProfileInfo(p.Name, true, p.Description))],
+                    MatchingProfile(), Defaults);
             }
         }
     }
@@ -1049,10 +1152,14 @@ public sealed class NovaGuider : IAsyncDisposable
 
     private sealed record StoredAssistant(string Camera, GuidingAssistantResult Result);
 
+    private sealed record GuideProfile(string Name, NovaGuiderSettings Settings);
+
+    /// <param name="MountDefaults">Which mount's defaults were offered already ("zwo-am"), so they're applied once.</param>
     private sealed record GuiderFile(
         string Backend = "phd2", NovaGuiderSettings? Nova = null, StoredCalibration? Calibration = null, IReadOnlyList<StoredDark>? Darks = null,
-        StoredAssistant? Assistant = null)
+        StoredAssistant? Assistant = null, IReadOnlyList<GuideProfile>? Profiles = null, string? MountDefaults = null)
     {
+        public IReadOnlyList<GuideProfile> Profiles { get; init; } = Profiles ?? [];
         public IReadOnlyList<StoredDark> Darks { get; init; } = Darks ?? [];
         public NovaGuiderSettings Nova { get; init; } = Nova ?? new NovaGuiderSettings();
     }

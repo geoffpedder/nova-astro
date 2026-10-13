@@ -2,6 +2,17 @@ import type { GuideLogFile, AltitudeCurve, SkyField, SolvedFrame, TargetInfo, To
 
 import { signedOut } from './auth.svelte'
 
+/** When guiding counts as settled (after Guide or a dither). */
+export interface Settle {
+  settlePixels: number
+  settleSeconds: number
+  settleTimeout: number
+}
+
+/** The settle part of the mount's guide defaults. */
+export const settleOf = (d: { settlePixels: number; settleSeconds: number; settleTimeout: number } | null | undefined): Settle | undefined =>
+  d ? { settlePixels: d.settlePixels, settleSeconds: d.settleSeconds, settleTimeout: d.settleTimeout } : undefined
+
 // Commands go over plain REST so they are just as easy to call from curl or scripts.
 
 async function get<T>(path: string): Promise<T> {
@@ -204,8 +215,12 @@ export const api = {
 
   guiderConnect: () => post('/api/guider/connect'),
   guiderDisconnect: () => post('/api/guider/disconnect'),
-  guide: (recalibrate = false) => post('/api/guider/guide', { recalibrate }),
-  dither: (pixels: number) => post('/api/guider/dither', { pixels }),
+  /** settle: the mount's defaults (guider status `defaults`); the server's own when left out. */
+  guide: (recalibrate = false, settle?: Settle) => post('/api/guider/guide', { recalibrate, ...settle }),
+  dither: (pixels: number, settle?: Settle) => post('/api/guider/dither', { pixels, ...settle }),
+  guideProfileSave: (name: string) => post('/api/guider/nova/profiles/save', { name }),
+  guideProfileLoad: (name: string) => post('/api/guider/nova/profiles/load', { name }),
+  guideProfileDelete: (name: string) => post('/api/guider/nova/profiles/delete', { name }),
   guiderStop: () => post('/api/guider/stop'),
   guiderProfile: (id: number) => post('/api/guider/profile', { id }),
   guiderEquipment: (connected: boolean) => post('/api/guider/equipment', { connected }),

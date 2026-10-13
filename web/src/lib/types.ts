@@ -590,6 +590,18 @@ export interface GuiderStatus {
   nova: NovaGuiderStatus | null
   /** Whether the recent guiding is seeing-limited or settings could improve it (after 30 steady steps). */
   diagnosis: GuideDiagnosis | null
+  /** Dither and settle defaults for the mount (smaller and tighter for ZWO's AM mounts). */
+  defaults: GuideDefaults | null
+}
+
+export interface GuideDefaults {
+  /** "ZWO AM" when the mount is one, else "". */
+  mount: string
+  ditherPixels: number
+  ditherEveryFrames: number
+  settlePixels: number
+  settleSeconds: number
+  settleTimeout: number
 }
 
 export interface GuideDiagnosis {
@@ -711,6 +723,11 @@ export interface NovaGuiderStatus {
   cameraGain: { value: number; min: number; max: number; step: number } | null
   /** The guiding assistant's last result for this guide camera. */
   assistant: GuidingAssistantResult | null
+  cameraConnected: boolean
+  /** Saved profiles (the user's, everything included) and built-in presets (exposure, gain, algorithms). */
+  profiles: { name: string; builtIn: boolean; description: string | null }[]
+  /** The profile the current settings are exactly, or null when changed since. */
+  profile: string | null
 }
 
 export interface DecDrift {

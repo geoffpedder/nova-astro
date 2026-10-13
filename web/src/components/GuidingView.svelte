@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { api } from '../lib/api'
+  import { api, settleOf } from '../lib/api'
   import { act, nova } from '../lib/state.svelte'
   import { guideView, setGuideStretch, type GuideStretch } from '../lib/guideView.svelte'
   import CalibrationGraph from './CalibrationGraph.svelte'
@@ -21,6 +21,12 @@
   const polar = (arcmin: number) => (arcmin >= 60 ? `${(arcmin / 60).toFixed(1)}°` : `${arcmin.toFixed(0)}′`)
 
   let ditherPixels = $state(5)
+  // The dither amount starts at the mount's default (smaller for a ZWO AM) until changed here.
+  let ditherTouched = false
+  $effect(() => {
+    const d = guider?.defaults?.ditherPixels
+    if (d != null && !ditherTouched) ditherPixels = d
+  })
 
   // The guide logs (one per night): fetched when the tab opens and whenever guiding or calibration ends.
   let logs = $state<GuideLogFile[]>([])
@@ -122,7 +128,7 @@
         <option value={60}>1 min</option><option value={120}>2 min</option><option value={180}>3 min</option><option value={300}>5 min</option>
       </select>
     </span>
-    <button disabled={guider?.settling || !guider?.connected} onclick={() => act(() => api.guide())}>
+    <button disabled={guider?.settling || !guider?.connected} onclick={() => act(() => api.guide(false, settleOf(guider?.defaults)))}>
       {phase === 'Guiding' || phase === 'LostLock' ? 'Restart' : 'Guide'}
     </button>
     <button class="danger" disabled={!running && !n?.darkProgress} onclick={() => act(api.guiderStop)}>Stop</button>
@@ -136,9 +142,9 @@
       <input class="mono" type="number" min="0.05" max="30" step="0.5" value={s?.exposureSeconds ?? 2} onchange={saveExposure} /> s
     </label>
     <label class="field">
-      <input class="mono" type="number" min="0.5" max="50" step="0.5" bind:value={ditherPixels} aria-label="Dither amount (pixels)" /> px
+      <input class="mono" type="number" min="0.5" max="50" step="0.5" bind:value={ditherPixels} oninput={() => (ditherTouched = true)} aria-label="Dither amount (guide pixels)" /> px
     </label>
-    <button class="secondary" disabled={phase !== 'Guiding' || guider?.settling} onclick={() => act(() => api.dither(ditherPixels))}>Dither</button>
+    <button class="secondary" disabled={phase !== 'Guiding' || guider?.settling} onclick={() => act(() => api.dither(ditherPixels, settleOf(guider?.defaults)))}>Dither</button>
   </div>
 
   <div class="main">

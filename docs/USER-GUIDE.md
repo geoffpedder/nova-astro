@@ -231,6 +231,13 @@ Targets chart shades that patch of sky (within 1.5 hours of the meridian and 20Â
 NOVA can guide by itself, with no PHD2, no virtual screen and nothing to set up beyond the Guider panel. It's new:
 PHD2 stays the default until it has proven itself under the sky, and you can switch back at any time.
 
+- **Profiles** (the list at the top): save the guide settings under a name (**Save asâ€¦**: camera, output, exposure,
+  gain, binning, darks and the algorithms), and switch between them, e.g. one per guide scope or for windy nights.
+  Built in: *NOVA defaults*, *ZWO AM mount* (1.5 s, gain 60) and *Poor seeing* (3 s, gentler corrections); these set
+  the exposure, gain and algorithms and keep the equipment. The list shows *Custom* once the settings were changed.
+  With a ZWO AM mount (AM3, AM5) NOVA sets *ZWO AM mount* the first time it sees one, unless the settings were already
+  changed, and its dithers default to 2.5 guide pixels with settling within 0.7 px for 8 s (the Guider panel, the
+  Guiding tab and new sequences), as an AM's guide pixel is several imaging pixels.
 - **Camera**: the guide camera (*Automatic* takes the first camera that isn't the imaging camera). **Pulses to**: the
   mount (pulse guiding, as with the ZWO AM3/AM5), or a guide camera's ST4 port. **Exposure** (2 s is a good start)
   and binning. **Gain**: set on the guide camera before every frame (its range shows beside it); empty leaves it as

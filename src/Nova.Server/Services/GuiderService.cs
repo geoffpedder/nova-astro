@@ -11,7 +11,8 @@ public sealed record GuiderStatus(
     string Host, bool Connected, GuiderState State, bool Settling, string? Version,
     double? PixelScale, double? Snr, double? Hfd, GuideStats Stats, IReadOnlyList<GuidePoint> History,
     IReadOnlyList<Phd2Profile> Profiles, Phd2Profile? Profile, bool EquipmentConnected, int? ScreenPort, bool AutoConnect,
-    DecDrift? Drift, string Backend = "phd2", NovaGuiderStatus? Nova = null, GuideDiagnosis? Diagnosis = null);
+    DecDrift? Drift, string Backend = "phd2", NovaGuiderStatus? Nova = null, GuideDiagnosis? Diagnosis = null,
+    GuideDefaults? Defaults = null);
 
 /// <summary>
 /// The guider everything else uses (sequences, notifications, the Guider panel), in front of one of two backends:
@@ -73,7 +74,12 @@ public sealed class GuiderService : IAsyncDisposable
         double? scale = status.Stats.Units == "arcsec" ? status.PixelScale : 1;
         var a = _nova?.Settings.Algorithms;
         var (minRa, minDec) = IsNova && a is not null && scale is { } s ? (a.RaMinMove * s, a.DecMinMove * s) : ((double?)null, (double?)null);
-        return status with { Diagnosis = GuidingDiagnosis.Diagnose(status.History, status.Stats.Units, seeing?.Ra, seeing?.Dec, minRa, minDec) };
+        return status with
+        {
+            Diagnosis = GuidingDiagnosis.Diagnose(status.History, status.Stats.Units, seeing?.Ra, seeing?.Dec, minRa, minDec),
+            // Dither and settle defaults for the mount (the panels' Guide/Dither and new sequences), with either guider.
+            Defaults = _nova?.Defaults,
+        };
     }
 
     /// <summary>NOVA's guider: run the guiding assistant (corrections off) for this long.</summary>

@@ -22,6 +22,10 @@ What changed in each release. The newest is first. A release's section here beco
 - **Guiding tab** for NOVA's guider: the whole guide frame with the guide star and the stars averaged with it marked
   (click another star to guide on it), the guide star close up, RMS and peaks, the calibration, a large graph of the
   last 300 steps, and all the buttons.
+- **Guide profiles** (NOVA's guider): save the guide settings under a name and switch between them; built-in
+  *NOVA defaults*, *ZWO AM mount* and *Poor seeing*.
+- **ZWO AM mount defaults:** with an AM3/AM5, NOVA's guider starts at 1.5 s exposures and gain 60 (unless already
+  changed), and dithers default to 2.5 guide pixels, settling within 0.7 px for 8 s (panels and new sequences).
 - **Seeing or settings?** Under the guiding graphs, a verdict on recent guiding: seeing-limited, within the min move,
   see-sawing (lower the aggressiveness) or lagging (raise it), and how much guiding adds to star size next to the
   latest frame's FWHM.
@@ -34,6 +38,7 @@ What changed in each release. The newest is first. A release's section here beco
   image folder (the USB drive when frames go there); the Guiding tab lists them to download.
 
 ### Fixed
+- The guide camera's Dark library section opens by itself only once the camera is connected.
 - **Dithers no longer spoil the guiding RMS and graph** (PHD2 and NOVA's guider): the steps while guiding settles
   after a dither (or after starting) are left out of the RMS and peaks, and the graph marks the dither with a dashed
   line and shades the settling instead of drawing a spike that rescaled everything.

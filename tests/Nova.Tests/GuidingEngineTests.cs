@@ -452,6 +452,23 @@ public class GuidingEngineTests
         Assert.Null(GuidingDiagnosis.Diagnose(seeing.Select(p => p with { Settling = true }).ToList(), "arcsec", 0.5, 0.5));
     }
 
+    [Theory]
+    [InlineData("ZWO AM5", true)]
+    [InlineData("ZWO AM3", true)]
+    [InlineData("ZWO  AM5 (USB)", true)]
+    [InlineData("AM5", true)]
+    [InlineData("EQMod Mount", false)]
+    [InlineData("LX200 GPS", false)]
+    [InlineData("Simulated Mount", false)]
+    [InlineData(null, false)]
+    public void RecognisesZwoAmMounts(string? name, bool am)
+    {
+        Assert.Equal(am, GuidePresets.IsZwoAm(name));
+        var defaults = GuidePresets.DefaultsFor(name);
+        Assert.Equal(am ? 2.5 : 5, defaults.DitherPixels);
+        Assert.Equal(am ? 0.7 : 1.5, defaults.SettlePixels);
+    }
+
     [Fact]
     public void DitherSettlingIsMarkedAndLeftOutOfTheRms()
     {

@@ -27,7 +27,13 @@
       rows: [],
       order: 'ByRow',
       targets: [blankTarget()],
-      dither: { everyFrames: 3, pixels: 5, raOnly: false, settlePixels: 1.5, settleSeconds: 10, settleTimeout: 60 },
+      // The mount's dither and settle defaults (smaller and tighter for a ZWO AM).
+      dither: (() => {
+        const d = nova.status?.guider?.defaults
+        return d
+          ? { everyFrames: d.ditherEveryFrames, pixels: d.ditherPixels, raOnly: false, settlePixels: d.settlePixels, settleSeconds: d.settleSeconds, settleTimeout: d.settleTimeout }
+          : { everyFrames: 3, pixels: 5, raOnly: false, settlePixels: 1.5, settleSeconds: 10, settleTimeout: 60 }
+      })(),
       autofocus: { afterFilterChange: false, temperatureChange: 1, hfrIncreasePercent: 15, everyFrames: null },
       end: { stopGuiding: true, warmCamera: false, park: false, stopAt: 'AstronomicalDawn' },
       meridianFlip: blankFlip(),

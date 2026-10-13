@@ -60,15 +60,34 @@
         : [...new Set([...darkOptions, s?.exposureSeconds ?? 2])].sort((a, b) => a - b)),
   )
   let darkFrames = $state(5)
-  // Open by itself only the first time the panel shows and there's no library yet; after that it stays as the user
-  // leaves it (status updates many times a second, so it mustn't be tied to the status).
+  // Opens by itself once, when the guide camera is connected and has no library yet (darks need the camera); after
+  // that it stays as the user leaves it (status updates many times a second, so it mustn't be tied to the status).
   let darksOpen = $state(false)
   let darksOpenDecided = false
   $effect(() => {
-    if (darksOpenDecided || !n) return
+    if (darksOpenDecided || !n?.cameraConnected) return
     darksOpenDecided = true
     darksOpen = !n.darks
   })
+
+  // Profiles: pick one (the user's own, or a built-in preset), save the current settings under a name, delete.
+  let profileName = $state('')
+  let savingProfile = $state(false)
+  const profile = $derived(n?.profile ?? null)
+  const mineSelected = $derived(!!n?.profiles.find((p) => p.name === profile && !p.builtIn))
+  async function saveProfile() {
+    const name = profileName.trim()
+    if (!name) return
+    if (n?.profiles.some((p) => p.name.toLowerCase() === name.toLowerCase() && !p.builtIn) &&
+        !(await ask(`Replace the profile '${name}'?`, { confirm: 'Replace' }))) return
+    if (await act(() => api.guideProfileSave(name))) {
+      savingProfile = false
+      profileName = ''
+    }
+  }
+  async function deleteProfile() {
+    if (profile && (await ask(`Delete the profile '${profile}'?`, { confirm: 'Delete', danger: true }))) act(() => api.guideProfileDelete(profile))
+  }
   const busyDarks = $derived(!!n?.darkProgress)
   function toggleDark(e: number) {
     darkPicked = darkExposures.includes(e) ? darkExposures.filter((x) => x !== e) : [...darkExposures, e].sort((a, b) => a - b)
@@ -88,6 +107,30 @@
 </script>
 
 {#if n && s}
+  <div class="profiles">
+    <select value={profile ?? ''} onchange={(e) => e.currentTarget.value && act(() => api.guideProfileLoad(e.currentTarget.value))}
+      aria-label="Guide profile" title={n.profiles.find((p) => p.name === profile)?.description ?? 'Guide settings profile'}>
+      {#if !profile}<option value="">Custom (not saved)</option>{/if}
+      {#if n.profiles.some((p) => !p.builtIn)}
+        <optgroup label="Saved">
+          {#each n.profiles.filter((p) => !p.builtIn) as p (p.name)}<option value={p.name}>{p.name}</option>{/each}
+        </optgroup>
+      {/if}
+      <optgroup label="Built in">
+        {#each n.profiles.filter((p) => p.builtIn) as p (p.name)}<option value={p.name} title={p.description}>{p.name}</option>{/each}
+      </optgroup>
+    </select>
+    {#if savingProfile}
+      <input class="name" bind:value={profileName} placeholder="Profile name" aria-label="Profile name" maxlength="40"
+        onkeydown={(e) => e.key === 'Enter' && saveProfile()} />
+      <button class="secondary small-btn" disabled={!profileName.trim()} onclick={saveProfile}>Save</button>
+      <button class="secondary small-btn" onclick={() => (savingProfile = false)}>Cancel</button>
+    {:else}
+      <button class="secondary small-btn" onclick={() => { profileName = mineSelected ? (profile ?? '') : ''; savingProfile = true }}
+        title="Save the current guide settings (camera, exposure, gain, algorithms…) as a profile">Save as…</button>
+      {#if mineSelected}<button class="secondary small-btn" onclick={deleteProfile} title="Delete this saved profile">Delete</button>{/if}
+    {/if}
+  </div>
   <div class="grid">
     <label for="ng-camera">Camera</label>
     <select id="ng-camera" value={s.camera ?? ''} disabled={running} onchange={(e) => save({ camera: e.currentTarget.value || null })}>
@@ -302,6 +345,25 @@
   .clear {
     font-size: 11px;
     padding: 1px 8px;
+  }
+  .profiles {
+    display: flex;
+    gap: 4px;
+    align-items: center;
+    margin-bottom: 8px;
+  }
+  .profiles select {
+    flex: 1;
+    min-width: 0;
+  }
+  .profiles .name {
+    flex: 1;
+    min-width: 0;
+  }
+  .small-btn {
+    font-size: 12px;
+    padding: 3px 8px;
+    flex-shrink: 0;
   }
   .graph {
     max-width: 260px;

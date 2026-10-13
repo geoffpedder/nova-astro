@@ -61,6 +61,22 @@
   const sequencer = $derived(nova.status?.sequencer)
   const seq = $derived(sequencer?.status ?? null)
 
+  // The current exposure's progress as a thin bar along the bottom of the sequence box (0–100). It eases forward
+  // between progress messages, but jumps back to 0 when the next exposure starts instead of sliding backwards.
+  const seqProgress = $derived.by(() => {
+    const e = nova.exposure
+    if (!sequencer?.running || !e) return null
+    if (e.state === 'Downloading' || e.totalSeconds <= 0) return 100
+    return Math.min(100, (100 * e.elapsedSeconds) / e.totalSeconds)
+  })
+  let progressBack = $state(false)
+  let lastProgress = 0
+  $effect.pre(() => {
+    const p = seqProgress ?? 0
+    progressBack = p < lastProgress
+    lastProgress = p
+  })
+
   onMount(() => {
     try {
       night = localStorage.getItem('nova.night') === '1'
@@ -200,6 +216,9 @@
           >
         {/if}
         <button class="seq-control abort" title="Abort the sequence" aria-label="Abort the sequence" onclick={abortSequence}>■</button>
+      {/if}
+      {#if seqProgress != null}
+        <span class="seq-progress" class:back={progressBack} style:width="{seqProgress}%" aria-hidden="true"></span>
       {/if}
     </div>
   {/if}
@@ -460,6 +479,8 @@
     vertical-align: middle;
   }
   .seq-chip {
+    position: relative;
+    overflow: hidden;
     display: inline-flex;
     align-items: center;
     border: 1px solid var(--warn);
@@ -501,6 +522,19 @@
   }
   .seq-control.abort {
     color: var(--danger);
+  }
+  /* The current exposure's progress, 2 px along the box's lower edge. */
+  .seq-progress {
+    position: absolute;
+    left: 0;
+    bottom: 0;
+    height: 2px;
+    background: var(--warn);
+    transition: width 1s linear;
+    pointer-events: none;
+  }
+  .seq-progress.back {
+    transition: none;
   }
   .seq-chip.paused {
     border-color: var(--muted);

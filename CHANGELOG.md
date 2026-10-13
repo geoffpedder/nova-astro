@@ -22,6 +22,8 @@ What changed in each release. The newest is first. A release's section here beco
 - **Guiding tab** for NOVA's guider: the whole guide frame with the guide star and the stars averaged with it marked
   (click another star to guide on it), the guide star close up, RMS and peaks, the calibration, a large graph of the
   last 300 steps, and all the buttons.
+- **Exposure progress in the header:** while a sequence runs, a thin bar along the bottom of its status box fills as
+  the current exposure goes.
 - **Guide logs** for NOVA's guider, in PHD2's guide-log format (so PHD2's log viewers can open them): every
   calibration step and guide frame, dithers, settling, lost stars and setting changes. One per night in the night's
   image folder (the USB drive when frames go there); the Guiding tab lists them to download.

@@ -134,6 +134,8 @@ public static class NovaApi
 
         api.MapGet("/status", (StatusReporter status) => status.GetSnapshot());
         api.MapGet("/log", (ActivityLog log) => log.Recent);
+        // The mini PC's CPU, memory, temperature and disks (the Activity tab asks every few seconds while it's open).
+        api.MapGet("/system/stats", (SystemStatsService stats, CancellationToken ct) => stats.ReadAsync(ct));
 
         // Equipment
         api.MapPost("/equipment/connect", async (EquipmentService equipment, GuiderService guider, ActivityLog log, CancellationToken ct) =>

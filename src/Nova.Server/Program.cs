@@ -78,6 +78,7 @@ builder.Services.AddSingleton<SetupGuideService>();
 builder.Services.AddSingleton<NotificationService>();
 builder.Services.AddSingleton<FocusOffsetService>();
 builder.Services.AddSingleton<StorageService>();
+builder.Services.AddSingleton<SystemStatsService>();
 builder.Services.AddHostedService(sp => sp.GetRequiredService<StorageService>());
 builder.Services.AddHostedService(sp => sp.GetRequiredService<NotificationService>());
 builder.Services.AddSingleton<StatusReporter>();

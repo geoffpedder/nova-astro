@@ -1,4 +1,4 @@
-import type { GuideLogFile, AltitudeCurve, SkyField, SolvedFrame, TargetInfo, TonightFilters, TonightResult, Annotations, AutofocusSettings, MotionDirection, PolarAlignmentSettings, Sequence, CameraSettingsUpdate, DeviceKind, DeviceProperty, FitsHeaderCard, PreviewMode, StarOverlay, FlatsSettings, SolveInfo, DriverSetup, SetupCheck, NotificationSettings, NotificationSettingsView, FolderListing, NovaGuiderSettings } from './types'
+import type { SystemStats, GuideLogFile, AltitudeCurve, SkyField, SolvedFrame, TargetInfo, TonightFilters, TonightResult, Annotations, AutofocusSettings, MotionDirection, PolarAlignmentSettings, Sequence, CameraSettingsUpdate, DeviceKind, DeviceProperty, FitsHeaderCard, PreviewMode, StarOverlay, FlatsSettings, SolveInfo, DriverSetup, SetupCheck, NotificationSettings, NotificationSettingsView, FolderListing, NovaGuiderSettings } from './types'
 
 import { signedOut } from './auth.svelte'
 
@@ -236,6 +236,7 @@ export const api = {
   guideDarks: (exposures: number[], frames: number) => post('/api/guider/darks/build', { exposures, frames }),
   clearGuideDarks: () => post('/api/guider/darks/clear'),
   guideLogs: () => get<GuideLogFile[]>('/api/guider/logs'),
+  systemStats: () => get<SystemStats>('/api/system/stats'),
   guideLogUrl: (log: GuideLogFile) => `/api/guider/logs/${encodeURIComponent(log.name)}?drive=${log.onDrive}`,
   /** stretch: low (black background), medium or high (full auto stretch). */
   guideFrameUrl: (frame: number, stretch = 'medium') => `/api/guider/frame.png?f=${frame}&stretch=${stretch}`,

@@ -604,6 +604,23 @@ export interface GuideDefaults {
   settleTimeout: number
 }
 
+/** The mini PC at a glance (null members aren't available on this system). */
+export interface SystemStats {
+  /** All cores together, 0–100. */
+  cpuPercent: number | null
+  cores: number
+  /** 1-minute load average. */
+  load: number | null
+  /** °C, the hottest thermal zone. */
+  cpuTemperature: number | null
+  memoryUsedBytes: number | null
+  memoryTotalBytes: number | null
+  novaMemoryBytes: number
+  disks: { label: string; path: string; totalBytes: number; freeBytes: number }[]
+  uptimeSeconds: number | null
+  host: string
+}
+
 export interface GuideDiagnosis {
   /** One line for under the graph. */
   summary: string

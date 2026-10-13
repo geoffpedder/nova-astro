@@ -294,7 +294,7 @@
     {#if mainView.view === 'polar'}<div class="view"><PolarView /></div>{/if}
     <div class="view" class:hidden={mainView.view !== 'phd2'}><Phd2View active={mainView.view === 'phd2'} /></div>
     {#if mainView.view === 'guiding'}<div class="view"><GuidingView /></div>{/if}
-    <div class="view" class:hidden={mainView.view !== 'activity'}><ActivityView /></div>
+    <div class="view" class:hidden={mainView.view !== 'activity'}><ActivityView active={mainView.view === 'activity'} /></div>
     <LogPanel />
   </section>
 </main>

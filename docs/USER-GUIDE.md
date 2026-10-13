@@ -47,7 +47,9 @@ The checklist goes away once the steps are done. **Setup** in the header brings 
 - **Main area:** the **Image**, **Sequence**, **Targets**, **Polar alignment**, **PHD2** and **Activity** tabs.
   Underneath, one line shows the latest activity (yellow for a warning, red for an error); click it for the
   **Activity** tab, the whole log, with *Warnings and errors only* to pick out problems. A dot on the tab means a
-  warning or error came in since you last looked.
+  warning or error came in since you last looked. Above the log, **Mini PC** shows its CPU use (with load and
+  temperature), memory in use (and NOVA's share), free space on the image disk (and the USB drive when frames go
+  there) and how long it's been up; the bars turn yellow at 75% and red at 90%.
 - **Header:** the connection, the network, a running sequence's progress (from any tab), **Setup**,
   **Full screen**, **Night** (everything in red, to keep your night vision) and ⏻ (restart or shut down the
   mini PC).

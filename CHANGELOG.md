@@ -22,6 +22,9 @@ What changed in each release. The newest is first. A release's section here beco
 - **Guiding tab** for NOVA's guider: the whole guide frame with the guide star and the stars averaged with it marked
   (click another star to guide on it), the guide star close up, RMS and peaks, the calibration, a large graph of the
   last 300 steps, and all the buttons.
+- **Mini PC stats** at the top of the Activity tab: CPU use, load and temperature, memory in use (and NOVA's own),
+  free space on the image disk (and the USB drive when frames go there), uptime. Refreshed every few seconds while
+  the tab is open.
 - **Guide profiles** (NOVA's guider): save the guide settings under a name and switch between them; built-in
   *NOVA defaults*, *ZWO AM mount* and *Poor seeing*.
 - **ZWO AM mount defaults:** with an AM3/AM5, NOVA's guider starts at 1.5 s exposures and gain 60 (unless already

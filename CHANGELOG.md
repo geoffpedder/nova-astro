@@ -4,6 +4,13 @@ What changed in each release. The newest is first. A release's section here beco
 
 ## [Unreleased]
 
+### Added
+- **Predictive PEC** (NOVA's guider, RA): learns the mount's periodic error while guiding (its period found
+  automatically, or set) and corrects it ahead of time, with a gentler reactive part; for strain-wave mounts like the
+  AM3. In the simulation tests it cut RA RMS by about 65% against Hysteresis on a strong periodic error. The Guiding
+  tab shows it learning or predicting; the guide log records it; the guiding assistant reports the PE period; built-in
+  profile *ZWO AM mount + PEC*.
+
 ## [0.3.6] - 2026-10-13
 
 ### Added

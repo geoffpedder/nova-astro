@@ -21,11 +21,15 @@ public static partial class GuidePresets
     public static readonly GuidePreset ZwoAm = new("ZWO AM mount",
         "Strain-wave drive (AM3, AM5): 1.5 s exposures to follow its fast periodic error, gain 60", 1.5, 60, new GuideAlgorithmSettings());
 
+    public static readonly GuidePreset ZwoAmPec = new("ZWO AM mount + PEC",
+        "As ZWO AM mount, with Predictive PEC learning and correcting its periodic error ahead of time", 1.5, 60,
+        new GuideAlgorithmSettings(RaAlgorithm: RaAlgorithm.PredictivePec));
+
     public static readonly GuidePreset PoorSeeing = new("Poor seeing",
         "3 s exposures and gentler corrections that don't chase the seeing", 3, null,
         new GuideAlgorithmSettings(RaHysteresis: 0.1, RaAggressiveness: 0.5, RaMinMove: 0.25, DecAggressiveness: 0.8, DecMinMove: 0.3));
 
-    public static IReadOnlyList<GuidePreset> All { get; } = [Standard, ZwoAm, PoorSeeing];
+    public static IReadOnlyList<GuidePreset> All { get; } = [Standard, ZwoAm, ZwoAmPec, PoorSeeing];
 
     [GeneratedRegex(@"\bZWO\s*AM\s*\d|\bAM[357]\b", RegexOptions.IgnoreCase)]
     private static partial Regex ZwoAmName();

@@ -50,7 +50,8 @@ public sealed record NovaGuiderStatus(
     int Frame, int? FrameWidth, int? FrameHeight, IReadOnlyList<GuideStarMark> Stars,
     GuideDarkInfo? Darks = null, string? DarkProgress = null, NumberSetting? CameraGain = null,
     GuidingAssistantResult? Assistant = null, bool CameraConnected = false,
-    IReadOnlyList<GuideProfileInfo>? Profiles = null, string? Profile = null, GuideDefaults? Defaults = null);
+    IReadOnlyList<GuideProfileInfo>? Profiles = null, string? Profile = null, GuideDefaults? Defaults = null,
+    PecStatus? Pec = null);
 
 /// <summary>A guide settings profile to choose from: the user's own (everything, equipment included) or built in.</summary>
 public sealed record GuideProfileInfo(string Name, bool BuiltIn, string? Description);
@@ -136,6 +137,11 @@ public sealed class NovaGuider : IAsyncDisposable
             else _log.Warn(problem);
         };
         equipment.DevicesChanged += (_, _) => ApplyMountDefaults();
+        _controller.Pec.Restarted += reason =>
+        {
+            _guideLog.Info(reason);
+            _log.Info(reason);
+        };
     }
 
     /// <summary>Dither and settle defaults for the mount in use (smaller and tighter for ZWO's AM mounts).</summary>
@@ -284,6 +290,10 @@ public sealed class NovaGuider : IAsyncDisposable
         if (a.RaAggressiveness is < 0 or > 2 || a.DecAggressiveness is < 0 or > 2 || a.RaHysteresis is < 0 or >= 1 ||
             a.RaMinMove < 0 || a.DecMinMove < 0 || a.MaxRaPulseMs is < 50 or > 10_000 || a.MaxDecPulseMs is < 50 or > 10_000)
             throw new ArgumentException("A guiding algorithm setting is out of range");
+        if (a.PecPeriodSeconds != 0 && a.PecPeriodSeconds is < PeriodicErrorPredictor.MinPeriod or > PeriodicErrorPredictor.MaxPeriod)
+            throw new ArgumentException($"The PEC period is 0 (find it) or {PeriodicErrorPredictor.MinPeriod:0}–{PeriodicErrorPredictor.MaxPeriod:0} s");
+        if (a.PecPredictionGain is < 0 or > 1.5 || a.PecReactiveAggressiveness is < 0 or > 2)
+            throw new ArgumentException("A Predictive PEC setting is out of range");
         lock (_sync)
         {
             foreach (var change in Changes(_saved.Nova, settings)) _guideLog.Info($"Guiding parameter change, {change}");
@@ -306,6 +316,8 @@ public sealed class NovaGuider : IAsyncDisposable
             ("Dec Minimum move", a.DecMinMove, b.DecMinMove), ("Dec FastSwitch", a.DecFastSwitch, b.DecFastSwitch),
             ("DEC guide mode", a.DecMode, b.DecMode), ("Max RA duration", a.MaxRaPulseMs, b.MaxRaPulseMs),
             ("Max DEC duration", a.MaxDecPulseMs, b.MaxDecPulseMs),
+            ("X guide algorithm", a.RaAlgorithm, b.RaAlgorithm), ("PEC period", a.PecPeriodSeconds, b.PecPeriodSeconds),
+            ("PEC prediction gain", a.PecPredictionGain, b.PecPredictionGain), ("PEC reactive aggression", a.PecReactiveAggressiveness, b.PecReactiveAggressiveness),
         ];
         return fields.Where(f => !Equals(f.Old, f.New)).Select(f => FormattableString.Invariant($"{f.Name} = {f.New ?? "driver"}"));
     }
@@ -339,7 +351,8 @@ public sealed class NovaGuider : IAsyncDisposable
                     Camera?.IsConnected ?? false,
                     [.. _saved.Profiles.Select(p => new GuideProfileInfo(p.Name, false, null)),
                      .. GuidePresets.All.Select(p => new GuideProfileInfo(p.Name, true, p.Description))],
-                    MatchingProfile(), Defaults);
+                    MatchingProfile(), Defaults,
+                    Settings.Algorithms.RaAlgorithm == RaAlgorithm.PredictivePec ? _controller.Pec.Status : null);
             }
         }
     }
@@ -444,6 +457,7 @@ public sealed class NovaGuider : IAsyncDisposable
                 throw new InvalidOperationException("No usable star there");
             if (_tracker.LockHome is { } home) _guideLog.Info(FormattableString.Invariant($"Star selected at {home.X:0.000}, {home.Y:0.000}"));
             _controller.Reset();
+            _controller.Pec.Reset();
             _lostFrames = 0;
             _last = null;
         }
@@ -520,6 +534,8 @@ public sealed class NovaGuider : IAsyncDisposable
             _drift.Reset();
             _driftReported = false;
             _controller.Reset();
+            _controller.Pec.Reset();
+            (_pecState, _pecPier) = (null, null);
             _rehome = true;
             _mode = Mode.Guiding;
             _activity = "Guiding";
@@ -558,6 +574,7 @@ public sealed class NovaGuider : IAsyncDisposable
             var (dx, dy) = GuideController.DitherOffset(_dither, pixels, raOnly, calibration);
             _tracker.ShiftHome(dx, dy);
             _controller.Reset();
+            _controller.LockMoved(calibration.ToAxes(dx, dy).Ra);
             _history.MarkDither();
             if (_tracker.LockHome is { } home)
                 _guideLog.Info(FormattableString.Invariant($"DITHER by {dx:0.000}, {dy:0.000}, new lock pos = {home.X:0.000}, {home.Y:0.000}"));
@@ -828,6 +845,7 @@ public sealed class NovaGuider : IAsyncDisposable
     {
         var pulses = new List<GuidePulse>();
         string? message = null;
+        string? pecInfo = null;
         lock (_sync)
         {
             _frame = image;
@@ -896,7 +914,8 @@ public sealed class NovaGuider : IAsyncDisposable
 
                 case Mode.Guiding when Current() is { } calibration:
                     State = GuiderState.Guiding;
-                    var c = _controller.Correct(m.Dx, m.Dy, calibration);
+                    pecInfo = PecWatch(calibration);
+                    var c = _controller.Correct(m.Dx, m.Dy, calibration, _clock.Elapsed.TotalSeconds, steady: _settle is null);
                     _history.Add(c.RaPixels, c.DecPixels, settling: _settle is not null);
                     var raGuide = c.Ra is { } rp ? rp.Milliseconds / 1000.0 * calibration.RaRate * (rp.Direction == GuideDirection.East ? 1 : -1) : 0;
                     var decGuide = c.Dec is { } dp ? dp.Milliseconds / 1000.0 * calibration.DecRate * (dp.Direction == GuideDirection.South ? 1 : -1) : 0;
@@ -916,6 +935,7 @@ public sealed class NovaGuider : IAsyncDisposable
                     break;
             }
         }
+        if (pecInfo is not null) _log.Info(pecInfo);
         if (message is not null) _log.Warn(message);
         return pulses;
     }
@@ -1038,6 +1058,40 @@ public sealed class NovaGuider : IAsyncDisposable
             Arcsec(c.RaRate), Arcsec(c.DecRate), Math.Round(c.OrthogonalityError, 1), Math.Round(c.DecDegrees, 1), c.PierSide, c.Utc, warning);
     }
 
+    // ---- Predictive PEC ----
+
+    private PecState? _pecState;
+    private PierSide? _pecPier;
+
+    /// <summary>
+    /// Before each guide step with Predictive PEC: starts the model over after a pier-side change (the RA gear is
+    /// driven the other way round), and notes when it starts predicting. Returns a line for the activity log, if any.
+    /// </summary>
+    private string? PecWatch(GuideCalibration calibration)
+    {
+        if (Settings.Algorithms.RaAlgorithm != RaAlgorithm.PredictivePec) return null;
+        var (_, pier) = Pointing();
+        if (_pecPier is not null && pier is not null && pier != _pecPier)
+        {
+            _controller.Pec.Reset();
+            _pecState = null;
+            _guideLog.Info("PEC: pier side changed, learning again");
+        }
+        _pecPier = pier ?? _pecPier;
+
+        var status = _controller.Pec.Status;
+        if (status.State == _pecState) return null;
+        var was = _pecState;
+        _pecState = status.State;
+        if (status.State != PecState.Predicting || was is null && status.Minutes < 1) return null;
+        var scale = PixelScale;
+        var size = scale is { } s ? FormattableString.Invariant($"±{status.AmplitudePixels * s:0.0}″") : FormattableString.Invariant($"±{status.AmplitudePixels:0.00} px");
+        var line = FormattableString.Invariant(
+            $"PEC: predicting, period {string.Join(" + ", status.Periods.Select(p => $"{p:0} s"))}, {status.Quality * 100:0}% of the RA motion explained, {size}");
+        _guideLog.Info(line);
+        return line;
+    }
+
     // ---- Guide log ----
 
     private string LogPathIn(string root, DateTime utc)
@@ -1083,7 +1137,9 @@ public sealed class NovaGuider : IAsyncDisposable
             calibration is { } c
                 ? FormattableString.Invariant($"Mount = {output.Name}, connected, guiding enabled, xAngle = {Deg(c.RaAngle):0.0}, xRate = {c.RaRate:0.000}, yAngle = {Deg(c.DecAngle):0.0}, yRate = {c.DecRate:0.000}, parity = +/+")
                 : $"Mount = {output.Name}, connected, guiding enabled",
-            FormattableString.Invariant($"X guide algorithm = Hysteresis, Hysteresis = {a.RaHysteresis:0.000}, Aggression = {a.RaAggressiveness:0.000}, Minimum move = {a.RaMinMove:0.000}"),
+            a.RaAlgorithm == RaAlgorithm.PredictivePec
+                ? FormattableString.Invariant($"X guide algorithm = Predictive PEC, Period = {(a.PecPeriodSeconds > 0 ? $"{a.PecPeriodSeconds:0.0} s" : "auto")}, Prediction gain = {a.PecPredictionGain:0.000}, Reactive aggression = {a.PecReactiveAggressiveness:0.000}, Hysteresis = {a.RaHysteresis:0.000}, Minimum move = {a.RaMinMove:0.000}")
+                : FormattableString.Invariant($"X guide algorithm = Hysteresis, Hysteresis = {a.RaHysteresis:0.000}, Aggression = {a.RaAggressiveness:0.000}, Minimum move = {a.RaMinMove:0.000}"),
             FormattableString.Invariant($"Y guide algorithm = Resist Switch, Minimum move = {a.DecMinMove:0.000} Aggression = {a.DecAggressiveness * 100:0}% FastSwitch = {(a.DecFastSwitch ? "enabled" : "disabled")}"),
             "Backlash comp = disabled, pulse = 0 ms",
             FormattableString.Invariant($"Max RA duration = {a.MaxRaPulseMs}, Max DEC duration = {a.MaxDecPulseMs}, DEC guide mode = {a.DecMode}"),

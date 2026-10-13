@@ -280,6 +280,16 @@ guiding settles after it are shaded and left out of the RMS, so a dither doesn't
 the exposure, and how bright to show the frame: **Low** (black background, just the stars), **Med** (the default)
 or **High** (the full auto stretch, for finding faint stars, noise and all); each browser remembers it. **Click a star** in the frame to guide on it instead; while guiding, guiding carries on from that star.
 
+**Predictive PEC** (Guiding settings, RA *Algorithm*): mounts have a periodic error in RA, and a strain-wave mount like
+the AM3 a large, fast one. Hysteresis only corrects it after it shows; Predictive PEC learns it while guiding (the RA
+error plus every correction sent, so the mount's own motion), finds its period, and corrects each frame's predicted
+wander ahead of time, with a gentler reactive part (*Reactive*, 50%) for the rest. It needs two cycles of the
+period before it predicts (often 10–20 minutes), guiding as Hysteresis until then; the Guiding tab shows *learning*
+or *predicting* with the period, how much of the motion it explains and its size. *PE period* 0 finds it; the
+guiding assistant reports it from a long enough run if you want to set it. It starts learning again when guiding
+starts (after a slew), after a meridian flip and after a minute without frames; dithers don't disturb it. The
+built-in profile *ZWO AM mount + PEC* turns it on with the AM settings.
+
 **Seeing or settings?** Under the graph (and under the Guider panel's graph, with PHD2 too) NOVA says what limits the
 guiding, once there are 30 steady steps: *seeing-limited* (errors the size of the seeing: nothing to gain),
 *within the min move* (the guider is leaving small errors alone on purpose), *see-saws* (corrections overshoot or chase

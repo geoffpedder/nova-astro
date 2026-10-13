@@ -312,6 +312,36 @@ public class NovaGuiderTests : IDisposable
     }
 
     [Fact]
+    public async Task PredictivePecLearnsTheSimulatedMountsPeriodicError()
+    {
+        await using var rig = await SetUpAsync();
+        using var timeout = new CancellationTokenSource(TimeSpan.FromMinutes(4));
+        await rig.Nova.CalibrateAsync(timeout.Token);
+
+        rig.Mount.PeriodicError = [(12, 24)]; // ±12″ every 24 s (a fast, made-up strain-wave error)
+        rig.Nova.UpdateSettings(rig.Nova.Settings with
+        {
+            Algorithms = rig.Nova.Settings.Algorithms with { RaAlgorithm = RaAlgorithm.PredictivePec },
+        });
+        Assert.Equal(PecState.Learning, rig.Nova.Status.Pec!.State);
+        await rig.Guider.GuideAndWaitAsync(new SettleSettings(2, 1, 60), timeout.Token);
+
+        // Two cycles (48 s) and a fit later it predicts, with the period it was given.
+        while (rig.Nova.Status.Pec!.State != PecState.Predicting) await Task.Delay(500, timeout.Token);
+        var pec = rig.Nova.Status.Pec!;
+        Assert.Contains(pec.Periods, p => Math.Abs(p - 24) < 2);
+        Assert.True(pec.Quality > 0.5, $"quality {pec.Quality}");
+
+        await Task.Delay(TimeSpan.FromSeconds(10), timeout.Token);
+        Assert.True(rig.Guider.Status.Stats.RmsRa < 4, $"RA RMS {rig.Guider.Status.Stats.RmsRa:0.00}″"); // under a guide pixel
+        await rig.Guider.StopAsync(CancellationToken.None);
+
+        var lines = File.ReadAllLines(rig.Nova.GuideLogPath(rig.Nova.GuideLogs()[0].Name, onDrive: false)!);
+        Assert.Contains(lines, l => l.StartsWith("X guide algorithm = Predictive PEC, Period = auto"));
+        Assert.Contains(lines, l => l.StartsWith("INFO: PEC: predicting, period "));
+    }
+
+    [Fact]
     public async Task SwitchingBackendsAndRefusals()
     {
         await using var rig = await SetUpAsync();

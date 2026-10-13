@@ -230,6 +230,24 @@
     <summary>Guiding settings</summary>
     <div class="grid">
       <span class="head">RA</span><span></span>
+      <label for="ng-ra-alg">Algorithm</label>
+      <select id="ng-ra-alg" value={s.algorithms.raAlgorithm}
+        onchange={(e) => saveAlgorithms({ raAlgorithm: e.currentTarget.value as GuideAlgorithmSettings['raAlgorithm'] })}
+        title="Predictive PEC learns the mount's periodic error while guiding and corrects it ahead of time">
+        <option value="Hysteresis">Hysteresis</option>
+        <option value="PredictivePec">Predictive PEC</option>
+      </select>
+      {#if s.algorithms.raAlgorithm === 'PredictivePec'}
+        <label for="ng-pec-period">PE period</label>
+        <div class="pair"><input id="ng-pec-period" class="mono" type="number" min="0" max="1500" step="1" value={s.algorithms.pecPeriodSeconds}
+          onchange={(e) => saveAlgorithms({ pecPeriodSeconds: num(e) })} title="0: found while guiding (the guiding assistant reports it too)" /> <span class="muted">s (0 = find)</span></div>
+        <label for="ng-pec-gain">Prediction gain</label>
+        <div class="pair"><input id="ng-pec-gain" class="mono" type="number" min="0" max="150" step="5" value={Math.round(s.algorithms.pecPredictionGain * 100)}
+          onchange={(e) => saveAlgorithms({ pecPredictionGain: num(e) / 100 })} title="How much of the predicted periodic error to correct ahead of time" /> <span class="muted">%</span></div>
+        <label for="ng-pec-react">Reactive</label>
+        <div class="pair"><input id="ng-pec-react" class="mono" type="number" min="0" max="200" step="5" value={Math.round(s.algorithms.pecReactiveAggressiveness * 100)}
+          onchange={(e) => saveAlgorithms({ pecReactiveAggressiveness: num(e) / 100 })} title="The aggressiveness of the reactive part while predicting (the next line is used while it learns)" /> <span class="muted">%</span></div>
+      {/if}
       <label for="ng-ra-agg">Aggressiveness</label>
       <div class="pair"><input id="ng-ra-agg" class="mono" type="number" min="0" max="200" step="5" value={Math.round(s.algorithms.raAggressiveness * 100)}
         onchange={(e) => saveAlgorithms({ raAggressiveness: num(e) / 100 })} /> <span class="muted">%</span></div>

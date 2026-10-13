@@ -646,6 +646,8 @@ export interface GuidingAssistantResult {
   recommendedDecMinMove: number
   recommendedExposure: number | null
   summary: string
+  /** RA's periodic error period(s), seconds (when the run saw two cycles). */
+  pePeriods: number[] | null
 }
 
 export type DecGuideMode = 'Auto' | 'North' | 'South' | 'Off'
@@ -660,6 +662,25 @@ export interface GuideAlgorithmSettings {
   decMode: DecGuideMode
   maxRaPulseMs: number
   maxDecPulseMs: number
+  /** RA: Hysteresis, or Predictive PEC (also corrects the learned periodic error ahead of time). */
+  raAlgorithm: 'Hysteresis' | 'PredictivePec'
+  /** Predictive PEC: the period if known (s); 0 finds it. */
+  pecPeriodSeconds: number
+  /** Predictive PEC: how much of the predicted motion to correct ahead (0–1). */
+  pecPredictionGain: number
+  /** Predictive PEC: the reactive part's aggressiveness. */
+  pecReactiveAggressiveness: number
+}
+
+/** Predictive PEC's model: learning or predicting, the period(s), the share of RA motion it explains, its size (px). */
+export interface PecStatus {
+  state: 'Learning' | 'Predicting'
+  periods: number[]
+  quality: number
+  amplitudePixels: number
+  minutes: number
+  /** Guiding needed before it predicts (two cycles of the longest period), when known. */
+  minutesNeeded: number | null
 }
 
 export interface NovaGuiderSettings {
@@ -745,6 +766,8 @@ export interface NovaGuiderStatus {
   profiles: { name: string; builtIn: boolean; description: string | null }[]
   /** The profile the current settings are exactly, or null when changed since. */
   profile: string | null
+  /** Predictive PEC's state, when it's the RA algorithm. */
+  pec: PecStatus | null
 }
 
 export interface DecDrift {

@@ -9,10 +9,13 @@ namespace Nova.Core.Guiding;
 /// <param name="DriftRa">Steady drift per minute (+/− along the axis); Dec drift is mostly polar alignment.</param>
 /// <param name="PeriodicRa">RA's slower wander left after the drift (peak to peak): periodic error and the like.</param>
 /// <param name="PolarErrorArcmin">The least polar error that explains the Dec drift (needs the scale).</param>
+/// <param name="PePeriods">The periodic error's period(s) in RA (seconds), when the run was long enough to see them:
+/// a starting point for Predictive PEC's period.</param>
 public sealed record GuidingAssistantResult(
     DateTime Utc, double Seconds, int Frames, string Axes, string Units,
     double JitterRa, double JitterDec, double DriftRa, double DriftDec, double PeriodicRa, double? PolarErrorArcmin,
-    double RecommendedRaMinMove, double RecommendedDecMinMove, double? RecommendedExposure, string Summary);
+    double RecommendedRaMinMove, double RecommendedDecMinMove, double? RecommendedExposure, string Summary,
+    IReadOnlyList<double>? PePeriods = null);
 
 /// <summary>
 /// PHD2's Guiding Assistant, in short: follow the star for a few minutes with corrections off and split its motion
@@ -89,18 +92,29 @@ public sealed class GuidingAssistant
             _ => null,
         };
 
+        // The periodic error's period(s): what Predictive PEC would learn (needs two cycles in the run).
+        IReadOnlyList<double> pePeriods = [];
+        if (calibrated && Seconds >= 60)
+        {
+            var times = _samples.Select(s => s.T).ToList();
+            var interval = Seconds / Math.Max(1, _samples.Count - 1);
+            pePeriods = Periodogram.Peaks(times, _samples.Select(s => s.Ra).ToList(), Math.Max(PeriodicErrorPredictor.MinPeriod, 4 * interval), Seconds / 2)
+                .Where(p => p.Power >= 0.2).Select(p => Math.Round(p.Seconds)).ToList();
+        }
+
         var u = units == "arcsec" ? "″" : " px";
         var axes = calibrated ? ("RA", "Dec") : ("X", "Y");
         var summary = $"Seeing jitter {jitterRa * scale:0.00}{u} {axes.Item1}, {jitterDec * scale:0.00}{u} {axes.Item2} (RMS); " +
                       $"drift {slopeRa * 60 * scale:+0.00;-0.00}{u}/min {axes.Item1}, {slopeDec * 60 * scale:+0.00;-0.00}{u}/min {axes.Item2}" +
                       (calibrated ? $"; RA wander {periodic * scale:0.0}{u} peak to peak" : "") +
+                      (pePeriods.Count > 0 ? $"; RA period {string.Join(" + ", pePeriods.Select(x => $"{x:0} s"))}" : "") +
                       (polar is { } p ? $"; polar alignment at least {DecDriftMonitor.Describe(p)} off" : "");
 
         return new GuidingAssistantResult(utc, Math.Round(Seconds, 1), _samples.Count, calibrated ? "RA/Dec" : "X/Y", units,
             Math.Round(jitterRa * scale, 3), Math.Round(jitterDec * scale, 3),
             Math.Round(slopeRa * 60 * scale, 3), Math.Round(slopeDec * 60 * scale, 3), Math.Round(periodic * scale, 3),
             polar is { } pe ? Math.Round(pe, 1) : null,
-            MinMove(jitterRa), MinMove(jitterDec), exposure, summary);
+            MinMove(jitterRa), MinMove(jitterDec), exposure, summary, pePeriods);
     }
 }
 

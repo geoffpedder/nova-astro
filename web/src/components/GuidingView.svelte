@@ -201,6 +201,7 @@
           <span>Seeing {assistant.jitterRa.toFixed(2)}{au} {assistant.axes === 'RA/Dec' ? 'RA' : 'X'}, {assistant.jitterDec.toFixed(2)}{au} {assistant.axes === 'RA/Dec' ? 'Dec' : 'Y'}</span>
           <span>Drift {assistant.driftRa.toFixed(2)}, {assistant.driftDec.toFixed(2)}{au}/min</span>
           {#if assistant.axes === 'RA/Dec'}<span>RA wander {assistant.periodicRa.toFixed(1)}{au} p-p</span>{/if}
+          {#if assistant.pePeriods?.length}<span>RA period {assistant.pePeriods.map((p) => `${p.toFixed(0)} s`).join(' + ')}</span>{/if}
           {#if assistant.polarErrorArcmin != null}<span>Polar error ≥ {assistant.polarErrorArcmin >= 60 ? `${(assistant.polarErrorArcmin / 60).toFixed(1)}°` : `${assistant.polarErrorArcmin.toFixed(0)}′`}</span>{/if}
           <span class="rec">Suggests min move RA {assistant.recommendedRaMinMove.toFixed(2)}, Dec {assistant.recommendedDecMinMove.toFixed(2)} px{assistant.recommendedExposure != null ? `, ${assistant.recommendedExposure} s exposures` : ''}</span>
           <button class="secondary apply" disabled={assistantRunning} onclick={() => act(api.guiderApplyAssistant)}>Apply</button>
@@ -217,6 +218,17 @@
         {#if calibration.warning}<p class="small warn">{calibration.warning}</p>{/if}
       {:else}
         <p class="muted small">Not calibrated yet: Guide calibrates first.</p>
+      {/if}
+      {#if n?.pec}
+        {@const pec = n.pec}
+        <p class="small mono pec" class:predicting={pec.state === 'Predicting'}
+          title="Predictive PEC: learns the mount's periodic error while guiding and corrects it ahead of time">
+          {#if pec.state === 'Predicting'}
+            PEC predicting: {pec.periods.map((p) => `${p.toFixed(0)} s`).join(' + ')}, {(pec.quality * 100).toFixed(0)}% explained, ±{guider?.pixelScale ? `${(pec.amplitudePixels * guider.pixelScale).toFixed(1)}″` : `${pec.amplitudePixels.toFixed(2)} px`}
+          {:else}
+            PEC learning: {pec.minutes.toFixed(0)}{pec.minutesNeeded != null ? ` of ~${Math.ceil(pec.minutesNeeded)}` : ''} min{pec.periods.length ? `, period so far ${pec.periods.map((p) => `${p.toFixed(0)} s`).join(' + ')}` : ''}
+          {/if}
+        </p>
       {/if}
       {#if n?.darks}
         <p class="small mono" class:warn={!n.darks.inUse}>
@@ -427,6 +439,12 @@
   .diagnosis {
     margin: 0;
     font-size: 13px;
+  }
+  .pec {
+    color: var(--muted);
+  }
+  .pec.predicting {
+    color: var(--ok);
   }
   .logs {
     display: flex;

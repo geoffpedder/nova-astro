@@ -5,7 +5,7 @@ using Nova.Core.Simulation;
 
 namespace Nova.Tests;
 
-public class GuidingEngineTests
+public class GuidingEngineTests(Xunit.Abstractions.ITestOutputHelper output)
 {
     /// <summary>
     /// A pretend guide camera view: pulses move the star field along known directions at known rates (pixels per
@@ -400,9 +400,17 @@ public class GuidingEngineTests
         Assert.InRange(result.DriftDec, 0.8, 1.2);          // 0.5 px/min × 2″
         Assert.InRange(result.PeriodicRa, 3.0, 6.5);        // the ±1.5 px wave: 6″ peak to peak, less smoothing
         Assert.InRange(result.PolarErrorArcmin!.Value, 3, 5); // 1″/min ÷ 0.26″/min per arcminute ≈ 4′
+        Assert.Empty(result.PePeriods!); // the 120 s wave needs a 4-minute run to be told from drift
         Assert.InRange(result.RecommendedRaMinMove, 0.12, 0.3);
         Assert.Null(result.RecommendedExposure); // good seeing: no reason to change the exposure
         Assert.Contains("Seeing jitter", result.Summary);
+
+        // A longer run sees the periodic error's period.
+        var longer = new GuidingAssistant();
+        for (var t = 0.0; t <= 300; t += 2) longer.Add(t, 1.5 * Math.Sin(2 * Math.PI * t / 120) + 0.3 * Gauss(random), 0.3 * Gauss(random));
+        var withPeriod = longer.Result(DateTime.UtcNow, 2, calibrated: true, exposureSeconds: 2)!;
+        Assert.InRange(Assert.Single(withPeriod.PePeriods!), 112, 128);
+        Assert.Contains("RA period", withPeriod.Summary);
 
         // Poor seeing (1.2″ a frame) asks for longer exposures to average it.
         var poor = new GuidingAssistant();
@@ -467,6 +475,106 @@ public class GuidingEngineTests
         var defaults = GuidePresets.DefaultsFor(name);
         Assert.Equal(am ? 2.5 : 5, defaults.DitherPixels);
         Assert.Equal(am ? 0.7 : 1.5, defaults.SettlePixels);
+    }
+
+    [Fact]
+    public void PeriodogramFindsOneAndTwoPeriodsInUnevenNoisyData()
+    {
+        var random = new Random(5);
+        var t = new List<double>();
+        for (var time = 0.0; time < 1800; time += 1.5 + random.NextDouble()) t.Add(time); // 1.5–2.5 s apart
+        var one = t.Select(x => 6 * Math.Sin(2 * Math.PI * x / 300) + 0.02 * x + 0.5 * Gauss(random)).ToList();
+        var peaks = Periodogram.Peaks(t, one, 20, 900);
+        Assert.Equal(300, peaks[0].Seconds, 300 * 0.03);
+        Assert.True(peaks[0].Power > 0.8);
+
+        var two = t.Select(x => 6 * Math.Sin(2 * Math.PI * x / 300) + 3 * Math.Sin(2 * Math.PI * x / 110 + 1) + 0.5 * Gauss(random)).ToList();
+        var both = Periodogram.Peaks(t, two, 20, 900).Select(p => p.Seconds).Order().ToList();
+        Assert.Equal(2, both.Count);
+        Assert.Equal(110, both[0], 110 * 0.03);
+        Assert.Equal(300, both[1], 300 * 0.03);
+
+        // Noise alone: nothing strong.
+        var noise = t.Select(_ => Gauss(random)).ToList();
+        Assert.All(Periodogram.Peaks(t, noise, 20, 900), p => Assert.True(p.Power < 0.1));
+    }
+
+    /// <summary>
+    /// An hour of 2 s guide frames along RA: the mount's periodic error (two waves) plus seeing noise; corrections
+    /// move the star back at once. Returns the RA RMS over the last 20 minutes and the controller.
+    /// </summary>
+    private static (double Rms, GuideController Controller) GuideAgainstPeriodicError(RaAlgorithm algorithm, bool withPe = true, int seed = 9)
+    {
+        var random = new Random(seed);
+        var cal = new GuideCalibration(0, 4, -Math.PI / 2, 4, 0, null, DateTime.UtcNow);
+        var controller = new GuideController(new GuideAlgorithmSettings(RaAlgorithm: algorithm));
+        double Gear(double t) => withPe ? 8 * Math.Sin(2 * Math.PI * t / 300) + 3 * Math.Sin(2 * Math.PI * t / 100 + 0.7) : 0;
+        double corrected = 0;
+        var late = new List<double>();
+        for (var t = 0.0; t < 3600; t += 2)
+        {
+            var x = Gear(t) - corrected;                 // where the star is, along RA (px)
+            var measured = x + 0.15 * Gauss(random);     // seeing
+            var c = controller.Correct(measured, 0.15 * Gauss(random), cal, t);
+            if (c.Ra is { } p) corrected += p.Milliseconds / 1000.0 * cal.RaRate * (p.Direction == GuideDirection.East ? 1 : -1);
+            if (t >= 2400) late.Add(x);
+        }
+        return (Math.Sqrt(late.Average(v => v * v)), controller);
+    }
+
+    [Fact]
+    public void PredictivePecBeatsHysteresisOnPeriodicError()
+    {
+        var (hysteresis, _) = GuideAgainstPeriodicError(RaAlgorithm.Hysteresis);
+        var (pec, controller) = GuideAgainstPeriodicError(RaAlgorithm.PredictivePec);
+        output.WriteLine($"RA RMS over the last 20 min: Hysteresis {hysteresis:0.000} px, Predictive PEC {pec:0.000} px ({100 * (1 - pec / hysteresis):0}% lower)");
+        Assert.True(pec < hysteresis * 0.7, $"PEC {pec:0.000} px vs Hysteresis {hysteresis:0.000} px RMS");
+
+        var status = controller.Pec.Status;
+        Assert.Equal(PecState.Predicting, status.State);
+        Assert.Contains(status.Periods, p => Math.Abs(p - 300) < 15);
+        Assert.True(status.Quality > 0.8, $"quality {status.Quality}");
+        Assert.InRange(status.AmplitudePixels, 7, 13);
+    }
+
+    [Fact]
+    public void PredictivePecDoesNoHarmWithoutPeriodicError()
+    {
+        var (hysteresis, _) = GuideAgainstPeriodicError(RaAlgorithm.Hysteresis, withPe: false);
+        var (pec, controller) = GuideAgainstPeriodicError(RaAlgorithm.PredictivePec, withPe: false);
+        Assert.True(pec <= hysteresis * 1.1, $"PEC {pec:0.000} px vs Hysteresis {hysteresis:0.000} px RMS");
+        Assert.Equal(PecState.Learning, controller.Pec.Status.State); // nothing worth predicting
+    }
+
+    [Fact]
+    public void PecPredictorLearnsKeepsDithersSmoothAndResets()
+    {
+        var p = new PeriodicErrorPredictor();
+        double Gear(double t) => 5 * Math.Sin(2 * Math.PI * t / 120);
+        for (var t = 0.0; t < 200; t += 2) p.Add(t, Gear(t));
+        Assert.Equal(PecState.Learning, p.Status.State); // under two cycles
+        Assert.Null(p.Predict(200, 2));
+
+        // A dither shifts the lock by 3 px along RA: the error jumps, but the recorded motion carries on.
+        p.Applied(3);
+        for (var t = 200.0; t < 400; t += 2) p.Add(t, Gear(t) - 3);
+        Assert.Equal(PecState.Predicting, p.Status.State);
+        Assert.InRange(p.Status.Periods[0], 117, 123);
+        Assert.Equal(Gear(402) - Gear(400), p.Predict(400, 2)!.Value, 0.05);
+
+        // A fixed period works from the same data.
+        var fixedPeriod = new PeriodicErrorPredictor { PeriodOverride = 120 };
+        for (var t = 0.0; t < 260; t += 2) fixedPeriod.Add(t, Gear(t));
+        Assert.Equal([120.0], fixedPeriod.Status.Periods);
+
+        // A long gap starts it over.
+        string? why = null;
+        p.Restarted += reason => why = reason;
+        p.Add(500, 0);
+        Assert.Contains("learning again", why);
+        Assert.Equal(PecState.Learning, p.Status.State);
+        p.Reset();
+        Assert.Equal(0, p.Status.Minutes);
     }
 
     [Fact]

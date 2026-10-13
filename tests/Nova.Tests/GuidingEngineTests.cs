@@ -341,6 +341,46 @@ public class GuidingEngineTests
     }
 
     [Fact]
+    public void WritesAGuideLogInPhd2sFormat()
+    {
+        var folder = Path.Combine(Path.GetTempPath(), "nova-guidelog-" + Guid.NewGuid().ToString("N"));
+        var path = Path.Combine(folder, "night", "NOVA_GuideLog.txt");
+        try
+        {
+            var log = new GuideLog(() => path);
+            var start = new DateTime(2026, 10, 12, 4, 0, 0, DateTimeKind.Utc);
+            log.Info("not written: no run going on");
+            log.BeginCalibration(start, ["Camera = Guide"]);
+            var points = new List<CalibrationPoint> { new("West", 0, 0), new("West", 3, 4), new("East", 1.5, 2), new("North", 1.5, 2), new("North", 1.5, -3) };
+            log.EndCalibration(start.AddSeconds(30), points, new GuideCalibration(0.9273, 5, -1.5708, 5, 10, null, start), null, 2);
+            log.BeginGuiding(start.AddSeconds(40), ["Exposure = 2000 ms"]);
+            log.Step(start.AddSeconds(42), new GuideLogStep(0.1, -0.2, 0.15, -0.25, 0.1, 0,
+                new GuidePulse(GuideDirection.East, 120), null, 52000, 80.123));
+            log.StarLost(start.AddSeconds(44), "Lost the guide star");
+            log.Info("DITHER by 1.000, 2.000, new lock pos = 3.000, 4.000");
+            log.EndGuiding(start.AddSeconds(46));
+
+            var lines = File.ReadAllLines(path);
+            Assert.StartsWith("PHD2 version", lines[0]);
+            Assert.Single(lines, l => l.StartsWith("PHD2 version")); // once per file
+            Assert.DoesNotContain(lines, l => l.Contains("not written"));
+            Assert.Contains("West,1,3.000,4.000,3.000,4.000,5.000", lines);
+            Assert.Contains("North,1,0.000,-5.000,1.500,-3.000,5.000", lines);
+            Assert.Contains("West calibration complete. Angle = 53.1 deg, Rate = 5.000 px/sec, Parity = +", lines);
+            Assert.Contains("North calibration complete. Angle = -90.0 deg, Rate = 5.000 px/sec, Parity = +", lines);
+            Assert.Contains("Calibration guide speeds: RA = 10.0 a-s/s, Dec = 10.0 a-s/s", lines);
+            Assert.Contains("1,2.000,\"Mount\",0.100,-0.200,0.150,-0.250,0.100,0.000,120,E,0,,,,52000,80.12,0", lines);
+            Assert.Contains("2,4.000,\"DROP\",,,,,,,,,,,,,0,0.00,1,\"Lost the guide star\"", lines);
+            Assert.Contains("INFO: DITHER by 1.000, 2.000, new lock pos = 3.000, 4.000", lines);
+            Assert.StartsWith("Guiding Ends at", lines[^1]);
+        }
+        finally
+        {
+            try { Directory.Delete(folder, recursive: true); } catch (IOException) { }
+        }
+    }
+
+    [Fact]
     public void DitherSettlingIsMarkedAndLeftOutOfTheRms()
     {
         var history = new GuideHistory(10);

@@ -1,4 +1,4 @@
-import type { AltitudeCurve, SkyField, SolvedFrame, TargetInfo, TonightFilters, TonightResult, Annotations, AutofocusSettings, MotionDirection, PolarAlignmentSettings, Sequence, CameraSettingsUpdate, DeviceKind, DeviceProperty, FitsHeaderCard, PreviewMode, StarOverlay, FlatsSettings, SolveInfo, DriverSetup, SetupCheck, NotificationSettings, NotificationSettingsView, FolderListing, NovaGuiderSettings } from './types'
+import type { GuideLogFile, AltitudeCurve, SkyField, SolvedFrame, TargetInfo, TonightFilters, TonightResult, Annotations, AutofocusSettings, MotionDirection, PolarAlignmentSettings, Sequence, CameraSettingsUpdate, DeviceKind, DeviceProperty, FitsHeaderCard, PreviewMode, StarOverlay, FlatsSettings, SolveInfo, DriverSetup, SetupCheck, NotificationSettings, NotificationSettingsView, FolderListing, NovaGuiderSettings } from './types'
 
 import { signedOut } from './auth.svelte'
 
@@ -217,6 +217,8 @@ export const api = {
   /** Takes a dark library for the guide camera: frames darks at each exposure (s). The scope must be covered. */
   guideDarks: (exposures: number[], frames: number) => post('/api/guider/darks/build', { exposures, frames }),
   clearGuideDarks: () => post('/api/guider/darks/clear'),
+  guideLogs: () => get<GuideLogFile[]>('/api/guider/logs'),
+  guideLogUrl: (log: GuideLogFile) => `/api/guider/logs/${encodeURIComponent(log.name)}?drive=${log.onDrive}`,
   /** stretch: low (black background), medium or high (full auto stretch). */
   guideFrameUrl: (frame: number, stretch = 'medium') => `/api/guider/frame.png?f=${frame}&stretch=${stretch}`,
   /** Guide on the star nearest this point of the guide frame (its pixels). */

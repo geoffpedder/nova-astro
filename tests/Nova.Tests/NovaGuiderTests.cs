@@ -28,7 +28,10 @@ public class NovaGuiderTests : IDisposable
 
     private async Task<Rig> SetUpAsync()
     {
-        var options = Opts.Create(new NovaOptions { Backend = "Simulator", ConfigDirectory = _config, Phd2AutoConnect = false });
+        var options = Opts.Create(new NovaOptions
+        {
+            Backend = "Simulator", ConfigDirectory = _config, ImageDirectory = Path.Combine(_config, "images"), Phd2AutoConnect = false,
+        });
         var log = new ActivityLog(new NullHubContext(), NullLogger<ActivityLog>.Instance);
         var equipment = new EquipmentService(options, log);
         var optics = new OpticsService(equipment, options, log);
@@ -88,6 +91,30 @@ public class NovaGuiderTests : IDisposable
         await guider.StopAsync(CancellationToken.None);
         Assert.False(guider.IsGuiding);
         Assert.Equal(GuiderState.Stopped, guider.Status.State);
+
+        // The night's guide log, in PHD2's format, in the night's image folder.
+        var log = Assert.Single(nova.GuideLogs());
+        Assert.False(log.OnDrive);
+        var path = nova.GuideLogPath(log.Name, onDrive: false)!;
+        Assert.Equal(Path.Combine(_config, "images", log.Night, log.Name), path);
+        var lines = File.ReadAllLines(path);
+        Assert.StartsWith("PHD2 version", lines[0]);
+        Assert.Contains(lines, l => l.StartsWith("Calibration Begins at"));
+        Assert.Contains(lines, l => l.StartsWith("West,0,"));
+        Assert.Contains(lines, l => l.StartsWith("West calibration complete. Angle = "));
+        Assert.Contains(lines, l => l.StartsWith("North calibration complete. Angle = "));
+        Assert.Contains(lines, l => l.StartsWith("Guiding Begins at"));
+        Assert.Contains(lines, l => l.StartsWith("X guide algorithm = Hysteresis, Hysteresis = 0.100, Aggression = 0.700"));
+        Assert.Contains(lines, l => l.StartsWith("Frame,Time,mount,dx,dy,RARawDistance"));
+        var rows = lines.Where(l => l.Length > 0 && char.IsDigit(l[0])).ToList();
+        Assert.True(rows.Count > 10, $"{rows.Count} guide rows");
+        Assert.All(rows, r => Assert.Equal(18, r.Split(',').Length));
+        Assert.Contains(lines, l => l.StartsWith("INFO: DITHER by "));
+        Assert.Contains(lines, l => l == "INFO: SETTLING STATE CHANGE, Settling complete");
+        Assert.Contains(lines, l => l.StartsWith("Guiding Ends at"));
+
+        // Only NOVA's guide logs can be fetched.
+        Assert.Null(nova.GuideLogPath("../guider.json", onDrive: false));
     }
 
     [Fact]

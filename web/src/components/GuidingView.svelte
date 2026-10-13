@@ -4,6 +4,7 @@
   import { guideView, setGuideStretch, type GuideStretch } from '../lib/guideView.svelte'
   import CalibrationGraph from './CalibrationGraph.svelte'
   import { guideGraph } from '../lib/guideGraph'
+  import type { GuideLogFile } from '../lib/types'
 
   // NOVA's own guider, full size: the whole guide frame with the stars it follows (click one to guide on it), the
   // lock star close up, the buttons, and a large graph of the last 10 minutes or so.
@@ -20,6 +21,23 @@
   const polar = (arcmin: number) => (arcmin >= 60 ? `${(arcmin / 60).toFixed(1)}°` : `${arcmin.toFixed(0)}′`)
 
   let ditherPixels = $state(5)
+
+  // The guide logs (one per night): fetched when the tab opens and whenever guiding or calibration ends.
+  let logs = $state<GuideLogFile[]>([])
+  async function loadLogs() {
+    try {
+      logs = await api.guideLogs()
+    } catch {
+      logs = []
+    }
+  }
+  let lastPhase = ''
+  $effect(() => {
+    const now = phase
+    if (lastPhase === '' || (['Guiding', 'Calibrating', 'LostLock'].includes(lastPhase) && !['Guiding', 'Calibrating', 'LostLock'].includes(now))) loadLogs()
+    lastPhase = now
+  })
+  const size = (bytes: number) => (bytes < 1024 * 1024 ? `${Math.max(1, Math.round(bytes / 1024))} KB` : `${(bytes / 1024 / 1024).toFixed(1)} MB`)
 
   const badgeClass = $derived(
     guider?.settling ? 'warn' : phase === 'Guiding' ? 'ok' : phase === 'LostLock' ? 'danger' : running ? 'warn' : 'muted',
@@ -166,6 +184,16 @@
         <p class="small warn">No dark library: hot pixels can be taken for stars (Guider panel, Dark library).</p>
       {/if}
       <p class="muted small">Click a star in the frame to guide on it. Green square: the guide star; yellow rings: the stars averaged with it.</p>
+      <div class="logs">
+        <span class="muted small">Guide logs{s && !s.guideLog ? ' (off in Guiding settings)' : ''}</span>
+        {#each logs.slice(0, 5) as log (log.name + log.onDrive)}
+          <a class="small mono" href={api.guideLogUrl(log)} download={log.name} title="PHD2's log format: opens in PHD2 log viewers">
+            {log.night}{log.onDrive ? ' (drive)' : ''}, {size(log.bytes)}
+          </a>
+        {:else}
+          <span class="muted small">None yet: one is written per night while calibrating and guiding.</span>
+        {/each}
+      </div>
     </aside>
   </div>
 
@@ -321,6 +349,14 @@
   .small {
     font-size: 12px;
     margin: 0;
+  }
+  .logs {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+  .logs a {
+    color: var(--accent);
   }
   .warn,
   .drift {

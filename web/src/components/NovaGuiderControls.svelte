@@ -228,6 +228,11 @@
       <label for="ng-flip">Reverse Dec after flip</label>
       <input id="ng-flip" type="checkbox" checked={s.reverseDecAfterFlip} onchange={(e) => save({ reverseDecAfterFlip: e.currentTarget.checked })}
         title="Only for mounts whose Dec guide pulses change direction after a meridian flip" />
+
+      <span class="head">Log</span><span></span>
+      <label for="ng-log">Guide log</label>
+      <input id="ng-log" type="checkbox" checked={s.guideLog} onchange={(e) => save({ guideLog: e.currentTarget.checked })}
+        title="A log of every calibration and guide frame (PHD2's format, for PHD2 log viewers), one per night in the night's image folder" />
     </div>
   </details>
 {/if}

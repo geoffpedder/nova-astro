@@ -4,15 +4,6 @@ What changed in each release. The newest is first. A release's section here beco
 
 ## [Unreleased]
 
-### Fixed
-- **Dithers no longer spoil the guiding RMS and graph** (PHD2 and NOVA's guider): the steps while guiding settles
-  after a dither (or after starting) are left out of the RMS and peaks, and the graph marks the dither with a dashed
-  line and shades the settling instead of drawing a spike that rescaled everything.
-- **Noise measured on coarse frames:** a ZWO guide camera's 12-bit values (multiples of 16) on a quiet background
-  left most pixels on one exact value, so NOVA measured no noise at all. Star detection then took hundreds of noise
-  specks for stars, and the stretch showed the frame as white noise whatever the setting. Affected any frame like
-  that, guide frames most.
-
 ### Added
 - **NOVA's own guider** (new; PHD2 stays the default): pick **NOVA** at the top of the Guider panel to guide with no
   PHD2 at all. Guide camera and output (the mount's pulse guiding, or a camera's ST4 port), Loop with a live view of
@@ -31,6 +22,18 @@ What changed in each release. The newest is first. A release's section here beco
 - **Guiding tab** for NOVA's guider: the whole guide frame with the guide star and the stars averaged with it marked
   (click another star to guide on it), the guide star close up, RMS and peaks, the calibration, a large graph of the
   last 300 steps, and all the buttons.
+- **Guide logs** for NOVA's guider, in PHD2's guide-log format (so PHD2's log viewers can open them): every
+  calibration step and guide frame, dithers, settling, lost stars and setting changes. One per night in the night's
+  image folder (the USB drive when frames go there); the Guiding tab lists them to download.
+
+### Fixed
+- **Dithers no longer spoil the guiding RMS and graph** (PHD2 and NOVA's guider): the steps while guiding settles
+  after a dither (or after starting) are left out of the RMS and peaks, and the graph marks the dither with a dashed
+  line and shades the settling instead of drawing a spike that rescaled everything.
+- **Noise measured on coarse frames:** a ZWO guide camera's 12-bit values (multiples of 16) on a quiet background
+  left most pixels on one exact value, so NOVA measured no noise at all. Star detection then took hundreds of noise
+  specks for stars, and the stretch showed the frame as white noise whatever the setting. Affected any frame like
+  that, guide frames most.
 
 ## [0.3.5] - 2026-10-11
 

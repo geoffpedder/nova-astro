@@ -15,12 +15,16 @@ namespace Nova.Server.Services;
 /// <param name="ReverseDecAfterFlip">For mounts whose Dec pulses change sense after a meridian flip.</param>
 /// <param name="UseDarks">Subtract the guide camera's dark library (when it has one) from every guide frame.</param>
 /// <param name="Gain">The guide camera's gain, set before every frame; null leaves it as the driver has it.</param>
+/// <param name="GuideLog">Write a guide log (PHD2's format) into each night's image folder.</param>
 public sealed record NovaGuiderSettings(
     string? Camera = null, string? Output = null, double ExposureSeconds = 2, int Binning = 1, int CalibrationStepMs = 0,
-    bool ReverseDecAfterFlip = false, GuideAlgorithmSettings? Algorithms = null, bool UseDarks = true, double? Gain = null)
+    bool ReverseDecAfterFlip = false, GuideAlgorithmSettings? Algorithms = null, bool UseDarks = true, double? Gain = null, bool GuideLog = true)
 {
     public GuideAlgorithmSettings Algorithms { get; init; } = Algorithms ?? new GuideAlgorithmSettings();
 }
+
+/// <summary>A guide log file: which night, where it is (the mini PC or the drive), its size and when it last grew.</summary>
+public sealed record GuideLogFile(string Name, string Night, bool OnDrive, long Bytes, DateTime ModifiedUtc);
 
 /// <summary>A guide output to choose from: <c>Name</c> null is the mount.</summary>
 public sealed record GuideOutputChoice(string? Name, string Label);
@@ -67,6 +71,9 @@ public sealed class NovaGuider : IAsyncDisposable
     private readonly ActivityLog _log;
     private readonly string _file;
     private readonly string _darkFolder;
+    private readonly string _localImages;
+    private readonly GuideLog _guideLog;
+    private string? _guideLogPath;
     private readonly Dictionary<string, RawImage> _darkCache = new(StringComparer.Ordinal);
     private string? _darkProgress;
     private readonly object _sync = new();
@@ -104,9 +111,25 @@ public sealed class NovaGuider : IAsyncDisposable
         _log = log;
         _file = Path.Combine(options.Value.ResolveConfigDirectory(), "guider.json");
         _darkFolder = Path.Combine(options.Value.ResolveConfigDirectory(), "guide-darks");
+        _localImages = options.Value.ResolveImageDirectory();
         _saved = Load();
         _controller.Settings = _saved.Nova.Algorithms;
+        _guideLog = new GuideLog(() => Settings.GuideLog ? _guideLogPath : null);
+        _guideLog.Problem += problem =>
+        {
+            // The drive was pulled out (or filled up): carry on in the mini PC's image folder.
+            var local = LogPathIn(_localImages, DateTime.UtcNow);
+            if (_guideLogPath != local)
+            {
+                _guideLogPath = local;
+                _log.Warn($"{problem}. The guide log carries on in {local}");
+            }
+            else _log.Warn(problem);
+        };
     }
+
+    /// <summary>Where frames go (the mini PC or a USB drive); guide logs go into the same night folders.</summary>
+    public StorageService? Storage { get; set; }
 
     /// <summary>Which guider NOVA uses: "phd2" or "nova".</summary>
     public string Backend => _saved.Backend;
@@ -159,10 +182,28 @@ public sealed class NovaGuider : IAsyncDisposable
             throw new ArgumentException("A guiding algorithm setting is out of range");
         lock (_sync)
         {
+            foreach (var change in Changes(_saved.Nova, settings)) _guideLog.Info($"Guiding parameter change, {change}");
             _saved = _saved with { Nova = settings };
             _controller.Settings = settings.Algorithms;
         }
         Save();
+    }
+
+    /// <summary>What differs between two sets of settings, as "Name = value" for the guide log.</summary>
+    private static IEnumerable<string> Changes(NovaGuiderSettings before, NovaGuiderSettings after)
+    {
+        var (a, b) = (before.Algorithms, after.Algorithms);
+        (string Name, object? Old, object? New)[] fields =
+        [
+            ("Exposure", before.ExposureSeconds * 1000, after.ExposureSeconds * 1000), ("Gain", before.Gain, after.Gain),
+            ("Use darks", before.UseDarks, after.UseDarks),
+            ("RA Hysteresis", a.RaHysteresis, b.RaHysteresis), ("RA Aggression", a.RaAggressiveness, b.RaAggressiveness),
+            ("RA Minimum move", a.RaMinMove, b.RaMinMove), ("Dec Aggression", a.DecAggressiveness, b.DecAggressiveness),
+            ("Dec Minimum move", a.DecMinMove, b.DecMinMove), ("Dec FastSwitch", a.DecFastSwitch, b.DecFastSwitch),
+            ("DEC guide mode", a.DecMode, b.DecMode), ("Max RA duration", a.MaxRaPulseMs, b.MaxRaPulseMs),
+            ("Max DEC duration", a.MaxDecPulseMs, b.MaxDecPulseMs),
+        ];
+        return fields.Where(f => !Equals(f.Old, f.New)).Select(f => FormattableString.Invariant($"{f.Name} = {f.New ?? "driver"}"));
     }
 
     public NovaGuiderStatus Status
@@ -249,6 +290,7 @@ public sealed class NovaGuider : IAsyncDisposable
         {
             FailWaiters(new OperationCanceledException("Guiding was switched to looping"));
             _mode = Mode.Looping;
+            _guideLog.EndGuiding(DateTime.UtcNow);
         }
     }
 
@@ -270,6 +312,11 @@ public sealed class NovaGuider : IAsyncDisposable
             _calibrationDone = done;
             _mode = Mode.Calibrating;
             _activity = "Calibrating";
+            var now = DateTime.UtcNow;
+            _guideLog.EndGuiding(now);
+            StartLogFile(now);
+            _guideLog.BeginCalibration(now, [.. LogHeader(camera, output, calibration: null),
+                FormattableString.Invariant($"Calibration step = {step} ms, Assume orthogonal axes = no")]);
         }
         _log.Info($"Calibrating the guider ({camera.Name} → {output.Name})…");
         await done.Task.WaitAsync(ct);
@@ -287,6 +334,7 @@ public sealed class NovaGuider : IAsyncDisposable
             if (_mode == Mode.Calibrating) throw new InvalidOperationException("Not while calibrating");
             if (!_tracker.SelectAt(_frameStars, _frame.Width, _frame.Height, x, y))
                 throw new InvalidOperationException("No usable star there");
+            if (_tracker.LockHome is { } home) _guideLog.Info(FormattableString.Invariant($"Star selected at {home.X:0.000}, {home.Y:0.000}"));
             _controller.Reset();
             _lostFrames = 0;
             _last = null;
@@ -322,6 +370,9 @@ public sealed class NovaGuider : IAsyncDisposable
             _rehome = true;
             _mode = Mode.Guiding;
             _activity = "Guiding";
+            var now = DateTime.UtcNow;
+            StartLogFile(now);
+            _guideLog.BeginGuiding(now, LogHeader(Camera!, Output!, Current()));
             wait = StartSettle(settle);
         }
         await wait.WaitAsync(ct);
@@ -355,6 +406,8 @@ public sealed class NovaGuider : IAsyncDisposable
             _tracker.ShiftHome(dx, dy);
             _controller.Reset();
             _history.MarkDither();
+            if (_tracker.LockHome is { } home)
+                _guideLog.Info(FormattableString.Invariant($"DITHER by {dx:0.000}, {dy:0.000}, new lock pos = {home.X:0.000}, {home.Y:0.000}"));
             wait = StartSettle(settle);
         }
         await wait.WaitAsync(ct);
@@ -608,6 +661,7 @@ public sealed class NovaGuider : IAsyncDisposable
             lock (_sync)
             {
                 FailWaiters(new OperationCanceledException("Guiding stopped"));
+                _guideLog.EndGuiding(DateTime.UtcNow);
                 State = GuiderState.Stopped;
                 _activity = null;
                 _loopCts?.Dispose();
@@ -681,6 +735,9 @@ public sealed class NovaGuider : IAsyncDisposable
                     State = GuiderState.Guiding;
                     var c = _controller.Correct(m.Dx, m.Dy, calibration);
                     _history.Add(c.RaPixels, c.DecPixels, settling: _settle is not null);
+                    var raGuide = c.Ra is { } rp ? rp.Milliseconds / 1000.0 * calibration.RaRate * (rp.Direction == GuideDirection.East ? 1 : -1) : 0;
+                    var decGuide = c.Dec is { } dp ? dp.Milliseconds / 1000.0 * calibration.DecRate * (dp.Direction == GuideDirection.South ? 1 : -1) : 0;
+                    _guideLog.Step(utc, new GuideLogStep(m.Dx, m.Dy, c.RaPixels, c.DecPixels, raGuide, decGuide, c.Ra, c.Dec, m.Mass, m.Snr));
                     if (c.Ra is { } ra) pulses.Add(ra);
                     if (c.Dec is { } dec) pulses.Add(dec);
                     var decMove = c.Dec is { } d ? d.Milliseconds / 1000.0 * calibration.DecRate : 0;
@@ -705,6 +762,7 @@ public sealed class NovaGuider : IAsyncDisposable
         _activity = activity;
         if (_mode == Mode.Looping) return;
         State = GuiderState.LostLock;
+        if (_mode == Mode.Guiding) _guideLog.StarLost(utc, activity);
         _drift.Add(_clock.Elapsed.TotalSeconds, 0, null, counts: false);
         Settle(utc, null);
     }
@@ -715,6 +773,7 @@ public sealed class NovaGuider : IAsyncDisposable
         var calibrator = _calibrator!;
         var done = _calibrationDone;
         (_calibrator, _calibrationDone, _mode) = (null, null, Mode.Looping);
+        _guideLog.EndCalibration(DateTime.UtcNow, calibrator.Points, calibrator.Result, calibrator.Error, PixelScale);
         if (calibrator.Result is { } result)
         {
             _saved = _saved with
@@ -739,6 +798,7 @@ public sealed class NovaGuider : IAsyncDisposable
     {
         _settle = new SettleTracker(settle, DateTime.UtcNow);
         _settled = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        _guideLog.Info("SETTLING STATE CHANGE, Settling started");
         return _settled.Task;
     }
 
@@ -749,16 +809,20 @@ public sealed class NovaGuider : IAsyncDisposable
         {
             if (!_settle.Add(utc, distance)) return;
             _settled?.TrySetResult();
+            _guideLog.Info("SETTLING STATE CHANGE, Settling complete");
         }
         catch (TimeoutException ex)
         {
             _settled?.TrySetException(ex);
+            _guideLog.Info($"SETTLING STATE CHANGE, Settling failed: {ex.Message}");
         }
         (_settle, _settled) = (null, null);
     }
 
     private void FailWaiters(Exception ex)
     {
+        if (_calibrator is { } calibrator)
+            _guideLog.EndCalibration(DateTime.UtcNow, calibrator.Points, null, ex.Message, PixelScale);
         _settled?.TrySetException(ex);
         _calibrationDone?.TrySetException(ex);
         (_settle, _settled, _calibrator, _calibrationDone) = (null, null, null, null);
@@ -783,6 +847,110 @@ public sealed class NovaGuider : IAsyncDisposable
         double? Arcsec(double rate) => PixelScale is { } s ? Math.Round(rate * s, 2) : null;
         return new GuideCalibrationInfo(Deg(c.RaAngle), Deg(c.DecAngle), Math.Round(c.RaRate, 3), Math.Round(c.DecRate, 3),
             Arcsec(c.RaRate), Arcsec(c.DecRate), Math.Round(c.OrthogonalityError, 1), Math.Round(c.DecDegrees, 1), c.PierSide, c.Utc, warning);
+    }
+
+    // ---- Guide log ----
+
+    private string LogPathIn(string root, DateTime utc)
+    {
+        var night = GuideLog.Night(utc);
+        return Path.Combine(root, night, $"NOVA_GuideLog_{night}.txt");
+    }
+
+    /// <summary>Picks the night's log file at the start of a calibration or guiding run: where frames are going now.</summary>
+    private void StartLogFile(DateTime utc)
+    {
+        string root;
+        try
+        {
+            root = Storage?.ImageRoot() ?? _localImages;
+        }
+        catch (Exception ex) when (ex is IOException or InvalidOperationException)
+        {
+            root = _localImages;
+        }
+        _guideLogPath = LogPathIn(root, utc);
+    }
+
+    /// <summary>The settings, equipment and pointing at the start of a run, in PHD2's words.</summary>
+    private List<string> LogHeader(ICamera camera, IGuideOutput output, GuideCalibration? calibration)
+    {
+        var s = Settings;
+        var a = s.Algorithms;
+        var scale = PixelScale;
+        var size = camera.SensorSize is { } z ? $"{z.Width} x {z.Height}" : _frame is { } f ? $"{f.Width} x {f.Height}" : "unknown";
+        var darks = UsableDarks(camera);
+        var dark = s.UseDarks && darks.Count > 0 ? $"have dark, dark dur = {darks.Min(d => d.ExposureSeconds) * 1000:0}" : "no dark";
+        var (dec, pier) = Pointing();
+        var ra = _equipment.Mount is { IsConnected: true } mount ? mount.Coordinates.RaHours : (double?)null;
+        var lines = new List<string>
+        {
+            "Dither = both axes, Dither scale = 1.000, Image noise reduction = none, Guide-frame time lapse = 0, Server enabled",
+            FormattableString.Invariant($"Pixel scale = {(scale is { } sc ? sc.ToString("0.00", CultureInfo.InvariantCulture) : "N/A")} arc-sec/px, Binning = {s.Binning}, Focal length = N/A mm"),
+            FormattableString.Invariant($"Search region = {_tracker.SearchRadius:0} px, Star mass tolerance = disabled"),
+            "Equipment Profile = NOVA",
+            FormattableString.Invariant($"Camera = {camera.Name}, gain = {camera.Controls.Gain?.Value.ToString("0", CultureInfo.InvariantCulture) ?? "N/A"}, full size = {size}, {dark}, no defect map, pixel size = {camera.PixelSize?.ToString("0.00", CultureInfo.InvariantCulture) ?? "N/A"} um"),
+            FormattableString.Invariant($"Exposure = {s.ExposureSeconds * 1000:0} ms"),
+            calibration is { } c
+                ? FormattableString.Invariant($"Mount = {output.Name}, connected, guiding enabled, xAngle = {Deg(c.RaAngle):0.0}, xRate = {c.RaRate:0.000}, yAngle = {Deg(c.DecAngle):0.0}, yRate = {c.DecRate:0.000}, parity = +/+")
+                : $"Mount = {output.Name}, connected, guiding enabled",
+            FormattableString.Invariant($"X guide algorithm = Hysteresis, Hysteresis = {a.RaHysteresis:0.000}, Aggression = {a.RaAggressiveness:0.000}, Minimum move = {a.RaMinMove:0.000}"),
+            FormattableString.Invariant($"Y guide algorithm = Resist Switch, Minimum move = {a.DecMinMove:0.000} Aggression = {a.DecAggressiveness * 100:0}% FastSwitch = {(a.DecFastSwitch ? "enabled" : "disabled")}"),
+            "Backlash comp = disabled, pulse = 0 ms",
+            FormattableString.Invariant($"Max RA duration = {a.MaxRaPulseMs}, Max DEC duration = {a.MaxDecPulseMs}, DEC guide mode = {a.DecMode}"),
+        };
+        if (calibration is { } cal && scale is { } px)
+            lines.Add(FormattableString.Invariant($"RA Guide Speed = {cal.RaRate * px:0.0} a-s/s, Dec Guide Speed = {cal.DecRate * px:0.0} a-s/s, Cal Dec = {cal.DecDegrees:0.0}, Last Cal Issue = None, Timestamp = {cal.Utc.ToLocalTime():yyyy-MM-dd HH:mm:ss}"));
+        lines.Add(FormattableString.Invariant($"RA = {(ra is { } r ? r.ToString("0.00", CultureInfo.InvariantCulture) : "N/A")} hr, Dec = {(dec is { } d ? d.ToString("0.0", CultureInfo.InvariantCulture) : "N/A")} deg, Hour angle = N/A hr, Pier side = {pier?.ToString() ?? "N/A"}, Rotator pos = N/A, Alt = N/A deg, Az = N/A deg"));
+        if (_tracker.LockHome is { } home) lines.Add(FormattableString.Invariant($"Lock position = {home.X:0.000}, {home.Y:0.000}"));
+        if (_last is { } m) lines.Add(FormattableString.Invariant($"Star position = {m.X:0.000}, {m.Y:0.000}, HFD = {m.Hfr * 2:0.00} px"));
+        return lines;
+
+        static double Deg(double r) => ((r * 180 / Math.PI) % 360 + 540) % 360 - 180;
+    }
+
+    /// <summary>The guide logs on the mini PC and the drive, newest night first.</summary>
+    public IReadOnlyList<GuideLogFile> GuideLogs()
+    {
+        var roots = new List<(string Root, bool Drive)> { (_localImages, false) };
+        try
+        {
+            if (Storage?.ImageRoot() is { } root && Path.GetFullPath(root) != Path.GetFullPath(_localImages)) roots.Add((root, true));
+        }
+        catch (Exception ex) when (ex is IOException or InvalidOperationException)
+        {
+            // no drive
+        }
+        var files = new List<GuideLogFile>();
+        foreach (var (root, drive) in roots)
+        {
+            if (!Directory.Exists(root)) continue;
+            foreach (var night in Directory.EnumerateDirectories(root))
+            foreach (var file in Directory.EnumerateFiles(night, "NOVA_GuideLog_*.txt"))
+            {
+                var info = new FileInfo(file);
+                files.Add(new GuideLogFile(info.Name, Path.GetFileName(night), drive, info.Length, info.LastWriteTimeUtc));
+            }
+        }
+        return files.OrderByDescending(f => f.Night).ThenBy(f => f.OnDrive).ToList();
+    }
+
+    /// <summary>A guide log's full path, by name (only NOVA's guide logs, only in the image folders).</summary>
+    public string? GuideLogPath(string name, bool onDrive)
+    {
+        if (!System.Text.RegularExpressions.Regex.IsMatch(name, @"^NOVA_GuideLog_\d{4}-\d{2}-\d{2}\.txt$")) return null;
+        var night = name["NOVA_GuideLog_".Length..^".txt".Length];
+        string root;
+        try
+        {
+            root = onDrive ? Storage?.ImageRoot() ?? _localImages : _localImages;
+        }
+        catch (Exception ex) when (ex is IOException or InvalidOperationException)
+        {
+            return null;
+        }
+        var path = Path.Combine(root, night, name);
+        return File.Exists(path) ? path : null;
     }
 
     // ---- Settings file ----

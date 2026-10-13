@@ -619,6 +619,18 @@ export interface NovaGuiderSettings {
   useDarks: boolean
   /** The guide camera's gain, set before every frame; null leaves it as the driver has it. */
   gain: number | null
+  /** Write a guide log (PHD2's format) into each night's image folder. */
+  guideLog: boolean
+}
+
+/** A guide log file of NOVA's guider (one per night, in the night's image folder). */
+export interface GuideLogFile {
+  name: string
+  night: string
+  /** On the USB drive rather than the mini PC. */
+  onDrive: boolean
+  bytes: number
+  modifiedUtc: string
 }
 
 /** The guide camera's dark library at the current binning. */

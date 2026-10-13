@@ -103,6 +103,7 @@ app.Services.GetRequiredService<SequencerService>().FocusOffsets = app.Services.
 var storage = app.Services.GetRequiredService<StorageService>();
 app.Services.GetRequiredService<ImagingService>().Storage = storage;
 app.Services.GetRequiredService<SequencerService>().Storage = storage;
+app.Services.GetRequiredService<NovaGuider>().Storage = storage;
 storage.FellBack += (_, why) => notifications.Notify(NotificationKind.Storage, "Frames are going to the mini PC", why);
 // A new password (or none) drops every live connection; each reconnects only if still signed in.
 app.Services.GetRequiredService<PasswordService>().Changed += Nova.Server.Hubs.NovaHub.DisconnectAll;

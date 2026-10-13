@@ -6,7 +6,8 @@ namespace Nova.Core.Guiding;
 /// <param name="X">Where the lock star is now (or would be, from the reference stars, when it wasn't found).</param>
 /// <param name="Found">How many of the tracked stars were found.</param>
 /// <param name="Snr">The lock star's SNR (0 when it wasn't found).</param>
-public sealed record GuideMeasurement(double X, double Y, double Dx, double Dy, int Found, int Tracked, double Snr, double Hfr)
+/// <param name="Mass">The lock star's total light (ADU), as PHD2 logs it; 0 when it wasn't found.</param>
+public sealed record GuideMeasurement(double X, double Y, double Dx, double Dy, int Found, int Tracked, double Snr, double Hfr, double Mass = 0)
 {
     public double Distance => Math.Sqrt(Dx * Dx + Dy * Dy);
 }
@@ -137,7 +138,7 @@ public sealed class GuideStarTracker
 
         var lockStar = found.GetValueOrDefault(_stars[0]);
         return new GuideMeasurement(_stars[0].LastX, _stars[0].LastY, dx, dy, matches.Count, _stars.Count,
-            lockStar?.Snr ?? 0, lockStar?.Hfr ?? 0);
+            lockStar?.Snr ?? 0, lockStar?.Hfr ?? 0, lockStar?.Flux ?? 0);
     }
 
     private static double Dist(double x1, double y1, double x2, double y2) => Math.Sqrt((x1 - x2) * (x1 - x2) + (y1 - y2) * (y1 - y2));

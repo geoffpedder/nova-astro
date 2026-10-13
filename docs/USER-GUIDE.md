@@ -271,6 +271,13 @@ guiding settles after it are shaded and left out of the RMS, so a dither doesn't
 the exposure, and how bright to show the frame: **Low** (black background, just the stars), **Med** (the default)
 or **High** (the full auto stretch, for finding faint stars, noise and all); each browser remembers it. **Click a star** in the frame to guide on it instead; while guiding, guiding carries on from that star.
 
+**Guide logs**: NOVA's guider writes a log of every calibration (each step and the result) and every guide frame
+(offsets, the error on each axis, the pulses sent, the star's brightness and SNR), with dithers, settling, lost stars
+and settings changed mid-run. It's in PHD2's guide-log format, so the tools made for PHD2's logs can open it. One file
+per night, `NOVA_GuideLog_<night>.txt` in the night's image folder (on the USB drive when frames go there), so it's
+copied along with the night's frames. The Guiding tab lists the latest to download; **Guide log** in Guiding settings
+turns it off.
+
 Set the **Guide scope** optics, so the RMS and the calibration are in arcseconds. The Dec drift warning works the
 same as with PHD2.
 

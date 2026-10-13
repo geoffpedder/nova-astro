@@ -868,6 +868,11 @@ public static class NovaApi
                 (guider.Nova ?? throw new InvalidOperationException("NOVA's own guider isn't available")).SelectStar(request.X, request.Y);
                 return Task.CompletedTask;
             }));
+        api.MapGet("/guider/logs", (GuiderService guider) => guider.Nova?.GuideLogs() ?? []);
+        api.MapGet("/guider/logs/{name}", (string name, bool? drive, GuiderService guider) =>
+            guider.Nova?.GuideLogPath(name, drive ?? false) is { } path
+                ? Results.File(File.OpenRead(path), "text/plain", name)
+                : Results.NotFound());
         api.MapGet("/guider/frame.png", (string? stretch, GuiderService guider) =>
             guider.Nova?.FramePng(stretch) is { } png ? Results.File(png, "image/png") : Results.NotFound());
     }

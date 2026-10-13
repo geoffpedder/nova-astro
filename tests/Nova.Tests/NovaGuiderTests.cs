@@ -76,9 +76,13 @@ public class NovaGuiderTests : IDisposable
         Assert.True(stats.Samples > 10, $"{stats.Samples} guide steps");
         Assert.True(stats.RmsTotal < 4, $"RMS {stats.RmsTotal:0.00}″"); // under a pixel
 
-        // Dither and settle again.
+        // Dither and settle again: the walk to the new place is marked, and doesn't count in the RMS.
         await guider.DitherAndWaitAsync(3, raOnly: false, new SettleSettings(1.5, 2, 60), timeout.Token);
         Assert.True(guider.IsGuiding);
+        var history = guider.Status.History;
+        Assert.Single(history, p => p.Dither);
+        Assert.Contains(history, p => p.Settling);
+        Assert.True(guider.Status.Stats.RmsTotal < 4, $"RMS {guider.Status.Stats.RmsTotal:0.00}″ after the dither");
         Assert.NotNull(nova.FramePng());
 
         await guider.StopAsync(CancellationToken.None);

@@ -5,6 +5,7 @@
   import NovaGuiderControls from './NovaGuiderControls.svelte'
   import OpticsEditor from './OpticsEditor.svelte'
   import Panel from './Panel.svelte'
+  import { guideGraph } from '../lib/guideGraph'
 
   const guider = $derived(nova.status?.guider)
   // PHD2, or NOVA's own guider: Guide, Stop, Dither, the graph and RMS work the same for both.
@@ -48,19 +49,9 @@
     busy = false
   }
 
-  // Guiding graph: RA and Dec error over the recent steps, scaled to the larger of ±2 units or the data. Each step
-  // has a fixed width (the server keeps the last 100), newest at the right, so the trace scrolls left as it grows
-  // instead of stretching to fill the graph.
+  // Guiding graph: the last 100 steps (see guideGraph: dithers marked, their settling not drawn or scaled to).
   const steps = 100
-  const chart = $derived.by(() => {
-    const points = (guider?.history ?? []).slice(-steps)
-    if (points.length < 2) return null
-    const limit = Math.max(2, ...points.map((p) => Math.max(Math.abs(p.ra), Math.abs(p.dec))))
-    const x = (i: number) => ((i + steps - points.length) / (steps - 1)) * 100
-    const y = (v: number) => 20 - (v / limit) * 18
-    const line = (key: 'ra' | 'dec') => points.map((p, i) => `${x(i).toFixed(1)},${y(p[key]).toFixed(1)}`).join(' ')
-    return { ra: line('ra'), dec: line('dec'), limit }
-  })
+  const chart = $derived(guideGraph(guider?.history ?? [], steps, 100, 40))
 
   const fmt = (n: number | null | undefined, digits = 2) => (n == null ? '—' : n.toFixed(digits))
 
@@ -149,11 +140,15 @@
 
     {#if chart}
       <svg class="graph" viewBox="0 0 100 40" preserveAspectRatio="none" role="img" aria-label="Guiding error graph: RA and Dec">
+        {#each chart.settling as [from, to], i (i)}<rect class="settle-band" x={from} y="0" width={Math.max(0.5, to - from)} height="40" />{/each}
         <line class="zero" x1="0" y1="20" x2="100" y2="20" />
-        <polyline class="ra" points={chart.ra} />
-        <polyline class="dec" points={chart.dec} />
+        {#each chart.dithers as x, i (i)}<line class="dither-mark" x1={x} y1="0" x2={x} y2="40" />{/each}
+        {#each chart.ra as points, i (i)}<polyline class="ra" {points} />{/each}
+        {#each chart.dec as points, i (i)}<polyline class="dec" {points} />{/each}
       </svg>
-      <div class="legend muted"><span class="ra-key">— RA</span><span class="dec-key">— Dec</span><span>±{fmt(chart.limit, 1)}{unit}</span></div>
+      <div class="legend muted">
+        <span class="ra-key">— RA</span><span class="dec-key">— Dec</span>{#if chart.dithers.length}<span class="dither-key">┆ dither</span>{/if}<span>±{fmt(chart.limit, 1)}{unit}</span>
+      </div>
     {/if}
 
     <div class="row">
@@ -249,6 +244,19 @@
     height: 70px;
     background: var(--input);
     border-radius: 4px;
+  }
+  .settle-band {
+    fill: var(--warn);
+    opacity: 0.08;
+  }
+  .dither-mark {
+    stroke: var(--warn);
+    stroke-width: 1;
+    stroke-dasharray: 3 3;
+    vector-effect: non-scaling-stroke;
+  }
+  .dither-key {
+    color: var(--warn);
   }
   .graph polyline {
     fill: none;

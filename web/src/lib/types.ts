@@ -572,7 +572,8 @@ export interface GuiderStatus {
   snr: number | null
   hfd: number | null
   stats: GuideStats
-  history: { ra: number; dec: number }[]
+  /** Recent guide steps; settling ones (after starting or a dither) aren't counted in the RMS. */
+  history: { ra: number; dec: number; settling: boolean; dither: boolean }[]
   profiles: { id: number; name: string }[]
   profile: { id: number; name: string } | null
   /** PHD2 has its own camera and mount connected. */

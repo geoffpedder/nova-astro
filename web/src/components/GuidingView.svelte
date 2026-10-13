@@ -3,6 +3,7 @@
   import { act, nova } from '../lib/state.svelte'
   import { guideView, setGuideStretch, type GuideStretch } from '../lib/guideView.svelte'
   import CalibrationGraph from './CalibrationGraph.svelte'
+  import { guideGraph } from '../lib/guideGraph'
 
   // NOVA's own guider, full size: the whole guide frame with the stars it follows (click one to guide on it), the
   // lock star close up, the buttons, and a large graph of the last 10 minutes or so.
@@ -57,18 +58,10 @@
     act(() => api.novaGuiderSettings({ ...s, exposureSeconds: seconds }))
   }
 
-  // The graph: RA and Dec error over the steps kept (up to 300), a fixed width per step so it scrolls left, scaled
-  // to the larger of ±2 units or the data (rounded up to a whole number), with lines at half and full scale.
+  // The graph: the steps kept (up to 300), with lines at half and full scale. Dithers are marked and their settling
+  // isn't drawn or scaled to (see guideGraph), so one dither doesn't squash the rest.
   const steps = 300
-  const chart = $derived.by(() => {
-    const points = (guider?.history ?? []).slice(-steps)
-    if (points.length < 2) return null
-    const limit = Math.ceil(Math.max(2, ...points.map((p) => Math.max(Math.abs(p.ra), Math.abs(p.dec)))))
-    const x = (i: number) => ((i + steps - points.length) / (steps - 1)) * 300
-    const y = (v: number) => 50 - (v / limit) * 46
-    const line = (key: 'ra' | 'dec') => points.map((p, i) => `${x(i).toFixed(1)},${y(p[key]).toFixed(1)}`).join(' ')
-    return { ra: line('ra'), dec: line('dec'), limit, y }
-  })
+  const chart = $derived(guideGraph(guider?.history ?? [], steps, 300, 100))
 
   const when = (utc: string) => new Date(utc).toLocaleString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })
   const rate = (px: number, arcsec: number | null) => (arcsec != null ? `${arcsec.toFixed(1)}″/s` : `${px.toFixed(1)} px/s`)
@@ -182,11 +175,13 @@
   <div class="graph">
     <svg viewBox="0 0 300 100" preserveAspectRatio="none" role="img" aria-label="Guiding error graph: RA and Dec">
       {#if chart}
+        {#each chart.settling as [from, to], i (i)}<rect class="settle-band" x={from} y="0" width={Math.max(0.5, to - from)} height="100" />{/each}
         <line class="grid" x1="0" y1={chart.y(chart.limit / 2)} x2="300" y2={chart.y(chart.limit / 2)} />
         <line class="grid" x1="0" y1={chart.y(-chart.limit / 2)} x2="300" y2={chart.y(-chart.limit / 2)} />
         <line class="zero" x1="0" y1="50" x2="300" y2="50" />
-        <polyline class="ra" points={chart.ra} />
-        <polyline class="dec" points={chart.dec} />
+        {#each chart.dithers as x, i (i)}<line class="dither-mark" x1={x} y1="0" x2={x} y2="100" />{/each}
+        {#each chart.ra as points, i (i)}<polyline class="ra" {points} />{/each}
+        {#each chart.dec as points, i (i)}<polyline class="dec" {points} />{/each}
       {:else}
         <line class="zero" x1="0" y1="50" x2="300" y2="50" />
       {/if}
@@ -195,7 +190,9 @@
       <span>+{chart?.limit ?? 2}{unit}</span><span>0</span><span>−{chart?.limit ?? 2}{unit}</span>
     </div>
   </div>
-  <div class="legend muted"><span class="ra-key">— RA</span><span class="dec-key">— Dec</span><span>last {steps} steps, newest on the right</span></div>
+  <div class="legend muted">
+    <span class="ra-key">— RA</span><span class="dec-key">— Dec</span><span class="dither-key">┆ dither (settling shaded, left out of the RMS)</span><span>last {steps} steps, newest on the right</span>
+  </div>
 </div>
 
 <style>
@@ -362,6 +359,19 @@
     height: clamp(100px, 20vh, 180px);
     background: var(--input);
     border-radius: 4px;
+  }
+  .settle-band {
+    fill: var(--warn);
+    opacity: 0.08;
+  }
+  .dither-mark {
+    stroke: var(--warn);
+    stroke-width: 1;
+    stroke-dasharray: 3 3;
+    vector-effect: non-scaling-stroke;
+  }
+  .dither-key {
+    color: var(--warn);
   }
   .graph polyline {
     fill: none;

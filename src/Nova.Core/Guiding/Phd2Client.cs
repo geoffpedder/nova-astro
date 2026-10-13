@@ -15,7 +15,9 @@ public enum GuiderState { Disconnected, Stopped, Selected, Calibrating, Guiding,
 public sealed record GuideStats(double RmsRa, double RmsDec, double RmsTotal, double PeakRa, double PeakDec, int Samples, string Units);
 
 /// <summary>One guide step's error, in <see cref="GuideStats.Units"/>.</summary>
-public sealed record GuidePoint(double Ra, double Dec);
+/// <param name="Settling">Taken while guiding settled (after starting or a dither): not counted in the RMS.</param>
+/// <param name="Dither">The first step after a dither.</param>
+public sealed record GuidePoint(double Ra, double Dec, bool Settling = false, bool Dither = false);
 
 /// <summary>A PHD2 equipment profile (camera, mount and guiding settings).</summary>
 public sealed record Phd2Profile(int Id, string Name);
@@ -31,7 +33,7 @@ public sealed class Phd2Client : IAsyncDisposable
     private readonly object _sync = new();
     private readonly Dictionary<int, TaskCompletionSource<JsonNode?>> _pending = new();
     private readonly SemaphoreSlim _writeLock = new(1, 1);
-    private readonly List<(double Ra, double Dec)> _history = new(); // raw pixels
+    private readonly GuideHistory _history = new(HistoryLength); // raw pixels
     private readonly DecDriftMonitor _drift = new();
     private bool _driftReported;
     private TaskCompletionSource<bool>? _settle;
@@ -142,22 +144,12 @@ public sealed class Phd2Client : IAsyncDisposable
 
     public ValueTask DisposeAsync() => new(DisconnectAsync());
 
-    /// <summary>RMS error over the recent guide steps (reset when guiding starts).</summary>
+    /// <summary>RMS error over the recent steady guide steps (reset when guiding starts; settling after a dither left out).</summary>
     public GuideStats Stats
     {
         get
         {
-            lock (_sync)
-            {
-                var scale = PixelScale ?? 1;
-                var units = PixelScale is null ? "px" : "arcsec";
-                if (_history.Count == 0) return new GuideStats(0, 0, 0, 0, 0, 0, units);
-                var ra = Math.Sqrt(_history.Average(p => p.Ra * p.Ra)) * scale;
-                var dec = Math.Sqrt(_history.Average(p => p.Dec * p.Dec)) * scale;
-                return new GuideStats(ra, dec, Math.Sqrt(ra * ra + dec * dec),
-                    _history.Max(p => Math.Abs(p.Ra)) * scale, _history.Max(p => Math.Abs(p.Dec)) * scale,
-                    _history.Count, units);
-            }
+            lock (_sync) return _history.Stats(PixelScale);
         }
     }
 
@@ -165,11 +157,7 @@ public sealed class Phd2Client : IAsyncDisposable
     {
         get
         {
-            lock (_sync)
-            {
-                var scale = PixelScale ?? 1;
-                return _history.Select(p => new GuidePoint(p.Ra * scale, p.Dec * scale)).ToList();
-            }
+            lock (_sync) return _history.Points(PixelScale);
         }
     }
 
@@ -180,8 +168,11 @@ public sealed class Phd2Client : IAsyncDisposable
         RunWithSettleAsync("guide", new JsonObject { ["settle"] = SettleJson(settle), ["recalibrate"] = recalibrate }, settle, ct);
 
     /// <summary>Dithers by up to <paramref name="pixels"/> and waits until guiding has settled again.</summary>
-    public Task DitherAsync(double pixels, bool raOnly, SettleSettings settle, CancellationToken ct) =>
-        RunWithSettleAsync("dither", new JsonObject { ["amount"] = pixels, ["raOnly"] = raOnly, ["settle"] = SettleJson(settle) }, settle, ct);
+    public Task DitherAsync(double pixels, bool raOnly, SettleSettings settle, CancellationToken ct)
+    {
+        lock (_sync) _history.MarkDither();
+        return RunWithSettleAsync("dither", new JsonObject { ["amount"] = pixels, ["raOnly"] = raOnly, ["settle"] = SettleJson(settle) }, settle, ct);
+    }
 
     public Task StopAsync(CancellationToken ct) => CallAsync("stop_capture", null, ct);
 
@@ -322,8 +313,7 @@ public sealed class Phd2Client : IAsyncDisposable
             case "GuideStep":
                 lock (_sync)
                 {
-                    _history.Add((Number(message, "RADistanceRaw"), Number(message, "DECDistanceRaw")));
-                    if (_history.Count > HistoryLength) _history.RemoveAt(0);
+                    _history.Add(Number(message, "RADistanceRaw"), Number(message, "DECDistanceRaw"), settling: IsSettling);
                     var time = message["Timestamp"] is not null ? Number(message, "Timestamp") : Number(message, "Time");
                     _drift.Add(time, Number(message, "DECDistanceGuide"), message["DECDirection"]?.GetValue<string>(),
                         counts: !IsSettling && Number(message, "ErrorCode") == 0);
@@ -374,6 +364,7 @@ public sealed class Phd2Client : IAsyncDisposable
                 if (State is GuiderState.Stopped or GuiderState.Looping) SetState(GuiderState.Selected);
                 break;
             case "SettleDone":
+                IsSettling = false; // now, not when the waiting code resumes: the next GuideStep is steady guiding
                 var status = (int)Number(message, "Status");
                 if (status == 0)
                 {

@@ -266,7 +266,8 @@ PHD2 stays the default until it has proven itself under the sky, and you can swi
 **The Guiding tab** (it takes the PHD2 tab's place while NOVA is the guider) shows it all full size: the whole guide
 frame with the guide star (green square, the cross where it should be) and the stars averaged with it (yellow rings,
 dashed when the last frame missed them), the guide star close up, the RMS and peaks, the calibration, and a large
-graph of the last 300 steps (10 minutes of 2 s frames). It has the Loop, Calibrate, Guide, Stop and Dither buttons,
+graph of the last 300 steps (10 minutes of 2 s frames; a dashed line marks each dither, and the steps while
+guiding settles after it are shaded and left out of the RMS, so a dither doesn't look like bad guiding). It has the Loop, Calibrate, Guide, Stop and Dither buttons,
 the exposure, and how bright to show the frame: **Low** (black background, just the stars), **Med** (the default)
 or **High** (the full auto stretch, for finding faint stars, noise and all); each browser remembers it. **Click a star** in the frame to guide on it instead; while guiding, guiding carries on from that star.
 

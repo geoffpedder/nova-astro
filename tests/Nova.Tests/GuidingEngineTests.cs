@@ -341,6 +341,33 @@ public class GuidingEngineTests
     }
 
     [Fact]
+    public void DitherSettlingIsMarkedAndLeftOutOfTheRms()
+    {
+        var history = new GuideHistory(10);
+        history.Add(0.5, -0.5, settling: false);
+        history.Add(-0.5, 0.5, settling: false);
+        history.MarkDither();
+        history.Add(8, 6, settling: true);   // the star walking to its new place
+        history.Add(3, 2, settling: true);
+        history.Add(0.5, 0.5, settling: false);
+
+        var stats = history.Stats(2); // 2″ a pixel
+        Assert.Equal(3, stats.Samples);
+        Assert.Equal(1.0, stats.RmsRa, 6);
+        Assert.Equal(1.0, stats.PeakRa, 6);
+        Assert.Equal("arcsec", stats.Units);
+
+        var points = history.Points(2);
+        Assert.Equal([false, false, true, false, false], points.Select(p => p.Dither));
+        Assert.Equal([false, false, true, true, false], points.Select(p => p.Settling));
+        Assert.Equal(16, points[2].Ra);
+
+        for (var i = 0; i < 20; i++) history.Add(0, 0, false);
+        Assert.Equal(10, history.Count);
+        Assert.Equal("px", history.Stats(null).Units);
+    }
+
+    [Fact]
     public void DarksTakeOutHotPixelsAndKeepTheBackground()
     {
         static RawImage Frame(params (int I, float V)[] extra)

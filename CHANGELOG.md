@@ -5,6 +5,9 @@ What changed in each release. The newest is first. A release's section here beco
 ## [Unreleased]
 
 ### Fixed
+- **Dithers no longer spoil the guiding RMS and graph** (PHD2 and NOVA's guider): the steps while guiding settles
+  after a dither (or after starting) are left out of the RMS and peaks, and the graph marks the dither with a dashed
+  line and shades the settling instead of drawing a spike that rescaled everything.
 - **Noise measured on coarse frames:** a ZWO guide camera's 12-bit values (multiples of 16) on a quiet background
   left most pixels on one exact value, so NOVA measured no noise at all. Star detection then took hundreds of noise
   specks for stars, and the stretch showed the frame as white noise whatever the setting. Affected any frame like

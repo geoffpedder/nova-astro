@@ -73,7 +73,7 @@ public sealed class NovaGuider : IAsyncDisposable
     private readonly GuideStarTracker _tracker = new();
     private readonly GuideController _controller = new();
     private readonly DecDriftMonitor _drift = new();
-    private readonly List<(double Ra, double Dec)> _history = [];
+    private readonly GuideHistory _history = new(HistoryLength);
     private readonly Random _dither = new();
     private readonly System.Diagnostics.Stopwatch _clock = System.Diagnostics.Stopwatch.StartNew();
 
@@ -195,20 +195,12 @@ public sealed class NovaGuider : IAsyncDisposable
         }
     }
 
+    /// <summary>RMS error over the recent steady guide steps (settling after starting or a dither left out).</summary>
     public GuideStats Stats
     {
         get
         {
-            lock (_sync)
-            {
-                var scale = PixelScale ?? 1;
-                var units = PixelScale is null ? "px" : "arcsec";
-                if (_history.Count == 0) return new GuideStats(0, 0, 0, 0, 0, 0, units);
-                var ra = Math.Sqrt(_history.Average(p => p.Ra * p.Ra)) * scale;
-                var dec = Math.Sqrt(_history.Average(p => p.Dec * p.Dec)) * scale;
-                return new GuideStats(ra, dec, Math.Sqrt(ra * ra + dec * dec),
-                    _history.Max(p => Math.Abs(p.Ra)) * scale, _history.Max(p => Math.Abs(p.Dec)) * scale, _history.Count, units);
-            }
+            lock (_sync) return _history.Stats(PixelScale);
         }
     }
 
@@ -216,11 +208,7 @@ public sealed class NovaGuider : IAsyncDisposable
     {
         get
         {
-            lock (_sync)
-            {
-                var scale = PixelScale ?? 1;
-                return _history.Select(p => new GuidePoint(p.Ra * scale, p.Dec * scale)).ToList();
-            }
+            lock (_sync) return _history.Points(PixelScale);
         }
     }
 
@@ -366,6 +354,7 @@ public sealed class NovaGuider : IAsyncDisposable
             var (dx, dy) = GuideController.DitherOffset(_dither, pixels, raOnly, calibration);
             _tracker.ShiftHome(dx, dy);
             _controller.Reset();
+            _history.MarkDither();
             wait = StartSettle(settle);
         }
         await wait.WaitAsync(ct);
@@ -691,8 +680,7 @@ public sealed class NovaGuider : IAsyncDisposable
                 case Mode.Guiding when Current() is { } calibration:
                     State = GuiderState.Guiding;
                     var c = _controller.Correct(m.Dx, m.Dy, calibration);
-                    _history.Add((c.RaPixels, c.DecPixels));
-                    if (_history.Count > HistoryLength) _history.RemoveAt(0);
+                    _history.Add(c.RaPixels, c.DecPixels, settling: _settle is not null);
                     if (c.Ra is { } ra) pulses.Add(ra);
                     if (c.Dec is { } dec) pulses.Add(dec);
                     var decMove = c.Dec is { } d ? d.Milliseconds / 1000.0 * calibration.DecRate : 0;

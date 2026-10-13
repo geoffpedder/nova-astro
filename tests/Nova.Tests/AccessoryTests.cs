@@ -86,10 +86,12 @@ public class Phd2ClientTests
                     Reply(request, "0"),
                     """{"Event":"StartCalibration","Mount":"INDI Mount"}""",
                     """{"Event":"StartGuiding"}""",
-                    """{"Event":"GuideStep","Frame":1,"RADistanceRaw":0.3,"DECDistanceRaw":-0.4,"SNR":42.5,"HFD":2.1}""",
-                    """{"Event":"GuideStep","Frame":2,"RADistanceRaw":-0.3,"DECDistanceRaw":0.4,"SNR":41.0,"HFD":2.2}""",
+                    // While settling (not counted in the RMS), then two steady steps.
+                    """{"Event":"GuideStep","Frame":1,"RADistanceRaw":4,"DECDistanceRaw":3,"SNR":40.0,"HFD":2.3}""",
                     "sleep:100",
                     """{"Event":"SettleDone","Status":0,"TotalFrames":5,"DroppedFrames":0}""",
+                    """{"Event":"GuideStep","Frame":2,"RADistanceRaw":0.3,"DECDistanceRaw":-0.4,"SNR":42.5,"HFD":2.1}""",
+                    """{"Event":"GuideStep","Frame":3,"RADistanceRaw":-0.3,"DECDistanceRaw":0.4,"SNR":41.0,"HFD":2.2}""",
                 ],
                 // The first dither fails to settle, the second succeeds.
                 "dither" => ++ditherCount == 1
@@ -107,6 +109,8 @@ public class Phd2ClientTests
 
         await client.GuideAsync(new SettleSettings(), recalibrate: false, cts.Token);
         Assert.Equal(GuiderState.Guiding, client.State);
+        for (var i = 0; i < 50 && client.History.Count < 3; i++) await Task.Delay(20, cts.Token);
+        Assert.Equal([true, false, false], client.History.Select(p => p.Settling));
         var stats = client.Stats;
         Assert.Equal("arcsec", stats.Units);
         Assert.Equal(2, stats.Samples);

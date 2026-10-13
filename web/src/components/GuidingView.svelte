@@ -257,11 +257,13 @@
   .field input {
     width: 64px;
   }
+  /* The frame gets what the window has left after the header, tabs, toolbar and graph (at least 260 px); in a short
+     window the tab scrolls rather than squeezing the frame under the graph. */
   .main {
     display: flex;
     gap: 12px;
-    min-height: 0;
-    flex: 1;
+    flex: none;
+    height: clamp(260px, calc(100vh - 460px), 75vh);
   }
   .frame {
     flex: 1;
@@ -272,10 +274,12 @@
     background: #000;
     border: 1px solid var(--panel-border);
     min-height: 240px;
+    overflow: hidden; /* never over the toolbar or the graph */
   }
+  /* Fits inside the box whatever its shape (letterboxed; clicks still map to the right pixels). */
   .frame svg {
     width: 100%;
-    max-height: 60vh;
+    height: 100%;
     cursor: crosshair;
     display: block;
   }
@@ -355,7 +359,7 @@
   }
   .graph svg {
     flex: 1;
-    height: 180px;
+    height: clamp(100px, 20vh, 180px);
     background: var(--input);
     border-radius: 4px;
   }
@@ -408,9 +412,14 @@
     .main {
       flex-direction: column;
       flex: none;
+      height: auto;
     }
     .frame {
       min-height: 0;
+    }
+    .frame svg {
+      height: auto;
+      max-height: 60vh;
     }
     aside {
       width: auto;

@@ -26,6 +26,34 @@
     if (drag) saveWebcamLayout()
     drag = null
   }
+  // Resized from its bottom-right corner, keeping the top-left where it is unless that would push it off the window.
+  let resize: { x: number; y: number; width: number; ratio: number; right: number; bottom: number } | null = null
+  function resizeDown(e: PointerEvent) {
+    if (!box) return
+    const img = box.querySelector('img')
+    const ratio = img && img.clientWidth ? img.clientHeight / img.clientWidth : 0.75
+    resize = { x: e.clientX, y: e.clientY, width: webcamLayout.width, ratio, right: webcamLayout.right, bottom: webcamLayout.bottom }
+    ;(e.currentTarget as HTMLElement).setPointerCapture(e.pointerId)
+    e.preventDefault()
+  }
+  function resizeMove(e: PointerEvent) {
+    if (!resize) return
+    const dx = e.clientX - resize.x
+    const dy = (e.clientY - resize.y) / resize.ratio
+    const grow = Math.abs(dx) > Math.abs(dy) ? dx : dy // whichever way the corner moved most; the picture keeps its shape
+    const most = Math.min(window.innerWidth - 8, (window.innerHeight - 60) / resize.ratio) // still fits the window
+    const width = Math.round(Math.max(200, Math.min(most, resize.width + grow)))
+    const change = width - resize.width
+    webcamLayout.width = width
+    // Once against the window's edge it grows the other way instead.
+    webcamLayout.right = Math.max(0, resize.right - change)
+    webcamLayout.bottom = Math.max(0, resize.bottom - change * resize.ratio)
+  }
+  function resizeUp() {
+    if (resize) saveWebcamLayout()
+    resize = null
+  }
+
   function close() {
     webcamLayout.popped = false
     saveWebcamLayout()
@@ -33,7 +61,7 @@
 </script>
 
 {#if visible}
-  <div class="float panel" bind:this={box} style:right="{webcamLayout.right}px" style:bottom="{webcamLayout.bottom}px">
+  <div class="float panel" bind:this={box} style:right="{webcamLayout.right}px" style:bottom="{webcamLayout.bottom}px" style:width="{webcamLayout.width}px">
     <div class="bar" role="presentation" onpointerdown={down} onpointermove={move} onpointerup={up} onpointercancel={up}>
       <span class="title">Webcam</span>
       <span class="gap"></span>
@@ -41,6 +69,7 @@
       <button class="icon" onclick={close} title="Close (the webcam stops when nobody watches)" aria-label="Close the webcam view">✕</button>
     </div>
     {#if src}{#key src}<img class="frame" {src} alt="The webcam's live view" use:liveStream />{/key}{/if}
+    <div class="grip" role="presentation" title="Drag to resize" onpointerdown={resizeDown} onpointermove={resizeMove} onpointerup={resizeUp} onpointercancel={resizeUp}></div>
   </div>
 {/if}
 
@@ -48,7 +77,7 @@
   .float {
     position: fixed;
     z-index: 40;
-    width: 280px;
+    max-width: calc(100vw - 16px);
     padding: 0;
     overflow: hidden;
     box-shadow: 0 8px 24px rgb(0 0 0 / 0.45);
@@ -88,13 +117,32 @@
     background: #000;
     min-height: 120px;
   }
+  .grip {
+    position: absolute;
+    right: 0;
+    bottom: 0;
+    width: 16px;
+    height: 16px;
+    cursor: nwse-resize;
+    touch-action: none;
+    background: linear-gradient(135deg, transparent 50%, var(--muted) 50%, var(--muted) 58%, transparent 58%, transparent 70%,
+        var(--muted) 70%, var(--muted) 78%, transparent 78%);
+    opacity: 0.7;
+  }
+  .grip:hover {
+    opacity: 1;
+  }
   /* Phones: docked full width above the activity line rather than floating. */
   @media (max-width: 600px) {
     .float {
       left: 8px !important;
       right: 8px !important;
       bottom: 40px !important;
-      width: auto;
+      width: auto !important;
+      max-width: none;
+    }
+    .grip {
+      display: none;
     }
     .bar {
       cursor: default;

@@ -7,16 +7,23 @@ interface WebcamLayout {
   /** Distance from the window's right and bottom edges (px), so it stays in its corner as the window resizes. */
   right: number
   bottom: number
+  /** Its width (px), set by dragging its corner; the height follows the picture. */
+  width: number
 }
 
 function load(): WebcamLayout {
   try {
     const saved = JSON.parse(localStorage.getItem('nova.webcam') ?? 'null')
-    if (saved && typeof saved.popped === 'boolean') return { popped: saved.popped, right: +saved.right || 16, bottom: +saved.bottom || 48 }
+    if (saved && typeof saved.popped === 'boolean') return {
+        popped: saved.popped,
+        right: +saved.right || 16,
+        bottom: +saved.bottom || 48,
+        width: Math.max(200, +saved.width || 280),
+      }
   } catch {
     // storage unavailable or unreadable: the defaults
   }
-  return { popped: false, right: 16, bottom: 48 }
+  return { popped: false, right: 16, bottom: 48, width: 280 }
 }
 
 export const webcamLayout = $state<WebcamLayout>(load())

@@ -460,7 +460,7 @@ Three ways to use [Stellarium](https://stellarium.org/) on the computer you brow
 A USB webcam on the mini PC, pointed at the rig, lets you watch it from indoors: the mount turning, a cable snagging,
 the dew shield, the flat panel. Plug it in and open the **Webcam** tab: the live view, with the webcam, size and frame
 rate (640×480 at 5 fps is plenty), and **Snapshot** to save a picture. **Pop out** puts it in a small window that stays
-on screen over the other tabs (drag it by its title; ⤢ goes back to the tab, ✕ closes it); each browser remembers it.
+on screen over the other tabs (drag it by its title, resize it from its bottom-right corner; ⤢ goes back to the tab, ✕ closes it); each browser remembers it.
 Night mode turns it red like the rest. **Controls** opens the webcam's own settings beside the picture, as the webcam
 offers them: brightness, contrast, gain, exposure (turn *Auto exposure* to manual to set the time, useful at night),
 white balance, focus, power line frequency (match your mains, 50 or 60 Hz, to stop flicker under lights). They change

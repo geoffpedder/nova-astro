@@ -5,6 +5,8 @@ What changed in each release. The newest is first. A release's section here beco
 ## [Unreleased]
 
 ### Added
+- **Drivers dialog filter:** *All installed*, *Ticked* (your equipment's drivers) or *Running* (a device connected
+  now), with counts, next to the search.
 - **Predictive PEC** (NOVA's guider, RA): learns the mount's periodic error while guiding (its period found
   automatically, or set) and corrects it ahead of time, with a gentler reactive part; for strain-wave mounts like the
   AM3. In the simulation tests it cut RA RMS by about 65% against Hysteresis on a strong periodic error. The Guiding

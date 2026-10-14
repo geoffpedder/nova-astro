@@ -64,7 +64,8 @@ Targets tab's sky chart.
 ## Equipment and drivers
 
 **Equipment → Drivers…** lists the INDI drivers installed on the mini PC by their proper names, grouped by
-kind (mounts, cameras, focusers…), with a search box. Tick the ones for your equipment and press **Apply**.
+kind (mounts, cameras, focusers…), with a search box. **All installed / Ticked / Running** narrows the list to
+the ones you've ticked, or those with a device connected right now. Tick the ones for your equipment and press **Apply**.
 NOVA saves the choice and starts and stops drivers straight away (stopping one disconnects its devices). A
 ticked driver that isn't installed shows the package that provides it.
 

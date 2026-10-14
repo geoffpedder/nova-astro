@@ -11,6 +11,13 @@
   let loadError = $state<string | null>(null)
   let chosen = $state<Set<string>>(new Set())
   let query = $state('')
+  // Which drivers to list: every installed one, the ones ticked (your equipment's), or those running a device now.
+  let show = $state<'all' | 'ticked' | 'running'>('all')
+  const counts = $derived({
+    all: setup?.drivers.filter((d) => d.installed || chosen.has(d.exec)).length ?? 0,
+    ticked: chosen.size,
+    running: setup?.drivers.filter((d) => d.devices.length > 0).length ?? 0,
+  })
   let applying = $state(false)
   let result = $state<string | null>(null)
 
@@ -44,6 +51,8 @@
     const shown = setup.drivers.filter(
       (d) =>
         (d.installed || chosen.has(d.exec)) &&
+        // Ticked: also those ticked before (until Apply), so unticking one doesn't make it vanish.
+        (show === 'all' || (show === 'ticked' ? chosen.has(d.exec) || d.selected : d.devices.length > 0)) &&
         (!q || [d.exec, d.manufacturer ?? '', ...d.labels].some((s) => s.toLowerCase().includes(q))),
     )
     // One heading per kind, in the order the kinds first come (the server sorts them).
@@ -120,6 +129,11 @@
       </p>
     {/if}
     {#if setup.problem}<p class="muted small">{setup.problem}</p>{/if}
+    <div class="segmented" role="group" aria-label="Which drivers to list">
+      <button class:on={show === 'all'} onclick={() => (show = 'all')} title="Every driver installed on the mini PC">All installed ({counts.all})</button>
+      <button class:on={show === 'ticked'} onclick={() => (show = 'ticked')} title="The drivers ticked for your equipment">Ticked ({counts.ticked})</button>
+      <button class:on={show === 'running'} onclick={() => (show = 'running')} title="Drivers with a device connected right now">Running ({counts.running})</button>
+    </div>
     <div class="list">
       {#each groups as g (g.group)}
         <h4>{groupNames[g.group] ?? g.group}</h4>
@@ -142,7 +156,9 @@
           </label>
         {/each}
       {:else}
-        <p class="muted">{query ? 'No driver matches that.' : `No INDI drivers found in ${'/usr/bin'}: install libindi.`}</p>
+        <p class="muted">
+          {query ? 'No driver matches that.' : show === 'ticked' ? 'No drivers ticked yet.' : show === 'running' ? 'No driver has a device connected.' : `No INDI drivers found in ${'/usr/bin'}: install libindi.`}
+        </p>
       {/each}
     </div>
   {/if}
@@ -184,6 +200,28 @@
   }
   header input {
     flex: 1;
+  }
+  .segmented {
+    display: flex;
+  }
+  .segmented button {
+    flex: 1;
+    border-radius: 0;
+    color: var(--muted);
+    background: transparent;
+    border: 1px solid var(--panel-border);
+    padding: 4px 8px;
+    font-size: 12px;
+  }
+  .segmented button:first-child {
+    border-radius: var(--radius) 0 0 var(--radius);
+  }
+  .segmented button:last-child {
+    border-radius: 0 var(--radius) var(--radius) 0;
+  }
+  .segmented button.on {
+    color: var(--accent);
+    border-color: var(--accent);
   }
   .small {
     font-size: 12px;

@@ -273,9 +273,13 @@
   let frameRequest = 0
   $effect(() => {
     // Everything drawn is read here, so any change redraws (once per animation frame).
-    void [projection, bright, famous, deepStars, deepObjects, bodies, frames, solved, mount, mountFrame, selected, surveyShown, now, tilesLoaded, useTiles, constellations, sunZone, themeTick, atmosphere, ground]
+    void [projection, bright, famous, deepStars, deepObjects, bodies, frames, solved, mount, mountFrame, selected, surveyShown, now, tilesLoaded, useTiles, constellations, sunZone, themeTick, atmosphere, ground, width, height]
     cancelAnimationFrame(frameRequest)
-    frameRequest = requestAnimationFrame(draw)
+    // A new size (the window resized, or the tab shown again after one) is drawn straight away, before the browser
+    // paints: waiting a frame would show the old picture stretched to the new shape.
+    const dpr = window.devicePixelRatio || 1
+    if (canvas && ready && (canvas.width !== Math.round(width * dpr) || canvas.height !== Math.round(height * dpr))) untrack(draw)
+    else frameRequest = requestAnimationFrame(draw)
   })
 
   // Off-screen canvases for the ground and the day sky, one cell per few screen pixels.
@@ -1191,8 +1195,6 @@
 <div class="chart" bind:clientWidth={width} bind:clientHeight={height}>
   <canvas
     bind:this={canvas}
-    style:width="{width}px"
-    style:height="{height}px"
     onpointerdown={pointerdown}
     onpointermove={pointermove}
     onpointerup={pointerup}
@@ -1222,6 +1224,8 @@
   canvas {
     position: absolute;
     inset: 0;
+    width: 100%;
+    height: 100%;
     display: block;
     touch-action: none;
     cursor: grab;

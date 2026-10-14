@@ -24,6 +24,7 @@ What changed in each release. The newest is first. A release's section here beco
   profile *ZWO AM mount + PEC*.
 
 ### Fixed
+- The Targets tab's sky chart no longer shows stretched for a moment when opened after the browser window was resized.
 - The whole page no longer scrolls a little when the mouse wheel turns over the header: the main area now takes
   exactly the height the header leaves (it was a fixed guess that a slightly taller header overran).
 

@@ -4,6 +4,8 @@ What changed in each release. The newest is first. A release's section here beco
 
 ## [Unreleased]
 
+## [0.3.7] - 2026-10-13
+
 ### Added
 - **Webcam view:** a USB webcam on the mini PC in a **Webcam** tab, to watch the rig from indoors, with **Pop out** to
   keep a floating view (moved and resized as you like) over the other tabs, and **Snapshot**. It runs only while watched and passes the
@@ -243,6 +245,7 @@ The first release: ready-made downloads for 64-bit PCs (`linux-x64`) and the Ras
 - **Stellarium:** take its selection, act as its telescope, and turn its Oculars frame to the camera's angle.
 - **The mini PC:** restart and shut down from the page, network status, night mode.
 
-[Unreleased]: https://github.com/geoffpedder/nova-astro/compare/v0.3.6...HEAD
+[Unreleased]: https://github.com/geoffpedder/nova-astro/compare/v0.3.7...HEAD
+[0.3.7]: https://github.com/geoffpedder/nova-astro/releases/tag/v0.3.7
 [0.3.6]: https://github.com/geoffpedder/nova-astro/releases/tag/v0.3.6
 [0.3.5]: https://github.com/geoffpedder/nova-astro/releases/tag/v0.3.5

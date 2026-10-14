@@ -122,7 +122,7 @@ file *from this computer*, or *from the mini PC*: its image folders (and a mount
 frame from an earlier run that hasn't been copied off yet. The Image tab shows it stretched, in colour for colour cameras, with the
 star count, HFR, FWHM and statistics underneath; **Names** labels the stars once the frame is solved, and
 **Header** shows the FITS header. **Expose** at the start of the Image tab's toolbar takes a frame with the Camera
-panel's settings (exposure, Save FITS, Loop) and becomes **Abort** while it exposes, handy with the panels folded
+panel's settings (exposure, Save FITS, Loop); the seconds box beside it is the Camera panel's exposure, so change it in either place, and becomes **Abort** while it exposes, handy with the panels folded
 away. **Pop out** opens the latest image in a small window that stays on screen whichever tab is showing, following each
 new frame (drag it by its title, resize it from its bottom-right corner; ⤢ goes to the Image tab, ✕ or **Pop out**
 again closes it).

@@ -362,6 +362,19 @@
   <h2>Image</h2>
 
   <div class="toolbar">
+    <!-- The exposure time is the Camera panel's: change it in either place. -->
+    <span class="shoot-group">
+    <input
+      class="mono seconds"
+      type="number"
+      min="0"
+      max="3600"
+      step="0.5"
+      bind:value={exposure.duration}
+      disabled={!!nova.exposure || !nova.status?.camera?.connected}
+      aria-label="Exposure (seconds)"
+      title="Exposure in seconds (the same as the Camera panel's)"
+    /><span class="unit muted">s</span>
     {#if nova.exposure}
       <button
         class="danger small shoot"
@@ -377,9 +390,10 @@
         onclick={expose}
         title="Takes a frame with the Camera panel's settings (exposure, Save FITS, Loop)"
       >
-        Expose {exposure.duration} s
+        Expose
       </button>
     {/if}
+    </span>
     <label class="mode">
       Colour
       <select
@@ -794,6 +808,32 @@
     background: #000;
     border-radius: var(--radius);
     overflow: hidden;
+  }
+  /* The exposure time and Expose as one control. */
+  .shoot-group {
+    display: inline-flex;
+    align-items: stretch;
+  }
+  .shoot-group .seconds {
+    width: 4.2em;
+    padding: 2px 6px;
+    font-size: 12px;
+    border-radius: var(--radius) 0 0 var(--radius);
+    border-right: none;
+    text-align: right;
+  }
+  .shoot-group .unit {
+    display: flex;
+    align-items: center;
+    padding: 0 6px 0 3px;
+    font-size: 12px;
+    background: var(--input);
+    border: 1px solid var(--panel-border);
+    border-left: none;
+    border-right: none;
+  }
+  .shoot-group .shoot {
+    border-radius: 0 var(--radius) var(--radius) 0;
   }
   .toolbar {
     display: flex;

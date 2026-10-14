@@ -4,16 +4,29 @@ What changed in each release. The newest is first. A release's section here beco
 
 ## [Unreleased]
 
+## [0.3.9] - 2026-10-14
+
 ### Added
 - **Dec backlash compensation** (NOVA's guider, on by default): calibration measures the Dec backlash (how far
   short the South steps come of the North ones), and when a Dec correction reverses, guiding adds that much pulse to
   take up the slack, adjusting it as it goes (more if the star still lags, less if it overshoots). The Guiding tab
   shows the backlash and the pulse; the guide log records it. In the simulation tests it cut Dec RMS by about a
   quarter on reversing Dec corrections with 3 px of backlash.
+- **Exposure time on the Image tab:** a seconds box joined to **Expose**, the same setting as the Camera panel's.
+- **Docs:** choosing a computer (a used ex-office mini PC such as a ThinkCentre M710q is cheaper than a Raspberry
+  Pi kit and ideal for NOVA), giving Ubuntu Server the whole drive (its installer leaves part of it unused), and new
+  screenshots.
 
 ### Changed
 - Sites show by name only (the Site line, the setup guide and the activity log), so screenshots don't give your
   location away; the coordinates show only while the Site section is open.
+- The altitude chart's hour labels thin out (every 4, 6 or 12 hours) when it's too narrow for every 2.
+
+### Fixed
+- Night mode: text box placeholders, colour emoji (network, pin, folder, lock, map), the direction pad's stop
+  square, the pop-out pictures and the zoomed image's overview are all red now.
+- Filter wheel buttons fit long names (Luminance, H_Alpha) instead of the text running over.
+- The Sequence tab no longer shows a sideways scroll bar that moves a pixel or so.
 
 ## [0.3.8] - 2026-10-14
 
@@ -271,7 +284,8 @@ The first release: ready-made downloads for 64-bit PCs (`linux-x64`) and the Ras
 - **Stellarium:** take its selection, act as its telescope, and turn its Oculars frame to the camera's angle.
 - **The mini PC:** restart and shut down from the page, network status, night mode.
 
-[Unreleased]: https://github.com/geoffpedder/nova-astro/compare/v0.3.8...HEAD
+[Unreleased]: https://github.com/geoffpedder/nova-astro/compare/v0.3.9...HEAD
+[0.3.9]: https://github.com/geoffpedder/nova-astro/releases/tag/v0.3.9
 [0.3.8]: https://github.com/geoffpedder/nova-astro/releases/tag/v0.3.8
 [0.3.7]: https://github.com/geoffpedder/nova-astro/releases/tag/v0.3.7
 [0.3.6]: https://github.com/geoffpedder/nova-astro/releases/tag/v0.3.6

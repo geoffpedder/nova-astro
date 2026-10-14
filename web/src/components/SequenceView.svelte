@@ -486,7 +486,9 @@
     flex-direction: column;
     gap: 12px;
     min-height: 0;
-    overflow: auto;
+    /* Up and down only: nothing in it is wider (the frames table scrolls sideways in its own box), and a width that
+       works out to a fraction of a pixel would otherwise give a scroll bar that moves 1 px. */
+    overflow: hidden auto;
   }
   .top {
     display: flex;

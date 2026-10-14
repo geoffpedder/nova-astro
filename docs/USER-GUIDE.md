@@ -325,6 +325,8 @@ The **Targets** tab finds and frames what to image:
 - **The sky chart fills the tab.** The target list, the framing controls and the altitude chart float over
   it. Hide each one with its ✕, and bring it back with the **Targets**, **Framing** and **Altitude** buttons
   in the chart's toolbar. Picking a target from the list hides the list and shows the framing controls.
+  Move a panel by its heading (the altitude chart from anywhere on it), resize it from its bottom-right corner;
+  double-click its heading to put it back, or **Layers → Put panels back** for all three. Each browser remembers them.
 - **Search** the offline deep-sky catalogue by any name: `M 31`, `NGC 7000`, `C 20`, `Sh2-129`, `Heart`,
   `north america`. The planets and the Moon are found by name too.
 - **Tonight** rates every object for the coming night at the active site: hours of darkness above an

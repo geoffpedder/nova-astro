@@ -3,12 +3,18 @@
 
   // A target's altitude through the night: daylight and twilight shaded, the Moon dashed, the
   // minimum altitude as a line, and "now".
-  let { curve, minAltitude = 30, label = '' }: { curve: AltitudeCurve; minAltitude?: number; label?: string } = $props()
+  let {
+    curve,
+    minAltitude = 30,
+    label = '',
+    fill = false,
+  }: { curve: AltitudeCurve; minAltitude?: number; label?: string; /** As tall as its box, rather than a fixed height. */ fill?: boolean } = $props()
 
-  // Drawn at the width it's given (no stretched text), a fixed height.
+  // Drawn at the size it's given (no stretched text): its width, and a fixed height unless it fills its box.
   let width = $state(600)
-  const W = $derived(Math.max(300, width))
-  const H = 120
+  let height = $state(120)
+  const W = $derived(Math.max(200, width))
+  const H = $derived(fill ? Math.max(80, height) : 120)
   const PAD = { left: 28, right: 8, top: 8, bottom: 20 }
 
   const t0 = $derived(new Date(curve.points[0]?.utc ?? 0).getTime())
@@ -52,7 +58,7 @@
   const peak = $derived(curve.points.reduce((best, p) => (p.altitude > best.altitude ? p : best), curve.points[0]))
 </script>
 
-<div class="wrap" bind:clientWidth={width}>
+<div class="wrap" class:fill bind:clientWidth={width} bind:clientHeight={height}>
 <svg viewBox="0 0 {W} {H}" width={W} height={H} class="chart" role="img" aria-label="Altitude of {label} through the night">
   {#each bands as b, i (i)}<rect class={b.shade} x={b.x} y={PAD.top} width={b.w} height={H - PAD.top - PAD.bottom} />{/each}
   {#each [0, 30, 60, 90] as a (a)}
@@ -73,6 +79,11 @@
 <style>
   .wrap {
     width: 100%;
+  }
+  .wrap.fill {
+    flex: 1;
+    min-height: 0;
+    overflow: hidden;
   }
   .chart {
     display: block;

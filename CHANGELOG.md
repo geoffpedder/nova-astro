@@ -12,6 +12,8 @@ What changed in each release. The newest is first. A release's section here beco
   on (v4l2-ctl), kept per webcam and set again when it starts.
 - **Image pop-out:** **Pop out** on the Image tab keeps the latest image in a floating window over the other tabs,
   updated with each frame, moved and resized as you like.
+- **Targets tab panels:** the target list, framing controls and altitude chart can be moved and resized over the
+  sky chart (double-click a heading, or **Layers → Put panels back**, to return them).
 - **Drivers dialog filter:** *All installed*, *Ticked* (your equipment's drivers) or *Running* (a device connected
   now), with counts, next to the search.
 - **Predictive PEC** (NOVA's guider, RA): learns the mount's periodic error while guiding (its period found

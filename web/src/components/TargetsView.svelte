@@ -15,6 +15,13 @@
   // live position, feeding slews, centring and the sequence.
 
   const KEY = 'nova.framing'
+  type BoxName = 'picker' | 'controls' | 'altitude'
+  interface Box {
+    x: number
+    y: number
+    w: number
+    h: number
+  }
   interface Saved {
     target: { name: string; ra: number; dec: number; info: TargetInfo | null } | null
     centre: Sky | null
@@ -33,6 +40,8 @@
     camera: string | null
     /** Which panels float over the chart (collapsed ones leave just their button in the toolbar). */
     show: { picker: boolean; controls: boolean; altitude: boolean }
+    /** Panels moved or resized over the chart (px from its top-left); a missing one sits in its usual place. */
+    boxes: Partial<Record<BoxName, Box>>
     /** Which boxes the chart draws: the planned frame, the mount's, the last plate solve's. */
     layers: { target: boolean; mount: boolean; solve: boolean }
     filters: TonightFilters
@@ -53,6 +62,7 @@
     survey: 'tiles',
     camera: null,
     show: { picker: true, controls: true, altitude: true },
+    boxes: {},
     layers: { target: true, mount: true, solve: true },
     filters: {
       groups: ['galaxy', 'nebula', 'cluster', 'planetary'],
@@ -73,7 +83,7 @@
         // "auto" was the rendered images before the stored survey existed: the stored survey replaces it.
         const survey = !s.survey || s.survey === 'auto' ? 'tiles' : s.survey
         // The frame's rotation starts at 0° each time (match the camera, or turn it, for a target); the rest is kept.
-        return { ...defaults, ...s, pa: 0, survey, chart: { ...defaults.chart, ...s.chart }, filters: { ...defaults.filters, ...s.filters }, show: { ...defaults.show, ...s.show }, layers: { ...defaults.layers, ...s.layers } }
+        return { ...defaults, ...s, pa: 0, survey, chart: { ...defaults.chart, ...s.chart }, filters: { ...defaults.filters, ...s.filters }, show: { ...defaults.show, ...s.show }, boxes: { ...s.boxes }, layers: { ...defaults.layers, ...s.layers } }
       }
     } catch {
       // storage unavailable or unreadable: start fresh
@@ -81,6 +91,60 @@
     return structuredClone(defaults)
   }
   const s = $state<Saved>(load())
+
+  // The floating panels can be moved (by their heading) and resized (from their bottom-right corner) over the chart.
+  let overlay = $state<HTMLElement>()
+  let front = $state<BoxName | null>(null) // the last one grabbed, on top of the others
+  const smallest: Record<BoxName, [number, number]> = { picker: [220, 320], controls: [220, 160], altitude: [240, 100] }
+  function boxStyle(name: BoxName): string | undefined {
+    const b = s.boxes[name]
+    // Kept inside the chart when the window gets smaller.
+    return b
+      ? `left: clamp(0px, ${b.x}px, calc(100% - ${b.w}px)); top: clamp(0px, ${b.y}px, calc(100% - ${b.h}px)); width: min(${b.w}px, 100%); height: min(${b.h}px, 100%)`
+      : undefined
+  }
+  function grab(e: PointerEvent, name: BoxName, resizing: boolean) {
+    if (!overlay || e.button !== 0) return
+    if (!resizing && (e.target as HTMLElement).closest('button, input, select, a, .grip')) return
+    const panel = (e.currentTarget as HTMLElement).closest('.floating') as HTMLElement
+    front = name
+    const o = overlay.getBoundingClientRect()
+    const r = panel.getBoundingClientRect()
+    const start = { px: e.clientX, py: e.clientY, x: r.left - o.left, y: r.top - o.top, w: r.width, h: r.height }
+    const clamp = (v: number, lo: number, hi: number) => Math.max(lo, Math.min(hi, v))
+    let started = false
+    const move = (ev: PointerEvent) => {
+      const dx = ev.clientX - start.px
+      const dy = ev.clientY - start.py
+      if (!started) {
+        if (Math.abs(dx) + Math.abs(dy) < 3) return // a click, not a drag
+        started = true
+        s.boxes[name] = { x: Math.round(start.x), y: Math.round(start.y), w: Math.round(start.w), h: Math.round(start.h) }
+      }
+      const b = s.boxes[name]
+      if (!b) return
+      if (resizing) {
+        const [minW, minH] = smallest[name]
+        b.w = Math.round(clamp(start.w + dx, minW, o.width - start.x))
+        b.h = Math.round(clamp(start.h + dy, minH, o.height - start.y))
+      } else {
+        b.x = Math.round(clamp(start.x + dx, 0, o.width - start.w))
+        b.y = Math.round(clamp(start.y + dy, 0, o.height - start.h))
+      }
+    }
+    document.body.style.userSelect = 'none' // no text selected while dragging
+    const up = () => {
+      document.body.style.userSelect = ''
+      window.removeEventListener('pointermove', move)
+      window.removeEventListener('pointerup', up)
+      window.removeEventListener('pointercancel', up)
+    }
+    window.addEventListener('pointermove', move)
+    window.addEventListener('pointerup', up)
+    window.addEventListener('pointercancel', up)
+    e.preventDefault()
+  }
+  const placeBack = (name: BoxName) => delete s.boxes[name]
   $effect(() => {
     const json = JSON.stringify(s)
     try {
@@ -430,7 +494,7 @@
       onselect={(t) => select(t, false)}
     />
     <!-- Everything else floats over the chart; each panel collapses to its button in the toolbar. -->
-    <div class="overlay">
+    <div class="overlay" bind:this={overlay}>
       <div class="toolbar">
         <button class="secondary panel-toggle" class:on={s.show.picker} aria-pressed={s.show.picker} onclick={() => (s.show.picker = !s.show.picker)}
           title="Search and tonight's best targets">☰ Targets</button
@@ -451,6 +515,9 @@
           <button class="secondary" aria-expanded={layersOpen} onclick={() => (layersOpen = !layersOpen)} title="What the chart draws">Layers ▾</button>
           {#if layersOpen}
             <div class="layers-menu panel" role="group" aria-label="Chart layers">
+              <button class="secondary reset-boxes" disabled={!Object.keys(s.boxes).length} onclick={() => (s.boxes = {})}
+                title="The Targets, Framing and Altitude panels back where they started, at their usual size">Put panels back</button>
+              <hr />
               <label class="check" title="The daytime sky's blue glow and the bright haze round the Sun">
                 <input type="checkbox" bind:checked={s.atmosphere} /> Atmosphere
               </label>
@@ -501,8 +568,9 @@
       </div>
       <div class="side left">
         {#if s.show.picker}
-          <section class="picker floating" aria-label="Find a target">
-            <div class="floating-head">
+          <section class="picker floating" class:free={!!s.boxes.picker} class:front={front === 'picker'} style={boxStyle('picker')} aria-label="Find a target">
+            <div class="floating-head" role="presentation" title="Drag to move, double-click to put back"
+              onpointerdown={(e) => grab(e, 'picker', false)} ondblclick={() => placeBack('picker')}>
               <b>Targets</b>
               <button class="collapse" title="Hide (the Targets button brings it back)" aria-label="Hide the target list" onclick={() => (s.show.picker = false)}>✕</button>
             </div>
@@ -586,21 +654,25 @@
             <div class="row">
               <button class="secondary" disabled={!mountReady} onclick={frameMount} title="Frame wherever the mount points now">Frame the mount position</button>
             </div>
+            <div class="grip" role="presentation" title="Drag to resize" onpointerdown={(e) => grab(e, 'picker', true)}></div>
           </section>
         {/if}
       </div>
-      <div class="bottom">
+      <div class="bottom" class:free={!!s.boxes.altitude}>
         {#if curve && centre && s.show.altitude}
-          <div class="altitude floating">
+          <div class="altitude floating" class:free={!!s.boxes.altitude} class:front={front === 'altitude'} style={boxStyle('altitude')} role="presentation"
+            title="Drag to move, double-click to put back" onpointerdown={(e) => grab(e, 'altitude', false)} ondblclick={() => placeBack('altitude')}>
             <button class="collapse" title="Hide (the Altitude button brings it back)" aria-label="Hide the altitude chart" onclick={() => (s.show.altitude = false)}>✕</button>
-            <AltitudeChart {curve} minAltitude={s.filters.minAltitude} label={s.target?.name} />
+            <AltitudeChart {curve} minAltitude={s.filters.minAltitude} label={s.target?.name} fill={!!s.boxes.altitude} />
+            <div class="grip" role="presentation" title="Drag to resize" onpointerdown={(e) => grab(e, 'altitude', true)}></div>
           </div>
         {/if}
       </div>
       <div class="side right">
         {#if centre && s.show.controls}
-          <div class="controls floating" aria-label="Framing">
-            <div class="floating-head">
+          <div class="controls floating" class:free={!!s.boxes.controls} class:front={front === 'controls'} style={boxStyle('controls')} aria-label="Framing">
+            <div class="floating-head" role="presentation" title="Drag to move, double-click to put back"
+              onpointerdown={(e) => grab(e, 'controls', false)} ondblclick={() => placeBack('controls')}>
               <b>Framing</b>
               <button class="collapse" title="Hide (the Framing button brings it back)" aria-label="Hide the framing controls" onclick={() => (s.show.controls = false)}>✕</button>
             </div>
@@ -690,6 +762,7 @@
                 >Add to sequence{panels.length > 1 ? ` (${panels.length})` : ''}</button
               >
             </div>
+            <div class="grip sticky" role="presentation" title="Drag to resize" onpointerdown={(e) => grab(e, 'controls', true)}></div>
           </div>
         {/if}
       </div>
@@ -758,7 +831,32 @@
     box-shadow: 0 6px 18px rgb(0 0 0 / 0.35);
     min-height: 0;
   }
+  .floating {
+    position: relative;
+  }
+  /* Moved or resized: placed over the chart where it was put. */
+  .floating.free {
+    position: absolute;
+    max-height: none !important;
+  }
+  .floating.front {
+    z-index: 2;
+  }
+  .bottom.free {
+    display: contents;
+  }
+  .altitude.free {
+    display: flex;
+    flex-direction: column;
+  }
+  .altitude {
+    cursor: move;
+    touch-action: none;
+  }
   .floating-head {
+    cursor: move;
+    touch-action: none;
+    user-select: none;
     display: flex;
     align-items: center;
     justify-content: space-between;
@@ -784,6 +882,32 @@
     top: 4px;
     right: 4px;
     z-index: 1;
+  }
+  .grip {
+    position: absolute;
+    right: 0;
+    bottom: 0;
+    width: 18px;
+    height: 18px;
+    cursor: nwse-resize;
+    touch-action: none;
+    background: linear-gradient(135deg, transparent 50%, var(--muted) 50%, var(--muted) 58%, transparent 58%, transparent 70%,
+        var(--muted) 70%, var(--muted) 78%, transparent 78%);
+    opacity: 0.6;
+  }
+  .grip:hover {
+    opacity: 1;
+  }
+  /* In a panel that scrolls: kept in its bottom corner as it scrolls. */
+  .grip.sticky {
+    position: sticky;
+    bottom: -8px;
+    align-self: flex-end;
+    flex-shrink: 0;
+    margin: auto -10px -8px 0; /* at the bottom, however tall the panel is made */
+  }
+  .reset-boxes {
+    font-size: 12px;
   }
   .panel-toggle.on {
     color: var(--accent);

@@ -97,7 +97,18 @@ want to use the mini PC with its own screen and keyboard.
    (UEFI) setup first, usually reached with Del, F2 or F10 as it starts, and set it to the current time.
    Windows keeps local time there while Linux expects UTC, so the clock can start hours out; apt then
    refuses Ubuntu's package lists as "not valid yet", and the install stops partway.
-4. Then follow [Quick setup](#quick-setup) below.
+4. **Give Ubuntu the whole drive.** Ubuntu Server's installer sets up the drive with LVM but only uses part of
+   it (often 100 GB, or half the drive) for the system and your images, and leaves the rest unused, so a big
+   SSD can fill up after a few nights. Check with `df -h /`: if its size is well short of the drive's, take the
+   rest:
+
+   ```bash
+   sudo lvextend -r -l +100%FREE /dev/ubuntu-vg/ubuntu-lv
+   ```
+
+   `-r` grows the filesystem too, and it's safe while running. (`sudo vgs` shows how much was left unused.) To do
+   it during the install instead, at the storage summary edit `ubuntu-lv` and set its size to the maximum.
+5. Then follow [Quick setup](#quick-setup) below.
 
 ## Quick setup
 

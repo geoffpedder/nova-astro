@@ -206,7 +206,9 @@ the refracted pole.
 
 The Guider panel's switch at the top picks the guider: **PHD2** (the default) or **NOVA**, NOVA's own guider (new,
 see [below](#novas-own-guider)). Guide, Stop, Dither, the RMS and the graph work the same with either, and so do
-sequences: they guide, dither and wait for settling with whichever is chosen.
+sequences: they guide, dither and wait for settling with whichever is chosen. **Pop out** (under the Guider panel's
+graph, or beside the Guiding tab's) opens the graph and RMS in a small window that stays on screen whichever tab is
+showing; move it by its title, resize it from its corner.
 
 ### PHD2
 

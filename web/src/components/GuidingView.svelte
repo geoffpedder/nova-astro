@@ -3,7 +3,8 @@
   import { act, nova } from '../lib/state.svelte'
   import { guideView, setGuideStretch, type GuideStretch } from '../lib/guideView.svelte'
   import CalibrationGraph from './CalibrationGraph.svelte'
-  import { guideGraph } from '../lib/guideGraph'
+  import GuideChart from './GuideChart.svelte'
+  import { guideFloat } from '../lib/floats.svelte'
   import type { GuideLogFile } from '../lib/types'
 
   // NOVA's own guider, full size: the whole guide frame with the stars it follows (click one to guide on it), the
@@ -82,10 +83,8 @@
     act(() => api.novaGuiderSettings({ ...s, exposureSeconds: seconds }))
   }
 
-  // The graph: the steps kept (up to 300), with lines at half and full scale. Dithers are marked and their settling
-  // isn't drawn or scaled to (see guideGraph), so one dither doesn't squash the rest.
+  // The graph: the steps kept (up to 300).
   const steps = 300
-  const chart = $derived(guideGraph(guider?.history ?? [], steps, 300, 100))
 
   // Guiding assistant: how long to follow the star unguided.
   let assistantSeconds = $state(120)
@@ -262,26 +261,13 @@
   {#if drift?.significant}
     <p class="drift">Dec drifting {drift.arcsecPerMinute.toFixed(0)}″/min: polar alignment at least {polar(drift.polarErrorArcmin)} off</p>
   {/if}
-  <div class="graph">
-    <svg viewBox="0 0 300 100" preserveAspectRatio="none" role="img" aria-label="Guiding error graph: RA and Dec">
-      {#if chart}
-        {#each chart.settling as [from, to], i (i)}<rect class="settle-band" x={from} y="0" width={Math.max(0.5, to - from)} height="100" />{/each}
-        <line class="grid" x1="0" y1={chart.y(chart.limit / 2)} x2="300" y2={chart.y(chart.limit / 2)} />
-        <line class="grid" x1="0" y1={chart.y(-chart.limit / 2)} x2="300" y2={chart.y(-chart.limit / 2)} />
-        <line class="zero" x1="0" y1="50" x2="300" y2="50" />
-        {#each chart.dithers as x, i (i)}<line class="dither-mark" x1={x} y1="0" x2={x} y2="100" />{/each}
-        {#each chart.ra as points, i (i)}<polyline class="ra" {points} />{/each}
-        {#each chart.dec as points, i (i)}<polyline class="dec" {points} />{/each}
-      {:else}
-        <line class="zero" x1="0" y1="50" x2="300" y2="50" />
-      {/if}
-    </svg>
-    <div class="scale mono muted">
-      <span>+{chart?.limit ?? 2}{unit}</span><span>0</span><span>−{chart?.limit ?? 2}{unit}</span>
-    </div>
-  </div>
+  <GuideChart history={guider?.history ?? []} {unit} {steps} />
   <div class="legend muted">
     <span class="ra-key">— RA</span><span class="dec-key">— Dec</span><span class="dither-key">┆ dither (settling shaded, left out of the RMS)</span><span>last {steps} steps, newest on the right</span>
+    <span class="gap"></span>
+    <button class="secondary small" class:on={guideFloat.layout.popped} aria-pressed={guideFloat.layout.popped}
+      onclick={() => ((guideFloat.layout.popped = !guideFloat.layout.popped), guideFloat.save())}
+      title="The graph and RMS in a small window that stays on screen whichever tab is showing">Pop out</button>
   </div>
 </div>
 
@@ -482,73 +468,35 @@
     fill: none;
     stroke: var(--warn);
   }
-  .graph {
-    display: flex;
-    gap: 6px;
-  }
-  .graph svg {
-    flex: 1;
-    height: clamp(100px, 20vh, 180px);
-    background: var(--input);
-    border-radius: 4px;
-  }
-  .settle-band {
-    fill: var(--warn);
-    opacity: 0.08;
-  }
-  .dither-mark {
-    stroke: var(--warn);
-    stroke-width: 1;
-    stroke-dasharray: 3 3;
-    vector-effect: non-scaling-stroke;
-  }
   .dither-key {
     color: var(--warn);
   }
-  .graph polyline {
-    fill: none;
-    stroke-width: 1.2;
-    vector-effect: non-scaling-stroke;
-  }
-  .zero,
-  .grid {
-    stroke: var(--panel-border);
-    vector-effect: non-scaling-stroke;
-  }
-  .grid {
-    stroke-dasharray: 3 3;
-  }
-  .scale {
-    display: flex;
-    flex-direction: column;
-    justify-content: space-between;
-    font-size: 11px;
-    padding: 2px 0;
-  }
-  .ra,
   .ra-key {
-    stroke: #60a5fa;
     color: #60a5fa;
   }
-  .dec,
   .dec-key {
-    stroke: #f87171;
     color: #f87171;
   }
-  :global(:root[data-theme='night']) .ra,
   :global(:root[data-theme='night']) .ra-key {
-    stroke: #a01010;
     color: #a01010;
   }
-  :global(:root[data-theme='night']) .dec,
   :global(:root[data-theme='night']) .dec-key {
-    stroke: #ff3030;
     color: #ff3030;
   }
   .legend {
     display: flex;
-    gap: 12px;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 4px 12px;
     font-size: 11px;
+  }
+  .legend button {
+    font-size: 11px;
+    padding: 2px 8px;
+  }
+  .legend button.on {
+    color: var(--accent);
+    border-color: var(--accent);
   }
   @media (max-width: 900px) {
     .main {
@@ -572,9 +520,6 @@
     }
     .zoom {
       grid-row: span 4;
-    }
-    .graph svg {
-      height: 140px;
     }
   }
 </style>

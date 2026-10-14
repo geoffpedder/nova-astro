@@ -10,8 +10,9 @@ What changed in each release. The newest is first. A release's section here beco
   webcam's MJPEG on unconverted, so it costs next to nothing. Setup installs ffmpeg; the install adds NOVA's user to
   the `video` group. **Controls** beside it sets the webcam's own brightness, exposure, white balance, focus and so
   on (v4l2-ctl), kept per webcam and set again when it starts.
-- **Image pop-out:** **Pop out** on the Image tab keeps the latest image in a floating window over the other tabs,
-  updated with each frame, moved and resized as you like.
+- **Image and guiding pop-outs:** **Pop out** on the Image tab keeps the latest image in a floating window over the
+  tabs, updated with each frame; on the Guiding tab (or under the Guider panel's graph, PHD2 too) the guiding graph and
+  RMS. Moved and resized as you like, and opened without leaving the tab you're on.
 - **Targets tab panels:** the target list, framing controls and altitude chart can be moved and resized over the
   sky chart (double-click a heading, or **Layers → Put panels back**, to return them).
 - **Drivers dialog filter:** *All installed*, *Ticked* (your equipment's drivers) or *Running* (a device connected

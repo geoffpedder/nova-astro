@@ -25,6 +25,7 @@
   import WebcamView from './components/WebcamView.svelte'
   import WebcamFloat from './components/WebcamFloat.svelte'
   import ImageFloat from './components/ImageFloat.svelte'
+  import GuideFloat from './components/GuideFloat.svelte'
   import RotationPrompt from './components/RotationPrompt.svelte'
   import FlatsPrompt from './components/FlatsPrompt.svelte'
   import { mainView } from './lib/inbox.svelte'
@@ -310,6 +311,7 @@
 </div>
 <WebcamFloat />
 <ImageFloat />
+<GuideFloat />
 
 {#if nova.settingsDevice}
   <DriverSettings device={nova.settingsDevice} onclose={() => (nova.settingsDevice = null)} />

@@ -40,3 +40,6 @@ export function createFloatLayout(key: string, defaults: Omit<FloatLayout, 'popp
 
 /** The latest image popped out; it starts beside the webcam's. */
 export const imageFloat = createFloatLayout('nova.imageFloat', { right: 312, bottom: 48, width: 320 })
+
+/** The guiding graph popped out; it starts above the webcam's. */
+export const guideFloat = createFloatLayout('nova.guideFloat', { right: 16, bottom: 300, width: 360 })

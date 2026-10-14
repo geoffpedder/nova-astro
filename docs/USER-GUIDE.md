@@ -112,7 +112,8 @@ frame from an earlier run that hasn't been copied off yet. The Image tab shows i
 star count, HFR, FWHM and statistics underneath; **Names** labels the stars once the frame is solved, and
 **Header** shows the FITS header. **Expose** at the start of the Image tab's toolbar takes a frame with the Camera
 panel's settings (exposure, Save FITS, Loop) and becomes **Abort** while it exposes, handy with the panels folded
-away.
+away. **Pop out** keeps the latest image in a small window over the other tabs, following each new frame (drag it by
+its title, resize it from its bottom-right corner; ⤢ goes back to the Image tab, ✕ closes it).
 
 **Default gain and offset:** camera drivers start with their own (the INDI ZWO driver's gain is 200). A ZWO imaging
 camera gets **gain 100, offset 50** from NOVA each time it connects: at 100 the newer ZWO sensors (ASI2600, ASI533

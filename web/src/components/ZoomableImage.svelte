@@ -350,7 +350,7 @@
       aria-valuenow={Math.round(-x)}
       tabindex="-1"
     >
-      <img {src} alt="" draggable="false" />
+      <img class="frame" {src} alt="" draggable="false" />
       <div
         class="view"
         style:left="{nav.left}px"

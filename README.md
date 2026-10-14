@@ -5,7 +5,7 @@ Raspberry Pi) and controls your mount, cameras, focuser, filter wheel, rotator a
 [INDI](https://www.indilib.org/). You use it from a browser on any computer, tablet or phone on the same
 network, with nothing to install there. It's inspired by [N.I.N.A.](https://nighttime-imaging.eu/), for Linux.
 
-![NOVA's Image tab showing a 300 s frame of M 31, with its image history](docs/images/image-tab.webp)
+![NOVA's Image tab showing a 300 s frame of M 31, with its image history](docs/images/image-tab-v2.webp)
 
 ## What it does
 
@@ -33,9 +33,9 @@ network, with nothing to install there. It's inspired by [N.I.N.A.](https://nigh
 
 <table>
   <tr>
-    <td width="33%"><a href="docs/images/targets-tab.webp"><img src="docs/images/targets-tab.webp" alt="The Targets tab: tonight's best targets, the sky chart with DSS imagery, and the camera's frame on IC 1396, with the panels moved and the altitude chart"></a></td>
-    <td width="33%"><a href="docs/images/sequence-tab.webp"><img src="docs/images/sequence-tab.webp" alt="The Sequence tab: IC 1396 with its frames, dithering, refocusing, meridian flip and end-of-night steps"></a></td>
-    <td width="33%"><a href="docs/images/image-tab.webp"><img src="docs/images/image-tab.webp" alt="The Image tab: the Andromeda Galaxy, with stars, HFR and FWHM, and the image history"></a></td>
+    <td width="33%"><a href="docs/images/targets-tab-v2.webp"><img src="docs/images/targets-tab-v2.webp" alt="The Targets tab: tonight's best targets, the sky chart with DSS imagery, and the camera's frame on IC 1396, with the panels moved and the altitude chart"></a></td>
+    <td width="33%"><a href="docs/images/sequence-tab-v2.webp"><img src="docs/images/sequence-tab-v2.webp" alt="The Sequence tab: IC 1396 with its frames, dithering, refocusing, meridian flip and end-of-night steps"></a></td>
+    <td width="33%"><a href="docs/images/image-tab-v2.webp"><img src="docs/images/image-tab-v2.webp" alt="The Image tab: the Andromeda Galaxy, with stars, HFR and FWHM, and the image history"></a></td>
   </tr>
   <tr>
     <td><b>Targets:</b> tonight's best targets, a sky chart with survey imagery, and framing the camera on IC 1396.</td>
@@ -43,8 +43,8 @@ network, with nothing to install there. It's inspired by [N.I.N.A.](https://nigh
     <td><b>Image:</b> every frame stretched in colour, with its stars, HFR and FWHM, and the night's history.</td>
   </tr>
   <tr>
-    <td><a href="docs/images/phd2-tab.webp"><img src="docs/images/phd2-tab.webp" alt="The PHD2 tab: PHD2's own window, running headless on the mini PC"></a></td>
-    <td><a href="docs/images/webcam-tab.webp"><img src="docs/images/webcam-tab.webp" alt="The Webcam tab: a USB webcam's view of the telescope in the back yard at night"></a></td>
+    <td><a href="docs/images/phd2-tab-v2.webp"><img src="docs/images/phd2-tab-v2.webp" alt="The PHD2 tab: PHD2's own window, running headless on the mini PC"></a></td>
+    <td><a href="docs/images/webcam-tab-v2.webp"><img src="docs/images/webcam-tab-v2.webp" alt="The Webcam tab: a USB webcam's view of the telescope in the back yard at night"></a></td>
     <td></td>
   </tr>
   <tr>

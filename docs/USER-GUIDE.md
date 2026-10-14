@@ -223,7 +223,7 @@ showing; move it by its title, resize it from its corner.
 
 ### PHD2
 
-![PHD2's window in NOVA's PHD2 tab](images/phd2-tab.webp)
+![PHD2's window in NOVA's PHD2 tab](images/phd2-tab-v2.webp)
 
 NOVA guides through [PHD2](https://openphdguiding.org/), which runs on the mini PC on a virtual screen; see
 it in the **PHD2** tab. The first time, PHD2 opens its *New Profile Wizard* there: create a profile (your guide
@@ -332,7 +332,7 @@ same as with PHD2.
 
 ## Targets and framing
 
-![The Targets tab framing IC 1396](images/targets-tab.webp)
+![The Targets tab framing IC 1396](images/targets-tab-v2.webp)
 
 The **Targets** tab finds and frames what to image:
 
@@ -382,7 +382,7 @@ Without imagery the chart draws catalogue stars.
 
 ## Sequences
 
-![The Sequence tab](images/sequence-tab.webp)
+![The Sequence tab](images/sequence-tab-v2.webp)
 
 The **Sequence** tab runs a night's imaging unattended, for one target or several in turn:
 
@@ -474,7 +474,7 @@ Three ways to use [Stellarium](https://stellarium.org/) on the computer you brow
 
 ## Webcam
 
-![The Webcam tab: the telescope in the back yard at night](images/webcam-tab.webp)
+![The Webcam tab: the telescope in the back yard at night](images/webcam-tab-v2.webp)
 
 A USB webcam on the mini PC, pointed at the rig, lets you watch it from indoors: the mount turning, a cable snagging,
 the dew shield, the flat panel. Plug it in and open the **Webcam** tab: the live view, with the webcam, size and frame

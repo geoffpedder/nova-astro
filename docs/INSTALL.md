@@ -4,6 +4,7 @@ NOVA runs on a small Linux computer at the telescope (a mini PC or a Raspberry P
 browser on any computer, tablet or phone on the same network.
 
 - [What you need](#what-you-need)
+- [Choosing a computer](#choosing-a-computer)
 - [Which system to use](#which-system-to-use)
 - [Quick setup](#quick-setup)
 - [First run](#first-run)
@@ -32,6 +33,39 @@ browser on any computer, tablet or phone on the same network.
 - **Equipment with INDI drivers:** mounts, cameras, focusers, filter wheels, rotators and flat panels. NOVA
   talks to them through [INDI](https://www.indilib.org/).
 - **A browser** on the computer, tablet or phone you'll use NOVA from. Nothing is installed there.
+
+## Choosing a computer
+
+**A used ex-office mini PC is the best value for NOVA.** Raspberry Pis have become expensive: by the time a Pi 5
+has enough memory, a case, a cooler, a power supply and decent storage, it often costs more than a second-hand
+business mini PC that is faster in every way. Offices replace these "tiny" PCs in bulk, so they're plentiful and
+cheap on the used market:
+
+- **Lenovo ThinkCentre M710q, M720q, M920q** (the "Tiny" range; NOVA is developed on one)
+- **Dell OptiPlex Micro** (3060, 5060, 7060 and similar)
+- **HP EliteDesk / ProDesk Mini** (G3, G4 and similar)
+
+What makes them a good fit:
+
+- **Fast enough for everything at once:** a 6th to 9th generation Intel Core i3 or i5 runs INDI, PHD2 and
+  NOVA together with room to spare, and plate solves in a second or two.
+- **A proper SSD,** not an SD card that can wear out or corrupt when the power drops in the field.
+- **Every INDI driver:** x86-64 gets all of them, and every Linux package, with nothing to compile.
+- **Small and frugal:** about the size of a paperback, drawing around 10–15 W while imaging. Most run from a
+  19–20 V laptop-style power brick, so at the telescope a 12 V battery works through a DC-DC step-up converter
+  or a 12 V laptop adapter.
+
+What to look for in a listing:
+
+- **8 GB of memory** (4 GB works; more doesn't help NOVA).
+- **An SSD** of 128 GB or more (captures can go to a USB drive instead).
+- **A Wi-Fi card,** if you want Wi-Fi and the [hotspot](USER-GUIDE.md#wi-fi-hotspot-no-wi-fi-at-the-site). Some come
+  without one; an Intel card (8265, 9260, AX200/AX210) can be fitted cheaply. Ask for the antennas to be included.
+  `nova doctor` says whether yours can run a hotspot.
+- **USB 3 ports** for the imaging camera; plug the guide camera and a webcam into separate ports.
+
+A Raspberry Pi 4 or 5 still works if you already have one (64-bit Raspberry Pi OS, with an SSD rather than an
+SD card if possible).
 
 ## Which system to use
 

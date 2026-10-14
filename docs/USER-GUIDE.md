@@ -474,6 +474,8 @@ Three ways to use [Stellarium](https://stellarium.org/) on the computer you brow
 
 ## Webcam
 
+![The Webcam tab: the telescope in the back yard at night](images/webcam-tab.webp)
+
 A USB webcam on the mini PC, pointed at the rig, lets you watch it from indoors: the mount turning, a cable snagging,
 the dew shield, the flat panel. Plug it in and open the **Webcam** tab: the live view, with the webcam, size and frame
 rate (640×480 at 5 fps is plenty), and **Snapshot** to save a picture. **Pop out** opens it in a small window that stays

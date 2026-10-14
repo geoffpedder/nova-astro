@@ -22,8 +22,6 @@
   let elevation = $state<number | null>(null)
   let loadedKey = $state<string | null>(null)
   let showMap = $state(false)
-  // Coordinates stay hidden unless asked for (each time), so screenshots don't give the site away.
-  let showCoordinates = $state(false)
 
   const site = $derived(nova.status?.site)
 
@@ -186,24 +184,13 @@
 
     <div class="fields">
       <label class="full">Name<input type="text" maxlength="60" placeholder="e.g. Home, Dark site" bind:value={name} /></label>
-      {#if showCoordinates || latitude === null || longitude === null}
-        <label>Latitude (°, +N)<input class="mono" type="number" min="-90" max="90" step="0.0001" bind:value={latitude} /></label>
-        <label>Longitude (°, +E)<input class="mono" type="number" min="-180" max="180" step="0.0001" bind:value={longitude} /></label>
-        <label>Elevation (m)<input class="mono" type="number" min="-500" max="10000" step="1" bind:value={elevation} /></label>
-      {:else}
-        <p class="muted full hidden-note">Location set (hidden, so screenshots don't show it)</p>
-      {/if}
-      <span class="row">
-        <button class="secondary map-button" onclick={() => (showMap = true)}>🗺 Pick on map…</button>
-        {#if latitude !== null && longitude !== null}
-          <button class="secondary" onclick={() => (showCoordinates = !showCoordinates)} aria-pressed={showCoordinates}>
-            {showCoordinates ? 'Hide coordinates' : 'Show coordinates'}
-          </button>
-        {/if}
-      </span>
+      <label>Latitude (°, +N)<input class="mono" type="number" min="-90" max="90" step="0.0001" bind:value={latitude} /></label>
+      <label>Longitude (°, +E)<input class="mono" type="number" min="-180" max="180" step="0.0001" bind:value={longitude} /></label>
+      <label>Elevation (m)<input class="mono" type="number" min="-500" max="10000" step="1" bind:value={elevation} /></label>
+      <button class="secondary map-button" onclick={() => (showMap = true)}>🗺 Pick on map…</button>
     </div>
 
-    {#if showCoordinates && latitude !== null && longitude !== null}
+    {#if latitude !== null && longitude !== null}
       <p class="muted mono readout">{describe(latitude, longitude)}</p>
     {/if}
 
@@ -346,15 +333,6 @@
   }
   .full {
     grid-column: 1 / -1;
-  }
-  .hidden-note {
-    margin: 0;
-    font-size: 12px;
-  }
-  .fields .row {
-    display: flex;
-    gap: 6px;
-    flex-wrap: wrap;
   }
   .readout {
     margin: 6px 0 0;

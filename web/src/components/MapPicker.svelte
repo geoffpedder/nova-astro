@@ -411,11 +411,11 @@
     position: fixed;
     inset: 0;
     background: rgb(0 0 0 / 0.55);
-    z-index: 20;
+    z-index: 50;
   }
   .dialog {
     position: fixed;
-    z-index: 21;
+    z-index: 51;
     inset: 4vh max(12px, calc(50vw - 520px));
     display: flex;
     flex-direction: column;

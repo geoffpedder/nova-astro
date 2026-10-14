@@ -85,11 +85,11 @@
     position: fixed;
     inset: 0;
     background: rgb(0 0 0 / 0.5);
-    z-index: 10;
+    z-index: 40;
   }
   .dialog {
     position: fixed;
-    z-index: 11;
+    z-index: 41;
     inset: 5vh max(16px, calc(50vw - 380px)) auto;
     max-height: 90vh;
     display: flex;

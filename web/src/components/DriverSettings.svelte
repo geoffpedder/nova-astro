@@ -158,7 +158,7 @@
     position: fixed;
     inset: 0;
     background: rgb(0 0 0 / 0.5);
-    z-index: 10;
+    z-index: 40;
   }
   .drawer {
     position: fixed;
@@ -167,7 +167,7 @@
     bottom: 0;
     width: min(560px, 100vw);
     border-radius: 0;
-    z-index: 11;
+    z-index: 41;
     display: flex;
     flex-direction: column;
     gap: 10px;

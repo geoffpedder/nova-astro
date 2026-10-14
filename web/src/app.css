@@ -248,6 +248,22 @@ select {
   );
   pointer-events: none;
 }
+/* A dialog sits over the dimmed page, not the page's colour, so its corner is clipped off (see-through) instead, with
+   just the line along the cut. (Nothing in a dialog reaches past its edges.) */
+.panel[role='dialog'],
+.panel[role='alertdialog'] {
+  clip-path: polygon(0 0, calc(100% - var(--cut)) 0, 100% var(--cut), 100% 100%, 0 100%);
+}
+.panel[role='dialog']::after,
+.panel[role='alertdialog']::after {
+  background: linear-gradient(
+    to top right,
+    transparent calc(50% - 1.2px),
+    var(--cut-line) calc(50% - 1.2px),
+    var(--cut-line) 50%,
+    transparent 50%
+  );
+}
 .panel h2 {
   margin: 0 0 10px;
   min-height: 22px;

@@ -4,11 +4,11 @@ What changed in each release. The newest is first. A release's section here beco
 
 ## [Unreleased]
 
-### Fixed
-- The whole page no longer scrolls a little when the mouse wheel turns over the header: the main area now takes
-  exactly the height the header leaves (it was a fixed guess that a slightly taller header overran).
-
 ### Added
+- **Webcam view:** a USB webcam on the mini PC in a **Webcam** tab, to watch the rig from indoors, with **Pop out** to
+  keep a small floating view over the other tabs, and **Snapshot**. It runs only while watched and passes the
+  webcam's MJPEG on unconverted, so it costs next to nothing. Setup installs ffmpeg; the install adds NOVA's user to
+  the `video` group.
 - **Drivers dialog filter:** *All installed*, *Ticked* (your equipment's drivers) or *Running* (a device connected
   now), with counts, next to the search.
 - **Predictive PEC** (NOVA's guider, RA): learns the mount's periodic error while guiding (its period found
@@ -16,6 +16,10 @@ What changed in each release. The newest is first. A release's section here beco
   AM3. In the simulation tests it cut RA RMS by about 65% against Hysteresis on a strong periodic error. The Guiding
   tab shows it learning or predicting; the guide log records it; the guiding assistant reports the PE period; built-in
   profile *ZWO AM mount + PEC*.
+
+### Fixed
+- The whole page no longer scrolls a little when the mouse wheel turns over the header: the main area now takes
+  exactly the height the header leaves (it was a fixed guess that a slightly taller header overran).
 
 ## [0.3.6] - 2026-10-13
 

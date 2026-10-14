@@ -51,8 +51,9 @@ for unit in indiserver nova nova-display nova-wm phd2 nova-screen; do
   sed "s/NOVA_USER/$NOVA_USER/" "$HERE/$unit.service" > "/etc/systemd/system/$unit.service"
 done
 
-# Serial mounts and focusers need the serial group (uucp on Arch, dialout on Debian/Ubuntu).
-for group in uucp dialout; do
+# Serial mounts and focusers need the serial group (uucp on Arch, dialout on Debian/Ubuntu); a webcam (the Webcam
+# view) needs video.
+for group in uucp dialout video; do
   if getent group "$group" >/dev/null; then
     usermod -aG "$group" "$NOVA_USER"
   fi

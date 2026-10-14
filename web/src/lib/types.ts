@@ -604,6 +604,27 @@ export interface GuideDefaults {
   settleTimeout: number
 }
 
+export interface WebcamSettings {
+  /** Null: the first webcam found. */
+  device: string | null
+  width: number
+  height: number
+  fps: number
+}
+
+export interface WebcamStatus {
+  devices: { path: string; name: string }[]
+  settings: WebcamSettings
+  /** The webcam in use (or that would be). */
+  device: string | null
+  state: 'Idle' | 'Starting' | 'Streaming' | 'Error'
+  viewers: number
+  fps: number | null
+  error: string | null
+  /** e.g. that it has to convert the webcam's frames. */
+  note: string | null
+}
+
 /** The mini PC at a glance (null members aren't available on this system). */
 export interface SystemStats {
   /** All cores together, 0–100. */

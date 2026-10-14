@@ -14,6 +14,7 @@
 - [Flats](#flats)
 - [Image history](#image-history)
 - [Stellarium](#stellarium)
+- [Webcam](#webcam)
 - [Notifications](#notifications)
 - [The mini PC](#the-mini-pc)
 
@@ -453,6 +454,21 @@ Three ways to use [Stellarium](https://stellarium.org/) on the computer you brow
 - **Camera angle in Oculars:** after a plate solve, *→ Stellarium* (or automatically, ticked under the ⚙ next
   to *From Stellarium*) turns Stellarium's Oculars sensor frame to the camera's solved angle. Check once
   against a real image and adjust *Angle offset* / *Reverse* if needed.
+
+## Webcam
+
+A USB webcam on the mini PC, pointed at the rig, lets you watch it from indoors: the mount turning, a cable snagging,
+the dew shield, the flat panel. Plug it in and open the **Webcam** tab: the live view, with the webcam, size and frame
+rate (640×480 at 5 fps is plenty), and **Snapshot** to save a picture. **Pop out** puts it in a small window that stays
+on screen over the other tabs (drag it by its title; ⤢ goes back to the tab, ✕ closes it); each browser remembers it.
+Night mode turns it red like the rest.
+
+It costs next to nothing: the webcam runs only while the tab or the popped-out window is open (it stops 10 s after
+nobody watches), and its frames are passed on as the webcam compresses them, without converting. A few things help:
+- **Plug it into a different USB port from the cameras.** A webcam on the same USB 2 hub as a USB 2 guide camera (the
+  ASI120MM Mini) can take bandwidth it needs, and guide frames come late or not at all.
+- **Tape over its light**, and for seeing anything in the dark use one with infrared night vision, or a dim red lamp.
+- It needs `ffmpeg` (setup installs it; `nova doctor` checks it and lists the webcams it sees).
 
 ## Notifications
 

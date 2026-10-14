@@ -22,6 +22,8 @@
   import TargetsView from './components/TargetsView.svelte'
   import Phd2View from './components/Phd2View.svelte'
   import GuidingView from './components/GuidingView.svelte'
+  import WebcamView from './components/WebcamView.svelte'
+  import WebcamFloat from './components/WebcamFloat.svelte'
   import RotationPrompt from './components/RotationPrompt.svelte'
   import FlatsPrompt from './components/FlatsPrompt.svelte'
   import { mainView } from './lib/inbox.svelte'
@@ -286,6 +288,9 @@
           title="NOVA's guider: the guide frame, its stars and the graph">Guiding{#if nova.status.guider.state === 'LostLock'}<span class="dot"></span>{/if}</button
         >
       {/if}
+      <button class:active={mainView.view === 'webcam'} aria-pressed={mainView.view === 'webcam'} onclick={() => (mainView.view = 'webcam')}
+        title="The webcam on the mini PC: watch the rig from indoors">Webcam</button
+      >
       <button class:active={mainView.view === 'activity'} aria-pressed={mainView.view === 'activity'} onclick={() => (mainView.view = 'activity')}
         title="Everything NOVA has done and reported">Activity{#if unseenProblem}<span class="dot"></span>{/if}</button
       >
@@ -296,11 +301,13 @@
     {#if mainView.view === 'polar'}<div class="view"><PolarView /></div>{/if}
     <div class="view" class:hidden={mainView.view !== 'phd2'}><Phd2View active={mainView.view === 'phd2'} /></div>
     {#if mainView.view === 'guiding'}<div class="view"><GuidingView /></div>{/if}
+    {#if mainView.view === 'webcam'}<div class="view"><WebcamView active={true} /></div>{/if}
     <div class="view" class:hidden={mainView.view !== 'activity'}><ActivityView active={mainView.view === 'activity'} /></div>
     <LogPanel />
   </section>
 </main>
 </div>
+<WebcamFloat />
 
 {#if nova.settingsDevice}
   <DriverSettings device={nova.settingsDevice} onclose={() => (nova.settingsDevice = null)} />

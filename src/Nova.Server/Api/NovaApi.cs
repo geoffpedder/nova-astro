@@ -137,6 +137,47 @@ public static class NovaApi
         // The mini PC's CPU, memory, temperature and disks (the Activity tab asks every few seconds while it's open).
         api.MapGet("/system/stats", (SystemStatsService stats, CancellationToken ct) => stats.ReadAsync(ct));
 
+        // Webcam view: the rig, from indoors. Captures only while a browser watches the stream.
+        api.MapGet("/webcam", (WebcamService webcam) => webcam.Status);
+        api.MapPost("/webcam/settings", (WebcamSettings settings, WebcamService webcam) =>
+        {
+            try
+            {
+                webcam.UpdateSettings(settings);
+                return Results.NoContent();
+            }
+            catch (ArgumentException ex)
+            {
+                return Results.Problem(ex.Message, statusCode: StatusCodes.Status400BadRequest);
+            }
+        });
+        // MJPEG over HTTP: a plain <img> shows it live in any browser.
+        api.MapGet("/webcam/stream", async (WebcamService webcam, HttpContext context) =>
+        {
+            var response = context.Response;
+            response.ContentType = "multipart/x-mixed-replace; boundary=novaframe";
+            response.Headers.CacheControl = "no-cache, no-store";
+            var body = response.Body;
+            try
+            {
+                await foreach (var frame in webcam.Watch(context.RequestAborted))
+                {
+                    await response.WriteAsync($"--novaframe\r\nContent-Type: {frame.ContentType}\r\nContent-Length: {frame.Data.Length}\r\n\r\n", context.RequestAborted);
+                    await body.WriteAsync(frame.Data, context.RequestAborted);
+                    await response.WriteAsync("\r\n", context.RequestAborted);
+                    await body.FlushAsync(context.RequestAborted);
+                }
+            }
+            catch (OperationCanceledException)
+            {
+                // the viewer went
+            }
+        });
+        api.MapGet("/webcam/snapshot", async (WebcamService webcam, CancellationToken ct) =>
+            await webcam.SnapshotAsync(ct) is { } frame
+                ? Results.File(frame.Data, frame.ContentType, $"webcam-{DateTime.Now:yyyy-MM-dd_HH-mm-ss}{(frame.ContentType == "image/png" ? ".png" : ".jpg")}")
+                : Results.Problem(webcam.Status.Error ?? "The webcam gave no picture", statusCode: StatusCodes.Status503ServiceUnavailable));
+
         // Equipment
         api.MapPost("/equipment/connect", async (EquipmentService equipment, GuiderService guider, ActivityLog log, CancellationToken ct) =>
         {

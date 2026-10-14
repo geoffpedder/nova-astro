@@ -79,6 +79,7 @@ builder.Services.AddSingleton<NotificationService>();
 builder.Services.AddSingleton<FocusOffsetService>();
 builder.Services.AddSingleton<StorageService>();
 builder.Services.AddSingleton<SystemStatsService>();
+builder.Services.AddSingleton<WebcamService>();
 builder.Services.AddHostedService(sp => sp.GetRequiredService<StorageService>());
 builder.Services.AddHostedService(sp => sp.GetRequiredService<NotificationService>());
 builder.Services.AddSingleton<StatusReporter>();

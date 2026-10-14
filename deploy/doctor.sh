@@ -174,6 +174,18 @@ if has lsblk; then
   [ -n "$usb" ] && pass "plugged in: $usb"
 fi
 
+section "Webcam view (optional)"
+if ! has ffmpeg; then note "ffmpeg isn't installed: the Webcam tab can't show a USB webcam" "$setup   (or: sudo pacman -S ffmpeg, sudo apt install ffmpeg)"
+else pass "ffmpeg $(ffmpeg -version 2>/dev/null | head -1 | awk '{print $3}')"; fi
+cams=$(for d in /sys/class/video4linux/video*; do
+  [ -f "$d/index" ] && [ "$(cat "$d/index")" = 0 ] && cat "$d/name"
+done 2>/dev/null | paste -sd, -)
+if [ -n "$cams" ]; then
+  pass "webcam plugged in: $cams"
+  if id -nG | grep -qw video; then pass "allowed to use it (video group)"
+  else note "this user isn't in the video group, so NOVA can't open the webcam" "$reinstall"; fi
+fi
+
 section "Password"
 nova_home=$(getent passwd "${nova_user:-$(id -un)}" | cut -d: -f6)
 if [ -f "${Nova__ConfigDirectory:-${nova_home:-$HOME}/.config/nova}/auth.json" ]; then pass "set: browsers sign in to use NOVA"

@@ -230,6 +230,7 @@ What `setup.sh` installs, written out for Arch so it can be done by hand:
 | Plate solving | ASTAP's command-line version from [SourceForge](https://sourceforge.net/projects/astap-program/files/linux_installer/) (`astap_cli` into /opt/astap), then `yay -S d20-star-db-astap` | the plate solver and its star database in /opt/astap (d05/d50 suit other fields of view). The AUR's `astap` builds from a source download that has gone missing before |
 | Headless PHD2 | `sudo pacman -S --needed xorg-server-xvfb x11vnc icewm python-build` then `yay -S phd2 novnc websockify` | guiding on a virtual display, its screen in the browser; websockify needs `python-build` to build |
 | Restart / shut down from the web page | `sudo pacman -S --needed polkit` (usually already there) | lets the ⏻ menu restart or power off the mini PC; the install adds a polkit rule allowing NOVA's user to do only that |
+| Webcam view | `sudo pacman -S --needed ffmpeg` | shows a USB webcam in the Webcam tab, to watch the rig from indoors; the install adds NOVA's user to the `video` group |
 | Saving to USB drives | `sudo pacman -S --needed udisks2` | mounts and ejects USB drives for NOVA (Camera panel → Storage); the install adds a polkit rule allowing NOVA's user to mount and eject them |
 | Wi-Fi details (optional) | `sudo pacman -S --needed iw` | the header's network name and signal; `iw` also spots when the mini PC runs a hotspot |
 | Network names (optional) | `sudo pacman -S avahi nss-mdns` and `sudo systemctl enable --now avahi-daemon` | `http://<name>.local:5000` |

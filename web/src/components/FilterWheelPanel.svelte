@@ -31,7 +31,7 @@
           class:active={wheel.position === i + 1}
           disabled={!ready || moving}
           onclick={() => act(() => api.filterMove(i + 1))}
-          title="Slot {i + 1}"
+          title="{name}, slot {i + 1}"
         >
           {name}
         </button>
@@ -42,17 +42,24 @@
 </Panel>
 
 <style>
+  /* Each button as wide as its name (Luminance, H_Alpha…), rows filled out evenly. */
   .filters {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(56px, 1fr));
+    display: flex;
+    flex-wrap: wrap;
     gap: 6px;
   }
   .filter {
+    flex: 1 1 auto;
+    min-width: 56px;
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
     background: transparent;
     color: var(--text);
     border: 1px solid var(--panel-border);
     font-weight: 500;
-    padding: 6px 4px;
+    padding: 6px 8px;
   }
   .filter.active {
     background: var(--kind);

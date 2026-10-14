@@ -1,40 +1,9 @@
-/**
- * The webcam's floating view on this browser: whether it's popped out over the other tabs, and where it sits.
- * Remembered per browser, like the panel layout.
- */
-interface WebcamLayout {
-  popped: boolean
-  /** Distance from the window's right and bottom edges (px), so it stays in its corner as the window resizes. */
-  right: number
-  bottom: number
-  /** Its width (px), set by dragging its corner; the height follows the picture. */
-  width: number
-}
+import { createFloatLayout } from './floats.svelte'
 
-function load(): WebcamLayout {
-  try {
-    const saved = JSON.parse(localStorage.getItem('nova.webcam') ?? 'null')
-    if (saved && typeof saved.popped === 'boolean') return {
-        popped: saved.popped,
-        right: +saved.right || 16,
-        bottom: +saved.bottom || 48,
-        width: Math.max(200, +saved.width || 280),
-      }
-  } catch {
-    // storage unavailable or unreadable: the defaults
-  }
-  return { popped: false, right: 16, bottom: 48, width: 280 }
-}
-
-export const webcamLayout = $state<WebcamLayout>(load())
-
-export function saveWebcamLayout(): void {
-  try {
-    localStorage.setItem('nova.webcam', JSON.stringify(webcamLayout))
-  } catch {
-    // just for this visit
-  }
-}
+/** The webcam's floating view on this browser: popped out over the other tabs, where it sits and its size. */
+const float = createFloatLayout('nova.webcam', { right: 16, bottom: 48, width: 280 })
+export const webcamLayout = float.layout
+export const saveWebcamLayout = float.save
 
 /**
  * The live stream's address. Each view adds its own number so two <img>s never share a connection, and a new number

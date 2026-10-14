@@ -12,6 +12,7 @@
   import { setOcularsRotation } from '../lib/stellarium'
   import { ocularsAngle, stellariumSettings } from '../lib/stellariumSettings.svelte'
   import { framing, mainView } from '../lib/inbox.svelte'
+  import { imageFloat } from '../lib/floats.svelte'
 
   // The history: which image is on screen (null follows the latest), and comparing two.
   const history = $derived(nova.status?.imageHistory ?? null)
@@ -456,6 +457,13 @@
     >
     <button class="secondary small" disabled={!image} onclick={() => (showHeader = true)} title="Show the FITS header">
       Header
+    </button>
+    <button
+      class="secondary small"
+      onclick={() => ((imageFloat.layout.popped = true), imageFloat.save())}
+      title="A small floating view of the latest image that stays on screen over the other tabs"
+    >
+      Pop out
     </button>
     <button class="secondary small" disabled={!image} onclick={() => (actualSize = !actualSize)} title={actualSize ? 'Fit the whole image' : 'One image pixel per screen pixel'}>
       {actualSize ? 'Fit' : '1:1'}

@@ -470,7 +470,7 @@ It costs next to nothing: the webcam runs only while the tab or the popped-out w
 nobody watches), and its frames are passed on as the webcam compresses them, without converting. A few things help:
 - **Plug it into a different USB port from the cameras.** A webcam on the same USB 2 hub as a USB 2 guide camera (the
   ASI120MM Mini) can take bandwidth it needs, and guide frames come late or not at all.
-- **Tape over its light**, and for seeing anything in the dark use one with infrared night vision, or a dim red lamp.
+- For seeing anything in the dark, use one with infrared night vision, or a dim red lamp.
 - It needs `ffmpeg`, and `v4l-utils` for the controls (setup installs both; `nova doctor` checks them and lists the
   webcams it sees).
 

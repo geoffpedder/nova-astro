@@ -164,8 +164,8 @@
   </div>
   {#if status?.note}<p class="warn small">{status.note}</p>{/if}
   <p class="muted small">
-    Plug the webcam into a different USB port from the cameras (a USB 2 guide camera on the same hub can lose frames),
-    and tape over its light. It only runs while this view, or the popped-out one, is open.
+    Plug the webcam into a different USB port from the cameras (a USB 2 guide camera on the same hub can lose frames).
+    It only runs while this view, or the popped-out one, is open.
   </p>
 </div>
 

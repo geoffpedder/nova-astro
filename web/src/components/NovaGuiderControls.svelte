@@ -281,6 +281,10 @@
       <label for="ng-fast">Fast switch</label>
       <input id="ng-fast" type="checkbox" checked={s.algorithms.decFastSwitch} onchange={(e) => saveAlgorithms({ decFastSwitch: e.currentTarget.checked })}
         title="Reverse Dec at once for a large error, instead of waiting a few frames" />
+      <label for="ng-backlash">Backlash comp</label>
+      <input id="ng-backlash" type="checkbox" checked={s.algorithms.decBacklashCompensation}
+        onchange={(e) => saveAlgorithms({ decBacklashCompensation: e.currentTarget.checked })}
+        title="When Dec reverses, add a pulse to take up the gears' slack first: measured at calibration, then adjusted as it guides" />
 
       <span class="head">Calibration</span><span></span>
       <label for="ng-step">Step</label>

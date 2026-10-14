@@ -15,7 +15,8 @@ public sealed record CalibrationStep(GuideDirection Direction, int Milliseconds,
 /// <summary>
 /// Calibration as PHD2 does it, as a state machine fed one star position per frame: clear Dec backlash (north until
 /// the star moves), step west until the star has moved <c>targetPixels</c>, the same number east to come back, then
-/// north and south the same way. The west and north moves give each axis's angle and rate.
+/// north and south the same way. The west and north moves give each axis's angle and rate; how far short the south
+/// steps come of the north ones is the Dec backlash (the first part of a reversed move is lost taking up the slack).
 /// </summary>
 public sealed class GuideCalibrator
 {
@@ -34,7 +35,7 @@ public sealed class GuideCalibrator
     private int _steps, _westSteps, _northSteps;
     private double _startX, _startY;
     private bool _started;
-    private (double Dx, double Dy) _west, _north;
+    private (double Dx, double Dy) _west, _north, _south;
     private readonly List<CalibrationPoint> _points = [];
     private double _originX, _originY;
 
@@ -140,7 +141,11 @@ public sealed class GuideCalibrator
                 return Pulse(GuideDirection.North);
 
             case Phase.South:
-                if (_steps >= _northSteps) return Finish();
+                if (_steps >= _northSteps)
+                {
+                    _south = (dx, dy);
+                    return Finish();
+                }
                 return Pulse(GuideDirection.South);
 
             default:
@@ -178,7 +183,7 @@ public sealed class GuideCalibrator
         var seconds = _stepMs / 1000.0;
         var raAngle = Math.Atan2(_west.Dy, _west.Dx);
         var raRate = Math.Sqrt(_west.Dx * _west.Dx + _west.Dy * _west.Dy) / (_westSteps * seconds);
-        double decAngle, decRate;
+        double decAngle, decRate, backlash = 0;
         if (_skipDec)
         {
             // Square on to RA, turned the usual way (north is 90° anticlockwise of west seen on the sky; with y down,
@@ -188,9 +193,13 @@ public sealed class GuideCalibrator
         else
         {
             decAngle = Math.Atan2(_north.Dy, _north.Dx);
-            decRate = Math.Sqrt(_north.Dx * _north.Dx + _north.Dy * _north.Dy) / (_northSteps * seconds);
+            var north = Math.Sqrt(_north.Dx * _north.Dx + _north.Dy * _north.Dy);
+            decRate = north / (_northSteps * seconds);
+            // The same pulses south as north should come all the way back; what's missing went into the backlash.
+            var back = -(_south.Dx * _north.Dx + _south.Dy * _north.Dy) / north;
+            backlash = Math.Round(Math.Clamp(north - back, 0, north), 2);
         }
-        Result = new GuideCalibration(raAngle, raRate, decAngle, decRate, _decDegrees, _pierSide, DateTime.UtcNow);
+        Result = new GuideCalibration(raAngle, raRate, decAngle, decRate, _decDegrees, _pierSide, DateTime.UtcNow, backlash);
         _phase = Phase.Done;
         if (!_skipDec && Result.OrthogonalityError > 10)
             Warning = $"The RA and Dec moves are {Result.OrthogonalityError:0}° from square (should be under 10°): " +

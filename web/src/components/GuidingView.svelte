@@ -229,6 +229,15 @@
           {/if}
         </p>
       {/if}
+      {#if n?.backlash}
+        {@const b = n.backlash}
+        <p class="small mono pec" class:predicting={b.enabled}
+          title="Dec backlash: how far a reversed Dec move runs before the star moves, measured at calibration (South steps coming up short of the North ones). Compensation adds that much pulse whenever Dec reverses, and adjusts it as it guides">
+          Dec backlash {guider?.pixelScale ? `${(b.measuredPixels * guider.pixelScale).toFixed(1)}″` : `${b.measuredPixels.toFixed(1)} px`} ({b.measuredMs} ms){b.enabled
+            ? `: adding ${b.pulseMs} ms on reversals${b.applied ? `, ${b.applied} so far` : ''}`
+            : ': compensation off'}
+        </p>
+      {/if}
       {#if n?.darks}
         <p class="small mono" class:warn={!n.darks.inUse}>
           Darks {n.darks.exposures.join(', ')} s{n.darks.inUse ? ', in use' : n.darks.gainMatches ? ', off' : ', other gain: not used'}

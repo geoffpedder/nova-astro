@@ -6,11 +6,16 @@ namespace Nova.Core.Guiding;
 /// How the guide star moves in the guide camera for each axis: a West pulse moves it along <see cref="RaAngle"/>
 /// at <see cref="RaRate"/>, a North pulse along <see cref="DecAngle"/> at <see cref="DecRate"/> (pixels per second
 /// of pulse; angles in radians from the image's +x axis, y down). Measured at <see cref="DecDegrees"/> on
-/// <see cref="PierSide"/>; <see cref="For"/> adapts it to where the scope points now.
+/// <see cref="PierSide"/>; <see cref="For"/> adapts it to where the scope points now. <see cref="DecBacklashPixels"/> is
+/// the Dec backlash it measured: how far short the South steps came of the North ones.
 /// </summary>
 public sealed record GuideCalibration(
-    double RaAngle, double RaRate, double DecAngle, double DecRate, double DecDegrees, PierSide? PierSide, DateTime Utc)
+    double RaAngle, double RaRate, double DecAngle, double DecRate, double DecDegrees, PierSide? PierSide, DateTime Utc,
+    double DecBacklashPixels = 0)
 {
+    /// <summary>The Dec backlash as pulse time (ms): how long a reversed Dec pulse runs before the star moves.</summary>
+    public double DecBacklashMs => DecRate > 0 ? DecBacklashPixels / DecRate * 1000 : 0;
+
     /// <summary>How far from square the axes are (degrees): a few is normal, over ~10 means a poor calibration.</summary>
     public double OrthogonalityError
     {

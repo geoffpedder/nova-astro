@@ -33,7 +33,11 @@ public sealed record GuideOutputChoice(string? Name, string Label);
 public sealed record GuideCalibrationInfo(
     double RaAngle, double DecAngle, double RaRate, double DecRate, double? RaArcsecPerSecond, double? DecArcsecPerSecond,
     double Orthogonality, double DecDegrees, PierSide? PierSide, DateTime Utc, string? Warning,
-    IReadOnlyList<CalibrationPoint>? Points = null);
+    IReadOnlyList<CalibrationPoint>? Points = null, double DecBacklashPixels = 0, int DecBacklashMs = 0);
+
+/// <summary>Dec backlash compensation now: what calibration measured, the pulse it adds on a reversal now (adjusted as it
+/// guides), and how many reversals it has compensated.</summary>
+public sealed record DecBacklashStatus(bool Enabled, double MeasuredPixels, int MeasuredMs, int PulseMs, int Applied);
 
 /// <summary>The guide star now: where it is, where it should be (lock), and how well it's seen.</summary>
 public sealed record GuideStarInfo(double X, double Y, double LockX, double LockY, double Snr, double Hfr, int Found, int Tracked);
@@ -51,7 +55,7 @@ public sealed record NovaGuiderStatus(
     GuideDarkInfo? Darks = null, string? DarkProgress = null, NumberSetting? CameraGain = null,
     GuidingAssistantResult? Assistant = null, bool CameraConnected = false,
     IReadOnlyList<GuideProfileInfo>? Profiles = null, string? Profile = null, GuideDefaults? Defaults = null,
-    PecStatus? Pec = null);
+    PecStatus? Pec = null, DecBacklashStatus? Backlash = null);
 
 /// <summary>A guide settings profile to choose from: the user's own (everything, equipment included) or built in.</summary>
 public sealed record GuideProfileInfo(string Name, bool BuiltIn, string? Description);
@@ -318,6 +322,7 @@ public sealed class NovaGuider : IAsyncDisposable
             ("Max DEC duration", a.MaxDecPulseMs, b.MaxDecPulseMs),
             ("X guide algorithm", a.RaAlgorithm, b.RaAlgorithm), ("PEC period", a.PecPeriodSeconds, b.PecPeriodSeconds),
             ("PEC prediction gain", a.PecPredictionGain, b.PecPredictionGain), ("PEC reactive aggression", a.PecReactiveAggressiveness, b.PecReactiveAggressiveness),
+            ("Backlash comp", a.DecBacklashCompensation, b.DecBacklashCompensation),
         ];
         return fields.Where(f => !Equals(f.Old, f.New)).Select(f => FormattableString.Invariant($"{f.Name} = {f.New ?? "driver"}"));
     }
@@ -352,7 +357,8 @@ public sealed class NovaGuider : IAsyncDisposable
                     [.. _saved.Profiles.Select(p => new GuideProfileInfo(p.Name, false, null)),
                      .. GuidePresets.All.Select(p => new GuideProfileInfo(p.Name, true, p.Description))],
                     MatchingProfile(), Defaults,
-                    Settings.Algorithms.RaAlgorithm == RaAlgorithm.PredictivePec ? _controller.Pec.Status : null);
+                    Settings.Algorithms.RaAlgorithm == RaAlgorithm.PredictivePec ? _controller.Pec.Status : null,
+                    BacklashStatus(stored?.Calibration));
             }
         }
     }
@@ -922,7 +928,8 @@ public sealed class NovaGuider : IAsyncDisposable
                     _guideLog.Step(utc, new GuideLogStep(m.Dx, m.Dy, c.RaPixels, c.DecPixels, raGuide, decGuide, c.Ra, c.Dec, m.Mass, m.Snr));
                     if (c.Ra is { } ra) pulses.Add(ra);
                     if (c.Dec is { } dec) pulses.Add(dec);
-                    var decMove = c.Dec is { } d ? d.Milliseconds / 1000.0 * calibration.DecRate : 0;
+                    // What actually moved the star: the part taking up backlash didn't (and would look like drift).
+                    var decMove = c.Dec is { } d ? (d.Milliseconds - c.DecBacklashMs) / 1000.0 * calibration.DecRate : 0;
                     _drift.Add(_clock.Elapsed.TotalSeconds, decMove, c.Dec?.Direction.ToString(), counts: _settle is null);
                     if (!_driftReported && PixelScale is { } scale && _drift.Estimate(scale) is { Significant: true } drift)
                     {
@@ -965,8 +972,12 @@ public sealed class NovaGuider : IAsyncDisposable
             };
             SaveLocked();
             var info = Describe(result, null);
+            var backlash = result.DecBacklashPixels >= DecBacklashCompensator.MinimumPixels
+                ? $", Dec backlash {(PixelScale is { } s ? $"{result.DecBacklashPixels * s:0.#}″" : $"{result.DecBacklashPixels:0.0} px")} ({result.DecBacklashMs:0} ms)" +
+                  (Settings.Algorithms.DecBacklashCompensation ? ", compensated" : "")
+                : "";
             _log.Info($"Guider calibrated: RA {info.RaAngle:0}° at {Rate(info.RaRate, info.RaArcsecPerSecond)}, " +
-                      $"Dec {info.DecAngle:0}° at {Rate(info.DecRate, info.DecArcsecPerSecond)}, {info.Orthogonality:0.#}° from square");
+                      $"Dec {info.DecAngle:0}° at {Rate(info.DecRate, info.DecArcsecPerSecond)}, {info.Orthogonality:0.#}° from square{backlash}");
             _tracker.SetHomeHere();
             done?.TrySetResult();
             return calibrator.Warning;
@@ -1050,12 +1061,25 @@ public sealed class NovaGuider : IAsyncDisposable
     private StoredCalibration? StoredFor(string? camera) =>
         _saved.Calibration is { } c && c.Camera == camera && c.Output == Settings.Output && c.Binning == Settings.Binning ? c : null;
 
+    /// <summary>Dec backlash compensation for display, once a calibration has measured some backlash.</summary>
+    private DecBacklashStatus? BacklashStatus(GuideCalibration? calibration)
+    {
+        if (calibration is null || calibration.DecBacklashPixels < DecBacklashCompensator.MinimumPixels) return null;
+        var b = _controller.Backlash;
+        var measuredMs = (int)Math.Round(calibration.DecBacklashMs);
+        // Before guiding seeds it from this calibration, the pulse is the measured one.
+        var pulse = b.MeasuredMs > 0 && Math.Abs(b.MeasuredMs - calibration.DecBacklashMs) < 1 ? (int)Math.Round(b.PulseMs) : measuredMs;
+        return new DecBacklashStatus(Settings.Algorithms.DecBacklashCompensation, calibration.DecBacklashPixels, measuredMs, pulse,
+            b.MeasuredMs > 0 ? b.Applied : 0);
+    }
+
     private GuideCalibrationInfo Describe(GuideCalibration c, string? warning)
     {
         static double Deg(double r) => Math.Round(((r * 180 / Math.PI) % 360 + 360) % 360, 1);
         double? Arcsec(double rate) => PixelScale is { } s ? Math.Round(rate * s, 2) : null;
         return new GuideCalibrationInfo(Deg(c.RaAngle), Deg(c.DecAngle), Math.Round(c.RaRate, 3), Math.Round(c.DecRate, 3),
-            Arcsec(c.RaRate), Arcsec(c.DecRate), Math.Round(c.OrthogonalityError, 1), Math.Round(c.DecDegrees, 1), c.PierSide, c.Utc, warning);
+            Arcsec(c.RaRate), Arcsec(c.DecRate), Math.Round(c.OrthogonalityError, 1), Math.Round(c.DecDegrees, 1), c.PierSide, c.Utc, warning,
+            DecBacklashPixels: Math.Round(c.DecBacklashPixels, 2), DecBacklashMs: (int)Math.Round(c.DecBacklashMs));
     }
 
     // ---- Predictive PEC ----
@@ -1141,7 +1165,11 @@ public sealed class NovaGuider : IAsyncDisposable
                 ? FormattableString.Invariant($"X guide algorithm = Predictive PEC, Period = {(a.PecPeriodSeconds > 0 ? $"{a.PecPeriodSeconds:0.0} s" : "auto")}, Prediction gain = {a.PecPredictionGain:0.000}, Reactive aggression = {a.PecReactiveAggressiveness:0.000}, Hysteresis = {a.RaHysteresis:0.000}, Minimum move = {a.RaMinMove:0.000}")
                 : FormattableString.Invariant($"X guide algorithm = Hysteresis, Hysteresis = {a.RaHysteresis:0.000}, Aggression = {a.RaAggressiveness:0.000}, Minimum move = {a.RaMinMove:0.000}"),
             FormattableString.Invariant($"Y guide algorithm = Resist Switch, Minimum move = {a.DecMinMove:0.000} Aggression = {a.DecAggressiveness * 100:0}% FastSwitch = {(a.DecFastSwitch ? "enabled" : "disabled")}"),
-            "Backlash comp = disabled, pulse = 0 ms",
+            a.DecBacklashCompensation && _controller.Backlash.PulseMs >= 10
+                ? FormattableString.Invariant($"Backlash comp = enabled, pulse = {_controller.Backlash.PulseMs:0} ms")
+                : calibration is { DecBacklashPixels: >= DecBacklashCompensator.MinimumPixels } && a.DecBacklashCompensation
+                    ? FormattableString.Invariant($"Backlash comp = enabled, pulse = {calibration.DecBacklashMs:0} ms")
+                    : "Backlash comp = disabled, pulse = 0 ms",
             FormattableString.Invariant($"Max RA duration = {a.MaxRaPulseMs}, Max DEC duration = {a.MaxDecPulseMs}, DEC guide mode = {a.DecMode}"),
         };
         if (calibration is { } cal && scale is { } px)

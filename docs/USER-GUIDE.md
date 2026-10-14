@@ -307,6 +307,16 @@ guiding assistant reports it from a long enough run if you want to set it. It st
 starts (after a slew), after a meridian flip and after a minute without frames; dithers don't disturb it. The
 built-in profile *ZWO AM mount + PEC* turns it on with the AM settings.
 
+**Dec backlash compensation** (Guiding settings, Dec *Backlash comp*, on by default): Dec gears have some slack, so
+when a correction reverses (north after south), the first part of the pulse only takes up the slack and the star
+doesn't move, and guiding lags behind after every reversal. Calibration measures it (the South steps come back short
+of the North ones by the backlash) and the Guiding tab shows it ("Dec backlash 9.6″ (750 ms)"). Guiding then adds
+that much pulse whenever Dec reverses, and adjusts it as it goes: if the star still needs pushing the same way the
+frame after, the next reversal gets a little more; if it overshot, less. Under half a pixel measured counts as no
+backlash. It matters most when Dec reverses often (polar alignment close to perfect, or Dec corrections both ways);
+with Dec drifting steadily one way, Resist Switch rarely reverses anyway. Calibrate again after changing the
+mount's Dec balance or gear mesh, as both change the backlash.
+
 **Seeing or settings?** Under the graph (and under the Guider panel's graph, with PHD2 too) NOVA says what limits the
 guiding, once there are 30 steady steps: *seeing-limited* (errors the size of the seeing: nothing to gain),
 *within the min move* (the guider is leaving small errors alone on purpose), *see-saws* (corrections overshoot or chase

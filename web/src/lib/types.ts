@@ -748,6 +748,8 @@ export interface GuideAlgorithmSettings {
   pecPredictionGain: number
   /** Predictive PEC: the reactive part's aggressiveness. */
   pecReactiveAggressiveness: number
+  /** Add a pulse to take up Dec backlash when a Dec correction reverses (measured at calibration, adjusted as it guides). */
+  decBacklashCompensation: boolean
 }
 
 /** Predictive PEC's model: learning or predicting, the period(s), the share of RA motion it explains, its size (px). */
@@ -816,6 +818,18 @@ export interface GuideCalibrationInfo {
   warning: string | null
   /** Where the star went after each calibration step (pixels from where the West steps began), for the graph. */
   points: { phase: 'West' | 'East' | 'North' | 'South'; x: number; y: number }[] | null
+  /** Dec backlash measured at calibration: how far short the South steps came of the North ones. */
+  decBacklashPixels: number
+  decBacklashMs: number
+}
+
+/** Dec backlash compensation now: measured, the pulse added on a reversal now, and reversals compensated. */
+export interface DecBacklashStatus {
+  enabled: boolean
+  measuredPixels: number
+  measuredMs: number
+  pulseMs: number
+  applied: number
 }
 
 export interface NovaGuiderStatus {
@@ -846,6 +860,8 @@ export interface NovaGuiderStatus {
   profile: string | null
   /** Predictive PEC's state, when it's the RA algorithm. */
   pec: PecStatus | null
+  /** Once a calibration has measured some Dec backlash. */
+  backlash: DecBacklashStatus | null
 }
 
 export interface DecDrift {

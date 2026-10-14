@@ -342,6 +342,33 @@ public class NovaGuiderTests : IDisposable
     }
 
     [Fact]
+    public async Task MeasuresAndCompensatesTheSimulatedMountsDecBacklash()
+    {
+        await using var rig = await SetUpAsync();
+        rig.Mount.DecBacklashArcsec = 20;
+        using var timeout = new CancellationTokenSource(TimeSpan.FromMinutes(3));
+        await rig.Nova.CalibrateAsync(timeout.Token);
+
+        var cal = rig.Nova.Status.Calibration!;
+        var arcsecPerPixel = cal.DecArcsecPerSecond!.Value / cal.DecRate;
+        var measured = cal.DecBacklashPixels * arcsecPerPixel;
+        Assert.InRange(measured, 14, 26); // 20″, through star centroids
+        var backlash = rig.Nova.Status.Backlash!;
+        Assert.True(backlash.Enabled);
+        Assert.Equal(cal.DecBacklashMs, backlash.MeasuredMs);
+
+        await rig.Guider.GuideAndWaitAsync(new SettleSettings(2, 1, 60), timeout.Token);
+        await Task.Delay(TimeSpan.FromSeconds(3), timeout.Token);
+        await rig.Guider.StopAsync(CancellationToken.None);
+        var lines = File.ReadAllLines(rig.Nova.GuideLogPath(rig.Nova.GuideLogs()[0].Name, onDrive: false)!);
+        Assert.Contains(lines, l => l.StartsWith("Backlash comp = enabled, pulse = ") && !l.EndsWith(" 0 ms"));
+
+        // Turned off: shown as off, and the guide log says so.
+        rig.Nova.UpdateSettings(rig.Nova.Settings with { Algorithms = rig.Nova.Settings.Algorithms with { DecBacklashCompensation = false } });
+        Assert.False(rig.Nova.Status.Backlash!.Enabled);
+    }
+
+    [Fact]
     public async Task SwitchingBackendsAndRefusals()
     {
         await using var rig = await SetUpAsync();

@@ -4,6 +4,13 @@ What changed in each release. The newest is first. A release's section here beco
 
 ## [Unreleased]
 
+### Added
+- **Dec backlash compensation** (NOVA's guider, on by default): calibration measures the Dec backlash (how far
+  short the South steps come of the North ones), and when a Dec correction reverses, guiding adds that much pulse to
+  take up the slack, adjusting it as it goes (more if the star still lags, less if it overshoots). The Guiding tab
+  shows the backlash and the pulse; the guide log records it. In the simulation tests it cut Dec RMS by about a
+  quarter on reversing Dec corrections with 3 px of backlash.
+
 ### Changed
 - Sites show by name only (the Site line, the setup guide and the activity log), so screenshots don't give your
   location away; the coordinates show only while the Site section is open.

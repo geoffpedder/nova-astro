@@ -180,6 +180,80 @@ public class GuidingEngineTests(Xunit.Abstractions.ITestOutputHelper output)
         Assert.Equal(0.9 * -2 * 0.7, h.Correction(-2), 6);
     }
 
+    [Theory]
+    [InlineData(0)]
+    [InlineData(1.5)]
+    [InlineData(4)]
+    public void CalibrationMeasuresDecBacklash(double backlash)
+    {
+        var sky = new FakeSky(30, 4, 300, 4, backlashPx: backlash);
+        var cal = Calibrate(sky);
+        Assert.Equal(backlash, cal.DecBacklashPixels, 0.05);
+        Assert.InRange(cal.DecBacklashMs, backlash / 4 * 1000 - 15, backlash / 4 * 1000 + 15);
+        Assert.Equal(4, cal.DecRate, 0.05); // the north steps still give the rate (the backlash was cleared first)
+    }
+
+    /// <summary>
+    /// Dec only: the star wanders north and south (a slow wobble, so corrections keep reversing) through a mount with
+    /// <paramref name="backlashPx"/> of Dec backlash. Returns the Dec RMS over the last half and the controller.
+    /// </summary>
+    private static (double Rms, GuideController Controller) GuideDecThroughBacklash(
+        bool compensate, double backlashPx, double measuredPx, int frames = 600)
+    {
+        var sky = new FakeSky(0, 4, 270, 4, backlashPx);
+        var cal = new GuideCalibration(0, 4, -Math.PI / 2, 4, 0, PierSide.West, DateTime.UtcNow, measuredPx);
+        var controller = new GuideController(new GuideAlgorithmSettings(DecBacklashCompensation: compensate));
+        var (homeX, homeY) = (sky.X, sky.Y);
+        var noise = new Random(5);
+        var late = new List<double>();
+        double last = 0;
+        for (var frame = 0; frame < frames; frame++)
+        {
+            var t = frame * 2.0; // 2 s frames
+            var wobble = 4 * Math.Sin(2 * Math.PI * t / 240); // ±4 px over 4 minutes: Dec reverses twice a cycle
+            sky.Move(270, wobble - last);
+            last = wobble;
+            var dy = sky.Y - homeY + (noise.NextDouble() - 0.5) * 0.2;
+            var c = controller.Correct(sky.X - homeX, dy, cal);
+            if (frame >= frames / 2) late.Add(sky.Y - homeY);
+            if (c.Dec is { } dec) sky.Pulse(dec.Direction, dec.Milliseconds);
+        }
+        return (Math.Sqrt(late.Average(v => v * v)), controller);
+    }
+
+    [Fact]
+    public void DecBacklashCompensationCutsTheLagAfterReversals()
+    {
+        var (off, _) = GuideDecThroughBacklash(compensate: false, backlashPx: 3, measuredPx: 3);
+        var (on, controller) = GuideDecThroughBacklash(compensate: true, backlashPx: 3, measuredPx: 3);
+        output.WriteLine($"Dec RMS with 3 px of backlash: {off:0.000} px uncompensated, {on:0.000} px compensated ({100 * (1 - on / off):0}% lower); " +
+            $"pulse {controller.Backlash.PulseMs:0} ms (truth 750), {controller.Backlash.Applied} reversals");
+        Assert.True(on < off * 0.85, $"compensated {on:0.000} px vs {off:0.000} px");
+        Assert.True(controller.Backlash.Applied > 5);
+        Assert.InRange(controller.Backlash.PulseMs, 450, 1100);
+    }
+
+    [Theory]
+    [InlineData(1.5)] // measured too little: it grows
+    [InlineData(5.5)] // too much: it shrinks
+    public void DecBacklashCompensationAdjustsTowardsTheTruth(double measuredPx)
+    {
+        var (_, controller) = GuideDecThroughBacklash(compensate: true, backlashPx: 3, measuredPx: measuredPx, frames: 1500);
+        var start = measuredPx / 4 * 1000;
+        output.WriteLine($"measured {start:0} ms, now {controller.Backlash.PulseMs:0} ms (truth 750): {controller.Backlash.Increases} up, {controller.Backlash.Decreases} down");
+        Assert.True(Math.Abs(controller.Backlash.PulseMs - 750) < Math.Abs(start - 750), $"{controller.Backlash.PulseMs:0} ms");
+    }
+
+    [Fact]
+    public void NoBacklashMeansNoCompensation()
+    {
+        var (rms, controller) = GuideDecThroughBacklash(compensate: true, backlashPx: 0, measuredPx: 0.3); // under the noise floor
+        Assert.Equal(0, controller.Backlash.MeasuredMs);
+        Assert.Equal(0, controller.Backlash.Applied);
+        var (plain, _) = GuideDecThroughBacklash(compensate: false, backlashPx: 0, measuredPx: 0);
+        Assert.Equal(plain, rms, 6);
+    }
+
     [Fact]
     public void ResistSwitchIsSlowToReverse()
     {

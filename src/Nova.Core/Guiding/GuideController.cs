@@ -12,6 +12,7 @@ public enum RaAlgorithm { Hysteresis, PredictivePec }
 /// <param name="PecPeriodSeconds">Predictive PEC: the periodic error's period if known (seconds); 0 finds it.</param>
 /// <param name="PecPredictionGain">Predictive PEC: how much of the predicted motion to correct ahead (0–1).</param>
 /// <param name="PecReactiveAggressiveness">Predictive PEC: the reactive part's aggressiveness, gentler as the prediction does most of the work.</param>
+/// <param name="DecBacklashCompensation">When a Dec correction reverses, add a pulse to take up the backlash measured at calibration (adjusted as it guides).</param>
 public sealed record GuideAlgorithmSettings(
     double RaHysteresis = 0.1,
     double RaAggressiveness = 0.7,
@@ -25,13 +26,91 @@ public sealed record GuideAlgorithmSettings(
     RaAlgorithm RaAlgorithm = RaAlgorithm.Hysteresis,
     double PecPeriodSeconds = 0,
     double PecPredictionGain = 0.8,
-    double PecReactiveAggressiveness = 0.5);
+    double PecReactiveAggressiveness = 0.5,
+    bool DecBacklashCompensation = true);
 
 /// <summary>A guide correction to send.</summary>
 public sealed record GuidePulse(GuideDirection Direction, int Milliseconds);
 
 /// <summary>One frame's guiding result: the error on each axis (pixels) and the pulses to send (null = none).</summary>
-public sealed record GuideCorrection(double RaPixels, double DecPixels, GuidePulse? Ra, GuidePulse? Dec);
+/// <param name="DecBacklashMs">The part of the Dec pulse added to take up backlash on a reversal (ms), or 0.</param>
+public sealed record GuideCorrection(double RaPixels, double DecPixels, GuidePulse? Ra, GuidePulse? Dec, int DecBacklashMs = 0);
+
+/// <summary>
+/// Dec backlash compensation, as PHD2 does it: when a Dec correction goes the other way from the last one, the gears
+/// have slack to take up before the star moves, so that much pulse is added. It starts from the backlash measured at
+/// calibration and adjusts itself: if the star still needs pushing the same way the frame after, the next reversal gets
+/// more; if it overshot, less (never more than twice what was measured, nor more than the longest Dec pulse).
+/// </summary>
+public sealed class DecBacklashCompensator
+{
+    /// <summary>Less than this measured at calibration (pixels) is noise, not backlash.</summary>
+    public const double MinimumPixels = 0.5;
+
+    private DateTime? _seededFrom;
+    private int _lastDirection; // +1 north, -1 south, 0 none yet
+    private int _checkDirection; // a compensated reversal to judge on the next frame
+
+    /// <summary>The backlash measured at calibration, as pulse time (ms; 0 if too small to matter).</summary>
+    public double MeasuredMs { get; private set; }
+    /// <summary>The pulse added on a reversal now (ms), adjusted from <see cref="MeasuredMs"/> as it guides.</summary>
+    public double PulseMs { get; private set; }
+    /// <summary>Reversals compensated since the calibration.</summary>
+    public int Applied { get; private set; }
+    public int Increases { get; private set; }
+    public int Decreases { get; private set; }
+
+    /// <summary>Starts from a calibration's measurement (once per calibration).</summary>
+    public void Seed(GuideCalibration calibration)
+    {
+        if (_seededFrom == calibration.Utc) return;
+        _seededFrom = calibration.Utc;
+        MeasuredMs = calibration.DecBacklashPixels >= MinimumPixels ? calibration.DecBacklashMs : 0;
+        PulseMs = MeasuredMs;
+        (Applied, Increases, Decreases, _checkDirection) = (0, 0, 0, 0);
+    }
+
+    /// <summary>
+    /// Adds the compensation to a Dec pulse that reverses the last one (when <paramref name="enabled"/>), and learns from
+    /// how the last compensated reversal turned out. Returns the milliseconds added.
+    /// </summary>
+    /// <param name="errorPixels">This frame's Dec error.</param>
+    /// <param name="threshold">An error under this after a compensated reversal is close enough to leave it as it is.</param>
+    public int Apply(ref GuidePulse? pulse, double errorPixels, bool enabled, double threshold, int maxMs)
+    {
+        var direction = pulse is null ? 0 : pulse.Direction == GuideDirection.North ? 1 : -1;
+        if (_checkDirection != 0)
+        {
+            if (direction != 0 && Math.Abs(errorPixels) >= threshold)
+            {
+                var ceiling = Math.Min(2 * MeasuredMs, maxMs);
+                if (direction == _checkDirection)
+                {
+                    PulseMs = Math.Min(PulseMs * 1.1 + 10, ceiling); // still short: the slack was more
+                    Increases++;
+                }
+                else
+                {
+                    PulseMs *= 0.8; // overshot: less
+                    Decreases++;
+                }
+            }
+            _checkDirection = 0;
+        }
+        if (direction == 0) return 0;
+
+        var added = 0;
+        if (enabled && _lastDirection != 0 && direction != _lastDirection && PulseMs >= 10)
+        {
+            added = (int)Math.Round(PulseMs);
+            pulse = pulse! with { Milliseconds = pulse.Milliseconds + added };
+            _checkDirection = direction;
+            Applied++;
+        }
+        _lastDirection = direction;
+        return added;
+    }
+}
 
 /// <summary>
 /// Turns a star offset into guide pulses: split into RA and Dec with the calibration, each through its algorithm
@@ -45,6 +124,9 @@ public sealed class GuideController
 
     /// <summary>Predictive PEC's model of the mount's periodic error (learning whenever Predictive PEC is chosen).</summary>
     public PeriodicErrorPredictor Pec { get; } = new();
+
+    /// <summary>Dec backlash compensation: the pulse added when Dec reverses (kept over Reset: the gears don't forget).</summary>
+    public DecBacklashCompensator Backlash { get; } = new();
 
     public GuideController(GuideAlgorithmSettings? settings = null) => Settings = settings ?? new GuideAlgorithmSettings();
 
@@ -113,7 +195,9 @@ public sealed class GuideController
                  (Settings.DecMode == DecGuideMode.South && dec.Direction != GuideDirection.South)))
                 dec = null;
         }
-        return new GuideCorrection(raError, decError, ra, dec);
+        Backlash.Seed(calibration);
+        var added = Backlash.Apply(ref dec, decError, Settings.DecBacklashCompensation, Math.Max(2 * Settings.DecMinMove, 0.3), Settings.MaxDecPulseMs);
+        return new GuideCorrection(raError, decError, ra, dec, added);
     }
 
     private static GuidePulse? ToPulse(double correction, double ratePixelsPerSecond, int maxMs, GuideDirection positive, GuideDirection negative)

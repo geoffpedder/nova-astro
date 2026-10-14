@@ -29,6 +29,14 @@ active() {
   systemctl is-active --quiet "$1" 2>/dev/null
 }
 
+# Avahi (<name>.local) can take its own announcement on the changed address for another computer's and rename itself
+# "<name>-2". Restart it once the address has settled, from a timer outside this service (which may be stopping).
+refresh_names() {
+  if active avahi-daemon; then
+    do_ systemd-run --quiet --collect --on-active=15 systemctl try-restart avahi-daemon.service || true
+  fi
+}
+
 method() {
   if active NetworkManager; then echo networkmanager
   elif active iwd; then echo iwd
@@ -118,6 +126,7 @@ rsn_pairwise=CCMP
 wpa_passphrase=$PASSPHRASE
 EOF
       do_ networkctl reconfigure "$dev" || true
+      refresh_names
       if [ "$DRY" = 1 ]; then echo "+ exec hostapd $RUN_DIR/hostapd.conf"; return; fi
       exec hostapd "$RUN_DIR/hostapd.conf"
       ;;
@@ -144,6 +153,7 @@ EOF
       exit 3
       ;;
   esac
+  refresh_names
   # NetworkManager and iwd keep the hotspot up themselves; stay running so the service stays up until it's stopped.
   if [ "$DRY" = 1 ]; then echo "+ wait until stopped"; else exec sleep infinity; fi
 }
@@ -182,6 +192,7 @@ restore() {
       do_ rm -f "$RUN_DIR/hotspot-client"
       ;;
   esac
+  refresh_names
 }
 
 case "$ACTION" in

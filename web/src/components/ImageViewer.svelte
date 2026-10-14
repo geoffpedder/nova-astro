@@ -596,7 +596,7 @@
 
   {#if image && stats}
     <div class="stats mono">
-      {#if image.openedFile}<span class="opened" title="Opened from your computer">📂 {image.openedFile}</span>{/if}
+      {#if image.openedFile}<span class="opened" title="Opened from your computer"><span class="emoji">📂</span> {image.openedFile}</span>{/if}
       <!-- Labelled numbers, spaced rather than strung together. -->
       <span class="fact"><span class="k">Image</span>#{image.id}</span>
       <span class="fact"><span class="k">Taken</span>{time(image.capturedUtc)}</span>

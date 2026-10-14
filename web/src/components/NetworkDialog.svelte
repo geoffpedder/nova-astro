@@ -110,7 +110,7 @@
     {#if hotspot}
       <p class="state small" class:on class:bad={hotspot.state === 'Error'}>
         {#if on}
-          📡 On{hotspot.reason ? ` (${hotspot.reason.toLowerCase()})` : ''}: {hotspot.stations ?? 0} device{hotspot.stations === 1 ? '' : 's'} joined.
+          <span class="emoji" aria-hidden="true">📡</span> On{hotspot.reason ? ` (${hotspot.reason.toLowerCase()})` : ''}: {hotspot.stations ?? 0} device{hotspot.stations === 1 ? '' : 's'} joined.
           {#if hotspot.manual && !hotspot.stations}Back to Wi-Fi in 3 minutes if nobody joins.{:else if hotspot.retry && !hotspot.stations}Tries Wi-Fi again every 5 minutes while nobody's on it.{/if}
         {:else if hotspot.state === 'Starting'}Starting…
         {:else if hotspot.state === 'Stopping'}Stopping…

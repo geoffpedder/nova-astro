@@ -20,7 +20,7 @@
     onexpand={() => (mainView.view = 'webcam')}
     closeTitle="Close (the webcam stops when nobody watches)"
   >
-    {#if src}{#key src}<img {src} alt="The webcam's live view" use:liveStream />{/key}{/if}
+    {#if src}{#key src}<img class="frame" {src} alt="The webcam's live view" use:liveStream />{/key}{/if}
   </FloatWindow>
 {/if}
 

@@ -103,7 +103,7 @@
             class:on={h.pinned}
             aria-pressed={h.pinned}
             title={h.pinned ? 'Pinned: newer images won\'t push it out. Click to unpin' : 'Pin: keep it however many newer images arrive'}
-            onclick={() => act(() => api.pinImage(id, !h.pinned))}>📌</button
+            onclick={() => act(() => api.pinImage(id, !h.pinned))}><span class="emoji">📌</span></button
           >
         </div>
       </div>

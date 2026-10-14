@@ -187,7 +187,7 @@
       <label>Latitude (°, +N)<input class="mono" type="number" min="-90" max="90" step="0.0001" bind:value={latitude} /></label>
       <label>Longitude (°, +E)<input class="mono" type="number" min="-180" max="180" step="0.0001" bind:value={longitude} /></label>
       <label>Elevation (m)<input class="mono" type="number" min="-500" max="10000" step="1" bind:value={elevation} /></label>
-      <button class="secondary map-button" onclick={() => (showMap = true)}>🗺 Pick on map…</button>
+      <button class="secondary map-button" onclick={() => (showMap = true)}><span class="emoji">🗺</span> Pick on map…</button>
     </div>
 
     {#if latitude !== null && longitude !== null}

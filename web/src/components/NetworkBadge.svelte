@@ -45,7 +45,7 @@
   <button class="network" class:weak title={`${details}
 
 Click for the Wi-Fi hotspot`} onclick={() => (open = true)}>
-    <span aria-hidden="true">{label.icon}</span>
+    <span class="emoji" aria-hidden="true">{label.icon}</span>
     <span class="text">{label.text}</span>
     {#if label.address}<span class="address muted">{label.address}</span>{/if}
   </button>

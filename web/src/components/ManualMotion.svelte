@@ -100,7 +100,7 @@
     </select>
   </label>
   {#if mount?.state === 'Parked'}<p class="muted note">Unpark to move by hand.</p>
-  {:else if locked && mount?.connected}<p class="note lock">🔒 {locked}</p>{/if}
+  {:else if locked && mount?.connected}<p class="note lock"><span class="emoji">🔒</span> {locked}</p>{/if}
 </div>
 
 <style>
@@ -132,6 +132,9 @@
     background: var(--danger);
     color: #fff;
     font-size: 11px;
+  }
+  :global(:root[data-theme='night']) .stop {
+    color: #000;
   }
   .rate {
     display: grid;

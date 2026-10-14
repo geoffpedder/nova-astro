@@ -41,7 +41,7 @@
     onexpand={() => (mainView.view = 'image')}
   >
     {#if src}
-      <img {src} alt="The latest frame" />
+      <img class="frame" {src} alt="The latest frame" />
     {:else}
       <p class="muted small empty">No image yet</p>
     {/if}

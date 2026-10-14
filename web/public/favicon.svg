@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
+  <!-- NOVA's icon: a four-pointed star with a bright core. -->
+  <defs>
+    <radialGradient id="glow" cx="50%" cy="50%" r="50%">
+      <stop offset="0" stop-color="#ffffff" />
+      <stop offset="0.35" stop-color="#cfe6f7" />
+      <stop offset="1" stop-color="#5e9fcf" />
+    </radialGradient>
+  </defs>
+  <path d="M16 1 C17 10 22 15 31 16 C22 17 17 22 16 31 C15 22 10 17 1 16 C10 15 15 10 16 1 Z" fill="url(#glow)" />
+</svg>

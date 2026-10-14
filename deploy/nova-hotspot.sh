@@ -21,8 +21,8 @@ ADDRESS=10.42.0.1
 
 say() { echo "nova-hotspot: $*"; }
 do_() { if [ "$DRY" = 1 ]; then echo "+ $*"; else "$@"; fi; }
-write() { # write <file> (contents on stdin)
-  if [ "$DRY" = 1 ]; then echo "+ write $1:"; sed 's/^/    /'; else install -d "$(dirname "$1")"; cat > "$1"; chmod 600 "$1"; fi
+write() { # write <file> [mode] (contents on stdin); root's alone unless a mode is given
+  if [ "$DRY" = 1 ]; then echo "+ write $1 (${2:-600}):"; sed 's/^/    /'; else install -d "$(dirname "$1")"; cat > "$1"; chmod "${2:-600}" "$1"; fi
 }
 active() {
   if [ -n "${NOVA_HOTSPOT_ACTIVE:-}" ]; then [[ " $NOVA_HOTSPOT_ACTIVE " == *" $1 "* ]]; return; fi
@@ -83,7 +83,8 @@ run() {
       echo "$client" | write "$RUN_DIR/hotspot-client"
       # Sorts before netplan's own file for this interface, so networkd uses this one: a fixed address, and its own
       # DHCP server for phones and laptops. No router or DNS handed out: a phone keeps its mobile data for the internet.
-      write "$NETWORK_FILE" <<EOF
+      # Readable by all: networkd runs as its own user (systemd-network). No secrets in it.
+      write "$NETWORK_FILE" 644 <<EOF
 # NOVA's hotspot (nova-hotspot.service); removed when it stops.
 [Match]
 Name=$dev

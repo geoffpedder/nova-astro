@@ -102,7 +102,9 @@ the mount connects; a speed you choose is remembered. Type coordinates or take t
 then expose, plate solve and correct until the target is within 1′.
 
 **Site** (at the bottom of the Mount panel): add your observing sites by coordinates or on the offline
-world map. The active site, and the mini PC's clock, are sent to the mount whenever it connects.
+world map. The active site, and the mini PC's clock, are sent to the mount whenever it connects. Sites show by name
+only: their coordinates stay hidden (here, in the setup guide and the activity log) so a screenshot doesn't give
+your location away; **Show coordinates** reveals them while you edit a site.
 
 **Settle after slews** (Mount panel, 3 s by default): after every GoTo (Slew, each centring attempt, a sequence's
 next target, a meridian flip) NOVA leaves the mount this long before it exposes, solves or moves on, so a mount

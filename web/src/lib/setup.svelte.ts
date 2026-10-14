@@ -54,7 +54,7 @@ export function setupSteps(): SetupStep[] {
       done: !!site,
       optional: false,
       detail: site
-        ? `${site.name}, ${site.latitude.toFixed(3)}° ${site.longitude.toFixed(3)}°`
+        ? site.name // never its coordinates: they'd be in every screenshot
         : "Where the telescope is: for targets' altitudes, the mount's clock and Sun protection.",
     },
     {

@@ -312,13 +312,14 @@ public sealed class SiteService
             if (DateTime.UtcNow - _locationSentUtc < TimeSpan.FromSeconds(5)) return;
             _locationSentUtc = DateTime.UtcNow;
         }
-        var was = mount.Location is { } w ? Describe(w) : "none";
+        // Sites are named, never located, in the log: it's on screen (and in screenshots).
+        var was = mount.Location is null ? "none" : "a different one";
         try
         {
             await mount.SetSiteAsync(site.Location, DateTimeOffset.Now, ct);
             // Said a few times; a driver that never takes it would otherwise fill the log.
             if (++_locationResends <= 3)
-                _log.Info($"{mount.Name} had location {was}: sent site '{site.Name}' ({Describe(site.Location)}) again");
+                _log.Info($"{mount.Name} had location {was}: sent site '{site.Name}' again");
             else if (_locationResends == 4)
                 _log.Warn($"{mount.Name} keeps showing location {was} instead of '{site.Name}': check its driver settings (NOVA keeps sending it)");
         }
@@ -396,7 +397,7 @@ public sealed class SiteService
             _settings = _settings with { Active = name, Sites = sites };
         }
         Save();
-        _log.Info($"Site '{name}': {Describe(site.Location)}");
+        _log.Info($"Site '{name}' saved");
         await ApplyNowAsync(ct);
     }
 
@@ -509,7 +510,7 @@ public sealed class SiteService
                 if (mount.Location is { } remembered && (remembered.Latitude != 0 || remembered.Longitude != 0))
                 {
                     await mount.SetSiteAsync(remembered, DateTimeOffset.Now, ct);
-                    _log.Info($"{mount.Name}: time and its remembered location ({Describe(remembered)}) sent. Set your site in NOVA's Mount panel to be sure it's right.");
+                    _log.Info($"{mount.Name}: time and its remembered location sent. Set your site in NOVA's Mount panel to be sure it's right.");
                 }
                 else
                 {
@@ -533,7 +534,7 @@ public sealed class SiteService
                 _appliedTo = mount.Name;
                 _locationSentUtc = DateTime.UtcNow;
             }
-            _log.Info($"{mount.Name}: site '{site.Name}' ({Describe(site.Location)}) and time sent");
+            _log.Info($"{mount.Name}: site '{site.Name}' and time sent");
             // The driver may still be starting up and overwrite it: check again shortly.
             foreach (var wait in new[] { 6, 15 })
             {

@@ -4,6 +4,10 @@ What changed in each release. The newest is first. A release's section here beco
 
 ## [Unreleased]
 
+### Changed
+- Sites show by name only: their coordinates are hidden in the Site panel (**Show coordinates** while editing), the
+  setup guide and the activity log, so screenshots don't give your location away.
+
 ## [0.3.8] - 2026-10-14
 
 ### Added

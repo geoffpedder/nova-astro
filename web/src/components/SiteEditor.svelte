@@ -22,6 +22,8 @@
   let elevation = $state<number | null>(null)
   let loadedKey = $state<string | null>(null)
   let showMap = $state(false)
+  // Coordinates stay hidden unless asked for (each time), so screenshots don't give the site away.
+  let showCoordinates = $state(false)
 
   const site = $derived(nova.status?.site)
 
@@ -123,7 +125,7 @@
 {/if}
 {#if site?.mountMismatch && site.mountLocation && active}
   <p class="warning">
-    ⚠ The mount thinks it's at {describe(site.mountLocation.latitude, site.mountLocation.longitude)}, not at “{active.name}”.
+    ⚠ The mount has a different location from “{active.name}”.
     <button class="link" onclick={() => act(() => api.selectSite(active.name))}>Send “{active.name}”</button>
   </p>
 {/if}
@@ -167,7 +169,7 @@
     <span class="chevron" class:closed={!open} aria-hidden="true">▾</span>
     Site
     <span class="muted summary">
-      {active ? `${active.name} (${describe(active.latitude, active.longitude)})` : 'not set'}
+      {active ? active.name : 'not set'}
     </span>
   </button>
 
@@ -184,13 +186,24 @@
 
     <div class="fields">
       <label class="full">Name<input type="text" maxlength="60" placeholder="e.g. Home, Dark site" bind:value={name} /></label>
-      <label>Latitude (°, +N)<input class="mono" type="number" min="-90" max="90" step="0.0001" bind:value={latitude} /></label>
-      <label>Longitude (°, +E)<input class="mono" type="number" min="-180" max="180" step="0.0001" bind:value={longitude} /></label>
-      <label>Elevation (m)<input class="mono" type="number" min="-500" max="10000" step="1" bind:value={elevation} /></label>
-      <button class="secondary map-button" onclick={() => (showMap = true)}>🗺 Pick on map…</button>
+      {#if showCoordinates || latitude === null || longitude === null}
+        <label>Latitude (°, +N)<input class="mono" type="number" min="-90" max="90" step="0.0001" bind:value={latitude} /></label>
+        <label>Longitude (°, +E)<input class="mono" type="number" min="-180" max="180" step="0.0001" bind:value={longitude} /></label>
+        <label>Elevation (m)<input class="mono" type="number" min="-500" max="10000" step="1" bind:value={elevation} /></label>
+      {:else}
+        <p class="muted full hidden-note">Location set (hidden, so screenshots don't show it)</p>
+      {/if}
+      <span class="row">
+        <button class="secondary map-button" onclick={() => (showMap = true)}>🗺 Pick on map…</button>
+        {#if latitude !== null && longitude !== null}
+          <button class="secondary" onclick={() => (showCoordinates = !showCoordinates)} aria-pressed={showCoordinates}>
+            {showCoordinates ? 'Hide coordinates' : 'Show coordinates'}
+          </button>
+        {/if}
+      </span>
     </div>
 
-    {#if latitude !== null && longitude !== null}
+    {#if showCoordinates && latitude !== null && longitude !== null}
       <p class="muted mono readout">{describe(latitude, longitude)}</p>
     {/if}
 
@@ -333,6 +346,15 @@
   }
   .full {
     grid-column: 1 / -1;
+  }
+  .hidden-note {
+    margin: 0;
+    font-size: 12px;
+  }
+  .fields .row {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
   }
   .readout {
     margin: 6px 0 0;

@@ -439,8 +439,8 @@ public sealed class SystemdHotspot : IHotspotControl
             problem = "hostapd isn't installed: nova setup (or: sudo apt install hostapd)";
         else if (!File.Exists($"/etc/systemd/system/{Unit}"))
             problem = "The hotspot isn't installed yet: nova update --force";
-        else if (await Run("pkcheck", $"--action-id org.freedesktop.systemd1.manage-units --process {Environment.ProcessId} --detail unit {Unit} --detail verb start", ct) is not { Code: 0 })
-            problem = "NOVA isn't allowed to start the hotspot yet: nova update --force (it installs the permission)";
+        // Whether polkit allows it can't be asked beforehand: a check naming the unit (its "details") is only accepted
+        // from root. Starting it says so, if not.
         return new HotspotEnvironment(method, device, problem);
     }
 
@@ -454,8 +454,8 @@ public sealed class SystemdHotspot : IHotspotControl
 
     public async Task StartAsync(CancellationToken ct)
     {
-        var result = await Run("systemctl", $"start {Unit}", ct);
-        if (result is not { Code: 0 }) throw new InvalidOperationException($"The mini PC refused: {result?.Output.Trim()}");
+        var result = await Run("systemctl", $"start --no-ask-password {Unit}", ct);
+        if (result is not { Code: 0 }) throw new InvalidOperationException(Refused(result?.Output));
         // Give it a moment: a hotspot that can't start (hostapd failing) stops again straight away.
         await Task.Delay(TimeSpan.FromSeconds(3), ct);
         if (!await IsActiveAsync(ct)) throw new InvalidOperationException("The hotspot stopped as soon as it started (details: journalctl -u nova-hotspot)");
@@ -463,9 +463,14 @@ public sealed class SystemdHotspot : IHotspotControl
 
     public async Task StopAsync(CancellationToken ct)
     {
-        var result = await Run("systemctl", $"stop {Unit}", ct);
-        if (result is not { Code: 0 }) throw new InvalidOperationException($"The mini PC refused: {result?.Output.Trim()}");
+        var result = await Run("systemctl", $"stop --no-ask-password {Unit}", ct);
+        if (result is not { Code: 0 }) throw new InvalidOperationException(Refused(result?.Output));
     }
+
+    private static string Refused(string? output) =>
+        output is not null && (output.Contains("authentication required", StringComparison.OrdinalIgnoreCase) || output.Contains("Access denied", StringComparison.OrdinalIgnoreCase))
+            ? "NOVA isn't allowed to start or stop the hotspot yet: nova update --force (it installs the permission)"
+            : $"The mini PC refused: {output?.Trim()}";
 
     private static async Task<bool> Active(string unit, CancellationToken ct) => await Run("systemctl", $"is-active --quiet {unit}", ct) is { Code: 0 };
 

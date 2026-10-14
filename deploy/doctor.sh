@@ -169,8 +169,8 @@ else
   fi
   if [ ! -f /etc/systemd/system/nova-hotspot.service ] || [ ! -x /opt/nova/nova-hotspot.sh ]; then
     note "the hotspot isn't installed yet" "$reinstall"
-  elif has pkcheck && ! pkcheck --action-id org.freedesktop.systemd1.manage-units --process $$ --detail unit nova-hotspot.service --detail verb start >/dev/null 2>&1; then
-    note "NOVA isn't allowed to start the hotspot yet" "$reinstall"
+  # (Whether polkit lets NOVA start it can't be checked from here: polkit takes a check naming the unit only from root.
+  # NOVA says so if starting it is refused.)
   elif [ -r /etc/nova/hotspot.conf ] && ! grep -q '^PASSPHRASE=.\{8,\}' /etc/nova/hotspot.conf; then
     note "no hotspot password set: set one in NOVA (click the network name in the header)"
   else

@@ -128,7 +128,7 @@
     display: flex;
     align-items: center;
     gap: 4px;
-    padding: 3px 6px;
+    padding: 3px calc(var(--cut) + 4px) 3px 6px; /* the buttons clear of the cut corner */
     cursor: move;
     touch-action: none;
     user-select: none;

@@ -23,10 +23,18 @@
   } = $props()
 
   let box = $state<HTMLElement>()
+  // Where it's shown: where it was put, but kept inside the browser when the window gets smaller (and back where it
+  // was put when the window grows again; layout keeps that).
+  let viewWidth = $state(window.innerWidth)
+  let viewHeight = $state(window.innerHeight)
+  let boxWidth = $state(0)
+  let boxHeight = $state(0)
+  const shownRight = $derived(Math.max(0, Math.min(layout.right, viewWidth - boxWidth)))
+  const shownBottom = $derived(Math.max(0, Math.min(layout.bottom, viewHeight - boxHeight)))
   let drag: { x: number; y: number; right: number; bottom: number } | null = null
   function down(e: PointerEvent) {
     if ((e.target as HTMLElement).closest('button')) return
-    drag = { x: e.clientX, y: e.clientY, right: layout.right, bottom: layout.bottom }
+    drag = { x: e.clientX, y: e.clientY, right: shownRight, bottom: shownBottom }
     ;(e.currentTarget as HTMLElement).setPointerCapture(e.pointerId)
   }
   function move(e: PointerEvent) {
@@ -46,7 +54,7 @@
     if (!box) return
     const content = box.querySelector('.content')
     const ratio = content && content.clientWidth && content.clientHeight ? content.clientHeight / content.clientWidth : 0.75
-    resize = { x: e.clientX, y: e.clientY, width: layout.width, ratio, right: layout.right, bottom: layout.bottom }
+    resize = { x: e.clientX, y: e.clientY, width: boxWidth || layout.width, ratio, right: shownRight, bottom: shownBottom }
     ;(e.currentTarget as HTMLElement).setPointerCapture(e.pointerId)
     e.preventDefault()
   }
@@ -74,7 +82,10 @@
   }
 </script>
 
-<div class="float panel" bind:this={box} style:right="{layout.right}px" style:bottom="{layout.bottom}px" style:width="{layout.width}px">
+<svelte:window bind:innerWidth={viewWidth} bind:innerHeight={viewHeight} />
+
+<div class="float panel" bind:this={box} bind:offsetWidth={boxWidth} bind:offsetHeight={boxHeight}
+  style:right="{shownRight}px" style:bottom="{shownBottom}px" style:width="{layout.width}px">
   <div class="bar" role="presentation" onpointerdown={down} onpointermove={move} onpointerup={up} onpointercancel={up}>
     <span class="title">{title}</span>
     <span class="gap"></span>

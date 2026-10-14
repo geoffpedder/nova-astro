@@ -37,7 +37,7 @@ public sealed record StatusSnapshot(
     SolverStatus PlateSolve, AutofocusInfo Autofocus, PolarAlignmentInfo PolarAlignment, StellariumLinkStatus? Stellarium, SequencerInfo Sequencer, PowerStatus Power, NetworkStatus Network, IReadOnlyList<HfrPoint> HfrHistory,
     ExposureStatus? Exposure, ImageInfo? LatestImage, IReadOnlyDictionary<string, string> Nicknames, FlatsInfo? Flats = null,
     ImageHistoryStatus? ImageHistory = null, FlatPanelStatus? FlatPanel = null, string? Version = null,
-    StorageStatus? Storage = null);
+    StorageStatus? Storage = null, HotspotStatus? Hotspot = null);
 
 /// <summary>
 /// Builds the full state snapshot and pushes it to every browser once a second.
@@ -50,7 +50,7 @@ public sealed class StatusReporter(
     AutofocusService autofocus, FocusPresetService focusPresets, PolarAlignmentService polar, StellariumTelescopeServer stellarium,
     SequencerService sequencer, MountMotionService motion, PowerService power, NetworkService network,
     NicknameService nicknames, FlatsService flats, IHubContext<NovaHub> hub, ILogger<StatusReporter> logger,
-    FocusOffsetService? offsets = null, StorageService? storage = null)
+    FocusOffsetService? offsets = null, StorageService? storage = null, HotspotService? hotspot = null)
     : BackgroundService
 {
     public StatusSnapshot GetSnapshot()
@@ -112,7 +112,8 @@ public sealed class StatusReporter(
                     panel.IsConnected ? panel.Brightness : null, panel.IsConnected && panel.HasCover, panel.CoverClosed, panel.CoverMoving)
                 : null,
             AppVersion,
-            storage?.Status);
+            storage?.Status,
+            hotspot?.Status);
     }
 
     /// <summary>NOVA's version ("0.2.0"; "0.0.0-dev" for a local build), without the build's commit hash.</summary>

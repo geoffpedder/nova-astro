@@ -18,6 +18,40 @@ export interface NetworkInterfaceInfo {
 
 export type MotionDirection = 'North' | 'South' | 'East' | 'West'
 
+/** The Wi-Fi hotspot fallback's name and password, and when it starts and stops by itself. */
+export interface HotspotSettings {
+  ssid: string
+  password: string
+  /** Start it when no Wi-Fi (or cable with a route to the router) is found for 90 s. */
+  fallback: boolean
+  /** While nobody is on it, try joining Wi-Fi again every 5 minutes. */
+  retry: boolean
+}
+
+export interface HotspotStatus {
+  state: 'Off' | 'Starting' | 'On' | 'Stopping' | 'Error'
+  ssid: string
+  /** A password is set, so it can start. */
+  configured: boolean
+  fallback: boolean
+  retry: boolean
+  /** Phones and laptops on it now. */
+  stations: number | null
+  /** How the mini PC runs it: networkd, networkmanager, iwd, simulator or none. */
+  method: string
+  /** Why it can't run here, or null. */
+  problem: string | null
+  error: string | null
+  address: string
+  /** Why it's on: no Wi-Fi found, or started from the page. */
+  reason: string | null
+  onSinceUtc: string | null
+  /** Started from the page: back to Wi-Fi if nobody joins within 3 minutes. */
+  manual: boolean
+  /** No connection and the fallback on: seconds until it starts. */
+  startsInSeconds: number | null
+}
+
 export type FrameType = 'Light' | 'Bias' | 'Dark' | 'Flat'
 
 export interface DeviceInfo {
@@ -964,6 +998,8 @@ export interface StatusSnapshot {
   version: string | null
   /** Where frames are saved: the mini PC or a USB drive. */
   storage: StorageStatus | null
+  /** The Wi-Fi hotspot fallback. */
+  hotspot: HotspotStatus | null
 }
 
 /** A folder or FITS file in the mini PC's image folders (Open… → From the mini PC). */

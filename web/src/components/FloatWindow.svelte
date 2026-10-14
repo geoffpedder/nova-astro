@@ -88,7 +88,7 @@
 <style>
   .float {
     position: fixed;
-    z-index: 40;
+    z-index: 35; /* under dialogs and their backdrop (40 and up) */
     max-width: calc(100vw - 16px);
     padding: 0;
     overflow: hidden;

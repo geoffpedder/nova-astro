@@ -30,6 +30,8 @@ install -m 755 "$HERE/indiserver-start.sh" /opt/nova/indiserver-start.sh
 install -m 755 "$HERE/nova-screen.sh" /opt/nova/nova-screen.sh
 install -m 644 "$HERE/openbox-rc.xml" /opt/nova/openbox-rc.xml
 install -m 755 "$HERE/nova-wm.sh" /opt/nova/nova-wm.sh
+# The Wi-Fi hotspot's root helper (run by nova-hotspot.service only), root-owned so NOVA can't change it.
+install -m 755 "$HERE/nova-hotspot.sh" /opt/nova/nova-hotspot.sh
 install -d /opt/nova/icewm
 install -m 644 "$HERE"/icewm/* /opt/nova/icewm/
 # The maintenance scripts and the "nova" command (nova update, nova doctor, ...), so they work without a copy of the
@@ -46,8 +48,12 @@ install -d /etc/nova
 # NOVA saves the driver choice here (Equipment → Drivers…), so it owns this one file.
 chown "$NOVA_USER" /etc/nova/indi.env
 [ -f /etc/nova/nova.env ] || install -m 644 "$HERE/nova.env" /etc/nova/nova.env
+# The hotspot's name and password, which NOVA writes (set on its page) and the hotspot's helper reads: NOVA's alone.
+[ -f /etc/nova/hotspot.conf ] || install -m 600 /dev/null /etc/nova/hotspot.conf
+chown "$NOVA_USER" /etc/nova/hotspot.conf
+chmod 600 /etc/nova/hotspot.conf
 
-for unit in indiserver nova nova-display nova-wm phd2 nova-screen; do
+for unit in indiserver nova nova-display nova-wm phd2 nova-screen nova-hotspot; do
   sed "s/NOVA_USER/$NOVA_USER/" "$HERE/$unit.service" > "/etc/systemd/system/$unit.service"
 done
 
@@ -66,6 +72,9 @@ if [ -d /etc/polkit-1/rules.d ]; then
   chmod 644 /etc/polkit-1/rules.d/49-nova-power.rules
   sed "s/NOVA_USER/$NOVA_USER/" "$HERE/nova-storage.rules" > /etc/polkit-1/rules.d/49-nova-storage.rules
   chmod 644 /etc/polkit-1/rules.d/49-nova-storage.rules
+  # And start and stop its Wi-Fi hotspot (nova-hotspot.service), no other service.
+  sed "s/NOVA_USER/$NOVA_USER/" "$HERE/nova-hotspot.rules" > /etc/polkit-1/rules.d/49-nova-hotspot.rules
+  chmod 644 /etc/polkit-1/rules.d/49-nova-hotspot.rules
 else
   echo "polkit isn't installed, so NOVA can't restart or shut down the mini PC. To allow it, install polkit (Arch: polkit, Debian/Ubuntu: polkitd), then run this again."
 fi
@@ -105,9 +114,10 @@ if command -v ufw >/dev/null && ufw status 2>/dev/null | grep -q '^Status: activ
   ufw allow 5000/tcp comment 'NOVA' >/dev/null
   ufw allow 10001/tcp comment 'NOVA: Stellarium telescope link' >/dev/null
   ufw allow 5353/udp comment 'mDNS: .local names' >/dev/null
-  echo "Firewall (ufw): ports 5000 and 10001 (TCP) and 5353 (UDP, for .local names) are open"
+  ufw allow 67/udp comment 'NOVA hotspot: addresses for phones (DHCP)' >/dev/null
+  echo "Firewall (ufw): ports 5000 and 10001 (TCP), 5353 (UDP, for .local names) and 67 (UDP, the hotspot's addresses) are open"
 elif command -v firewall-cmd >/dev/null && firewall-cmd --state >/dev/null 2>&1; then
-  firewall-cmd --quiet --permanent --add-port=5000/tcp --add-port=10001/tcp --add-service=mdns
+  firewall-cmd --quiet --permanent --add-port=5000/tcp --add-port=10001/tcp --add-service=mdns --add-service=dhcp
   firewall-cmd --quiet --reload
   echo "Firewall (firewalld): ports 5000 and 10001 (TCP) and mDNS (for .local names) are open"
 fi

@@ -17,6 +17,7 @@
 - [Webcam](#webcam)
 - [Notifications](#notifications)
 - [The mini PC](#the-mini-pc)
+  - [Wi-Fi hotspot](#wi-fi-hotspot-no-wi-fi-at-the-site)
 
 ## Getting started
 
@@ -502,6 +503,27 @@ the activity log. Your own ntfy server works too: set its address, and an access
 - **⏻ in the header** restarts or shuts down the mini PC, optionally parking the mount and turning the
   camera's cooler off first. It's also where you set, change or remove NOVA's password, and sign this browser
   out (see [Network, ports and security](INSTALL.md#network-ports-and-security)).
-- **The header** shows its network (wired, Wi-Fi with signal, or its own hotspot) and address.
+- **The header** shows its network (wired, Wi-Fi with signal, or its own hotspot) and address. Click it for the
+  **Network** dialog and the Wi-Fi hotspot.
+
+### Wi-Fi hotspot (no Wi-Fi at the site)
+
+When the mini PC finds no Wi-Fi to join, it can start its own Wi-Fi network so a phone or laptop can still reach
+NOVA. Set it up at home, before you go:
+
+1. Click the network name in the header, give the hotspot a **name** and a **password** (8 to 63 characters), and
+   **Save**. *Start it when no Wi-Fi is found* is on.
+2. Try it: **Start hotspot now**. This browser loses its connection; join the new network on your phone, then open
+   **http://10.42.0.1:5000** (or http://*name*.local:5000). If nobody joins within 3 minutes, it goes back to your
+   Wi-Fi by itself, so a test can't leave the mini PC out of reach. **Back to Wi-Fi** ends it.
+
+In the field the mini PC starts it about 90 seconds after finding no Wi-Fi (or a cable with internet). The hotspot
+gives out addresses but no internet, so a phone keeps using its mobile data for that. While nobody is on it, it
+tries your Wi-Fi again every 5 minutes (turn that off if you'd rather it stayed up), so back home it rejoins by
+itself. A plugged-in cable counts as connected, and a cable to a laptop is another way in.
+
+It works with Ubuntu Server's own Wi-Fi setup (netplan: systemd-networkd and wpa_supplicant, with `hostapd`, which
+setup installs), NetworkManager and iwd. `nova doctor` checks it; the mini PC's Wi-Fi adapter must be able to run a
+hotspot (most can).
 - **Updating, checks and logs** are done on the mini PC with the `nova` command; see
   [Installing NOVA](INSTALL.md#updating-and-the-nova-command).

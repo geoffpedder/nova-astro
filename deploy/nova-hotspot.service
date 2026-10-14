@@ -1,0 +1,12 @@
+[Unit]
+Description=NOVA's Wi-Fi hotspot (when there's no Wi-Fi to join)
+# Started and stopped by NOVA (polkit rule 49-nova-hotspot.rules); never at boot by itself.
+After=network.target
+
+[Service]
+Type=simple
+ExecStart=/opt/nova/nova-hotspot.sh run
+# Back to joining Wi-Fi however it ended: stopped, or hostapd failing.
+ExecStopPost=/opt/nova/nova-hotspot.sh restore
+Restart=no
+TimeoutStopSec=20

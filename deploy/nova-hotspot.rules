@@ -1,0 +1,9 @@
+// Lets NOVA (running as NOVA_USER) start and stop its Wi-Fi hotspot (nova-hotspot.service) — and no other service.
+// Installed to /etc/polkit-1/rules.d/49-nova-hotspot.rules by deploy/install.sh.
+polkit.addRule(function (action, subject) {
+    if (subject.user == "NOVA_USER" && action.id == "org.freedesktop.systemd1.manage-units" &&
+        action.lookup("unit") == "nova-hotspot.service" &&
+        ["start", "stop", "restart"].indexOf(action.lookup("verb")) >= 0) {
+        return polkit.Result.YES;
+    }
+});

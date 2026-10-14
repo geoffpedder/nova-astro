@@ -80,6 +80,7 @@ builder.Services.AddSingleton<FocusOffsetService>();
 builder.Services.AddSingleton<StorageService>();
 builder.Services.AddSingleton<SystemStatsService>();
 builder.Services.AddSingleton<WebcamService>();
+builder.Services.AddSingleton<HotspotService>();
 builder.Services.AddHostedService(sp => sp.GetRequiredService<StorageService>());
 builder.Services.AddHostedService(sp => sp.GetRequiredService<NotificationService>());
 builder.Services.AddSingleton<StatusReporter>();
@@ -87,6 +88,7 @@ builder.Services.AddHostedService(sp => sp.GetRequiredService<StatusReporter>())
 builder.Services.AddHostedService<ProviderConnector>();
 builder.Services.AddHostedService<GuiderConnector>();
 builder.Services.AddHostedService(sp => sp.GetRequiredService<NetworkService>());
+builder.Services.AddHostedService(sp => sp.GetRequiredService<HotspotService>());
 builder.Services.AddHostedService(sp => sp.GetRequiredService<StellariumTelescopeServer>());
 
 // Lets systemd know when the service has started and stops it cleanly.

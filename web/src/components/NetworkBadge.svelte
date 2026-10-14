@@ -1,11 +1,16 @@
 <script lang="ts">
   import { nova } from '../lib/state.svelte'
+  import NetworkDialog from './NetworkDialog.svelte'
 
   // How the mini PC is connected: its Wi-Fi network (and signal), the hotspot it's running, or a cable.
   const network = $derived(nova.status?.network)
   const primary = $derived(network?.primary ?? null)
+  const hotspot = $derived(nova.status?.hotspot ?? null)
+  let open = $state(false)
 
   const label = $derived.by(() => {
+    // NOVA's own hotspot is on (also the simulator's pretend one).
+    if (hotspot?.state === 'On') return { icon: '📡', text: `Hotspot ${hotspot.ssid}`, address: hotspot.address }
     if (!primary) return null
     const address = primary.addresses[0] ?? ''
     if (primary.mode === 'hotspot') return { icon: '📡', text: `Hotspot ${primary.ssid ?? ''}`.trim(), address }
@@ -37,15 +42,20 @@
 </script>
 
 {#if label}
-  <span class="network" class:weak title={details}>
+  <button class="network" class:weak title={`${details}
+
+Click for the Wi-Fi hotspot`} onclick={() => (open = true)}>
     <span aria-hidden="true">{label.icon}</span>
     <span class="text">{label.text}</span>
     {#if label.address}<span class="address muted">{label.address}</span>{/if}
-  </span>
+  </button>
 {/if}
+{#if open}<NetworkDialog onclose={() => (open = false)} />{/if}
 
 <style>
   .network {
+    all: unset;
+    cursor: pointer;
     display: inline-flex;
     align-items: center;
     gap: 5px;
@@ -58,6 +68,10 @@
     overflow: hidden;
     text-overflow: ellipsis;
     max-width: 180px;
+  }
+  .network:hover .text,
+  .network:focus-visible .text {
+    color: var(--accent);
   }
   .weak .text {
     color: var(--warn);

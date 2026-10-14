@@ -232,6 +232,7 @@ What `setup.sh` installs, written out for Arch so it can be done by hand:
 | Restart / shut down from the web page | `sudo pacman -S --needed polkit` (usually already there) | lets the ⏻ menu restart or power off the mini PC; the install adds a polkit rule allowing NOVA's user to do only that |
 | Webcam view | `sudo pacman -S --needed ffmpeg v4l-utils` | shows a USB webcam (ffmpeg) with its brightness, exposure and other controls (v4l-utils) in the Webcam tab, to watch the rig from indoors; the install adds NOVA's user to the `video` group |
 | Saving to USB drives | `sudo pacman -S --needed udisks2` | mounts and ejects USB drives for NOVA (Camera panel → Storage); the install adds a polkit rule allowing NOVA's user to mount and eject them |
+| Wi-Fi hotspot (optional) | `sudo pacman -S --needed hostapd` | the mini PC's own Wi-Fi network when there's none to join (Network dialog, from the header); hostapd is needed with systemd-networkd (NetworkManager and iwd run it themselves); the install adds `nova-hotspot.service` and a polkit rule letting NOVA's user start and stop only that |
 | Wi-Fi details (optional) | `sudo pacman -S --needed iw` | the header's network name and signal; `iw` also spots when the mini PC runs a hotspot |
 | Network names (optional) | `sudo pacman -S avahi nss-mdns` and `sudo systemctl enable --now avahi-daemon` | `http://<name>.local:5000` |
 | GSC catalogue (optional) | AUR `gsc`, built by hand (below) | stars for INDI's CCD Simulator only; real cameras don't need it |

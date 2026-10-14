@@ -43,6 +43,9 @@ public sealed partial class NetworkService : BackgroundService
         }
     }
 
+    /// <summary>Reads it now (the hotspot fallback deciding), and keeps it for the header too.</summary>
+    public async Task<NetworkStatus> RefreshAsync(CancellationToken ct) => Status = await ReadAsync(ct);
+
     public static async Task<NetworkStatus> ReadAsync(CancellationToken ct)
     {
         var interfaces = new List<NetworkInterfaceInfo>();

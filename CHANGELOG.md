@@ -4,6 +4,13 @@ What changed in each release. The newest is first. A release's section here beco
 
 ## [Unreleased]
 
+### Added
+- **Wi-Fi hotspot fallback:** when the mini PC finds no Wi-Fi to join for 90 seconds, it starts its own network
+  (name and password set in the new **Network** dialog: click the network name in the header), reachable at
+  http://10.42.0.1:5000. While nobody is on it, it tries Wi-Fi again every 5 minutes; **Start hotspot now** tries it
+  out (back to Wi-Fi in 3 minutes if nobody joins) and **Back to Wi-Fi** ends it. Works with Ubuntu Server's
+  netplan (systemd-networkd, with hostapd, which setup now installs), NetworkManager and iwd; `nova doctor` checks it.
+
 ## [0.3.7] - 2026-10-13
 
 ### Added

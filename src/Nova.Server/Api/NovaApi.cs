@@ -707,6 +707,26 @@ public static class NovaApi
             await power.ShutdownAsync(reboot: false, request.Park, request.CoolerOff, ct) is { } problem
                 ? Results.Problem(problem, statusCode: StatusCodes.Status409Conflict)
                 : Results.Accepted());
+        // The Wi-Fi hotspot fallback: its name and password (for the signed-in page only), and starting or stopping it.
+        api.MapGet("/hotspot", (HotspotService hotspot) => new { status = hotspot.Status, settings = hotspot.Settings });
+        api.MapPost("/hotspot/settings", (HotspotSettings settings, HotspotService hotspot) =>
+        {
+            try
+            {
+                hotspot.UpdateSettings(settings);
+                return Results.NoContent();
+            }
+            catch (ArgumentException ex)
+            {
+                return Results.Problem(ex.Message, statusCode: StatusCodes.Status400BadRequest);
+            }
+            catch (InvalidOperationException ex)
+            {
+                return Results.Problem(ex.Message, statusCode: StatusCodes.Status409Conflict);
+            }
+        });
+        api.MapPost("/hotspot/start", (HotspotService hotspot, CancellationToken ct) => ConflictOnRefusal(() => hotspot.StartHotspotAsync(ct)));
+        api.MapPost("/hotspot/stop", (HotspotService hotspot, CancellationToken ct) => ConflictOnRefusal(() => hotspot.StopHotspotAsync(ct)));
 
         // Sequencer: saved sequences, and running one.
         api.MapGet("/sequences", (SequencerService sequencer) => sequencer.SavedNames());

@@ -148,6 +148,36 @@ if has nmcli || has iwctl || has iw; then pass "Wi-Fi tools: $(for t in nmcli iw
 else note "no Wi-Fi tool found: the header can show addresses but not the network name" "sudo pacman -S --needed iw"; fi
 has iw || note "iw isn't installed: NOVA can't tell when the mini PC runs a hotspot" "sudo pacman -S --needed iw"
 
+section "Wi-Fi hotspot (optional: when there's no Wi-Fi to join)"
+wifi=""
+for dev in /sys/class/net/*; do [ -d "$dev/wireless" ] && { wifi=$(basename "$dev"); break; }; done
+if [ -z "$wifi" ]; then note "no Wi-Fi adapter: no hotspot (a cable still works)"
+else
+  if systemctl is-active --quiet NetworkManager 2>/dev/null; then how="NetworkManager"
+  elif systemctl is-active --quiet iwd 2>/dev/null; then how="iwd"
+  elif systemctl is-active --quiet systemd-networkd 2>/dev/null; then how="systemd-networkd + hostapd"
+  else how=""; fi
+  if [ -z "$how" ]; then note "the Wi-Fi isn't run by NetworkManager, iwd or systemd-networkd: NOVA can't start a hotspot"
+  else
+    pass "$wifi, run by $how"
+    if [ "$how" = "systemd-networkd + hostapd" ] && ! has hostapd && [ ! -x /usr/sbin/hostapd ]; then
+      note "hostapd isn't installed: the hotspot can't start" "$setup   (or: sudo apt install hostapd, sudo pacman -S hostapd)"
+    fi
+    if has iw && ! iw list 2>/dev/null | sed -n '/Supported interface modes/,/:$/p' | grep -q '\* AP$'; then
+      note "this Wi-Fi adapter doesn't say it can be a hotspot (AP mode): it may not work"
+    fi
+  fi
+  if [ ! -f /etc/systemd/system/nova-hotspot.service ] || [ ! -x /opt/nova/nova-hotspot.sh ]; then
+    note "the hotspot isn't installed yet" "$reinstall"
+  elif has pkcheck && ! pkcheck --action-id org.freedesktop.systemd1.manage-units --process $$ --detail unit nova-hotspot.service --detail verb start >/dev/null 2>&1; then
+    note "NOVA isn't allowed to start the hotspot yet" "$reinstall"
+  elif [ -r /etc/nova/hotspot.conf ] && ! grep -q '^PASSPHRASE=.\{8,\}' /etc/nova/hotspot.conf; then
+    note "no hotspot password set: set one in NOVA (click the network name in the header)"
+  else
+    systemctl is-active --quiet nova-hotspot.service && pass "hotspot on now (10.42.0.1)" || pass "ready (starts when no Wi-Fi is found)"
+  fi
+fi
+
 section "Network names (optional: http://<minipc>.local:5000)"
 if systemctl is-active --quiet avahi-daemon 2>/dev/null; then pass "avahi-daemon running"
 else note "avahi-daemon not running: use the IP address, or" "sudo pacman -S avahi nss-mdns && sudo systemctl enable --now avahi-daemon"; fi

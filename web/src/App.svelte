@@ -184,6 +184,8 @@
 {#if auth.checked && !auth.signedIn}
   <SignIn />
 {:else}
+<!-- The header at its own height, the main area exactly the rest of the window: the page itself never scrolls. -->
+<div class="shell">
 <header>
   <div class="brand">NOVA</div>
   {#if nova.status?.version}<span class="version mono muted" title="NOVA version">{nova.status.version === '0.0.0-dev' ? 'dev build' : `v${nova.status.version}`}</span>{/if}
@@ -298,6 +300,7 @@
     <LogPanel />
   </section>
 </main>
+</div>
 
 {#if nova.settingsDevice}
   <DriverSettings device={nova.settingsDevice} onclose={() => (nova.settingsDevice = null)} />
@@ -380,12 +383,27 @@
     padding: 0 2px;
     cursor: pointer;
   }
+  .shell {
+    display: grid;
+    grid-template-rows: auto minmax(0, 1fr);
+    height: 100vh;
+    height: 100dvh;
+    overflow: hidden;
+  }
+  /* The shell fills the window exactly, so the page has nothing to scroll; without this a stray pixel of width
+     brings a scrollbar, which takes height, which brings the other scrollbar, and the wheel moves the whole page. */
+  @media (min-width: 801px) {
+    :global(html),
+    :global(body) {
+      overflow: hidden;
+    }
+  }
   main {
     display: grid;
     grid-template-columns: minmax(300px, 360px) minmax(0, 1fr);
     gap: 12px;
     padding: 12px 16px;
-    height: calc(100vh - 56px);
+    min-height: 0;
   }
   aside {
     display: flex;
@@ -545,6 +563,12 @@
   @media (max-width: 800px) {
     header {
       flex-wrap: wrap;
+    }
+    /* Narrow screens stack the panels and the main view, and the page scrolls. */
+    .shell {
+      display: block;
+      height: auto;
+      overflow: visible;
     }
     main {
       grid-template-columns: 1fr;

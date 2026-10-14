@@ -4,6 +4,10 @@ What changed in each release. The newest is first. A release's section here beco
 
 ## [Unreleased]
 
+### Fixed
+- The whole page no longer scrolls a little when the mouse wheel turns over the header: the main area now takes
+  exactly the height the header leaves (it was a fixed guess that a slightly taller header overran).
+
 ### Added
 - **Drivers dialog filter:** *All installed*, *Ticked* (your equipment's drivers) or *Running* (a device connected
   now), with counts, next to the search.

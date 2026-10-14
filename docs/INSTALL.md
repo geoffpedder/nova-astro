@@ -41,7 +41,7 @@ has enough memory, a case, a cooler, a power supply and decent storage, it often
 business mini PC that is faster in every way. Offices replace these "tiny" PCs in bulk, so they're plentiful and
 cheap on the used market:
 
-- **Lenovo ThinkCentre M710q, M720q, M920q** (the "Tiny" range; NOVA is developed on one)
+- **Lenovo ThinkCentre M710q, M720q, M920q** (the "Tiny" range)
 - **Dell OptiPlex Micro** (3060, 5060, 7060 and similar)
 - **HP EliteDesk / ProDesk Mini** (G3, G4 and similar)
 

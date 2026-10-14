@@ -54,7 +54,6 @@ public sealed class StorageService : BackgroundService
     private IReadOnlyList<RemovableDrive> _drives = [];
     private readonly HashSet<string> _ejected = new(StringComparer.Ordinal);     // devices ejected: not remounted until replugged
     private readonly Dictionary<string, string> _failed = new(StringComparer.Ordinal); // device → why it can't be used, until replugged
-    private string? _warning;
     private string? _lastWarned;
     private CopyStatus? _copy;
     private CancellationTokenSource? _copyCts;

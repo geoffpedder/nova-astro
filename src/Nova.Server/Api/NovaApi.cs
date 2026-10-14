@@ -67,6 +67,9 @@ public sealed record GuiderBackendRequest(string Backend);
 /// <summary>Dark exposures (seconds) for the guide camera, and how many darks to take at each.</summary>
 public sealed record GuideDarksRequest(double[] Exposures, int Frames = 5);
 
+/// <summary>One of the webcam's controls (its V4L2 name) and the value to set.</summary>
+public sealed record WebcamControlRequest(string Name, int Value);
+
 /// <summary>A guide settings profile, by name.</summary>
 public sealed record GuideProfileRequest(string Name);
 
@@ -151,6 +154,25 @@ public static class NovaApi
                 return Results.Problem(ex.Message, statusCode: StatusCodes.Status400BadRequest);
             }
         });
+        // The webcam's own controls (v4l2-ctl): brightness, exposure, white balance… Set ones are kept per webcam.
+        api.MapGet("/webcam/controls", (WebcamService webcam, CancellationToken ct) => webcam.ControlsAsync(ct));
+        api.MapPost("/webcam/controls", async (WebcamControlRequest request, WebcamService webcam, CancellationToken ct) =>
+        {
+            try
+            {
+                await webcam.SetControlAsync(request.Name, request.Value, ct);
+                return Results.NoContent();
+            }
+            catch (ArgumentException ex)
+            {
+                return Results.Problem(ex.Message, statusCode: StatusCodes.Status400BadRequest);
+            }
+            catch (InvalidOperationException ex)
+            {
+                return Results.Problem(ex.Message, statusCode: StatusCodes.Status409Conflict);
+            }
+        });
+        api.MapPost("/webcam/controls/reset", (WebcamService webcam, CancellationToken ct) => ConflictOnRefusal(() => webcam.ResetControlsAsync(ct)));
         // MJPEG over HTTP: a plain <img> shows it live in any browser.
         api.MapGet("/webcam/stream", async (WebcamService webcam, HttpContext context) =>
         {

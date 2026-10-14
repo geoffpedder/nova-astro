@@ -36,6 +36,91 @@ public class WebcamTests : IDisposable
         Assert.Equal(Jpeg(3, 7), frames[2]);
     }
 
+    // As v4l2-ctl --list-ctrls-menus prints them for a typical UVC webcam (newer naming).
+    private const string ListedControls = """
+
+        User Controls
+
+                             brightness 0x00980900 (int)    : min=-64 max=64 step=1 default=0 value=12
+                               contrast 0x00980901 (int)    : min=0 max=95 step=1 default=32 value=32
+                white_balance_automatic 0x0098090c (bool)   : default=1 value=1
+                   power_line_frequency 0x00980918 (menu)   : min=0 max=2 default=1 value=1 (50 Hz)
+        				0: Disabled
+        				1: 50 Hz
+        				2: 60 Hz
+              white_balance_temperature 0x0098091a (int)    : min=2800 max=6500 step=1 default=4600 value=4600 flags=inactive
+
+        Camera Controls
+
+                          auto_exposure 0x009a0901 (menu)   : min=0 max=3 default=3 value=3 (Aperture Priority Mode)
+        				1: Manual Mode
+        				3: Aperture Priority Mode
+                 exposure_time_absolute 0x009a0902 (int)    : min=1 max=5000 step=1 default=157 value=157 flags=inactive
+                           privacy_button 0x009a0910 (button) : flags=write-only
+
+        """;
+
+    [Fact]
+    public void ParsesV4l2ControlListings()
+    {
+        var controls = V4l2Controls.Parse(ListedControls);
+        Assert.Equal(["brightness", "contrast", "white_balance_automatic", "power_line_frequency", "white_balance_temperature",
+            "auto_exposure", "exposure_time_absolute"], controls.Select(c => c.Name)); // the button isn't offered
+
+        var brightness = controls[0];
+        Assert.Equal(("int", -64, 64, 1, 0, 12, false), (brightness.Type, brightness.Min, brightness.Max, brightness.Step, brightness.Default, brightness.Value, brightness.Inactive));
+        Assert.Equal("User Controls", brightness.Group);
+
+        var power = controls.Single(c => c.Name == "power_line_frequency");
+        Assert.Equal("menu", power.Type);
+        Assert.Equal([new WebcamMenuItem(0, "Disabled"), new WebcamMenuItem(1, "50 Hz"), new WebcamMenuItem(2, "60 Hz")], power.Menu);
+
+        var auto = controls.Single(c => c.Name == "auto_exposure");
+        Assert.Equal(("Camera Controls", "Auto exposure", 3), (auto.Group, auto.Label, auto.Value));
+        Assert.Equal(2, auto.Menu.Count);
+        Assert.True(controls.Single(c => c.Name == "exposure_time_absolute").Inactive);
+        Assert.Equal(("bool", 0, 1, 1), controls.Single(c => c.Name == "white_balance_automatic") is var wb ? (wb.Type, wb.Min, wb.Max, wb.Value) : default);
+
+        // Older v4l2-ctl names (exposure_auto, exposure_absolute) read the same way.
+        var old = V4l2Controls.Parse("                  exposure_auto 0x009a0901 (menu)   : min=0 max=3 default=3 value=1\n\t\t\t\t1: Manual Mode\n");
+        Assert.Equal(("Auto exposure", 1), (old[0].Label, old[0].Value));
+        Assert.Equal("Controls", old[0].Group);
+    }
+
+    [Fact]
+    public async Task SetsChecksSavesAndReappliesControls()
+    {
+        await using (var webcam = Service(new FakeSource()))
+        {
+            await webcam.SetControlAsync("brightness", 20, CancellationToken.None);
+            Assert.Equal(20, webcam.SimulatedControls.Brightness);
+            await Assert.ThrowsAsync<ArgumentException>(() => webcam.SetControlAsync("brightness", 99, CancellationToken.None));
+            await Assert.ThrowsAsync<ArgumentException>(() => webcam.SetControlAsync("power_line_frequency", 5, CancellationToken.None));
+            await Assert.ThrowsAsync<ArgumentException>(() => webcam.SetControlAsync("zoom", 1, CancellationToken.None));
+
+            // Manual exposure makes exposure time settable (it was set by auto exposure).
+            await webcam.SetControlAsync("auto_exposure", 1, CancellationToken.None);
+            var listed = await webcam.ControlsAsync(CancellationToken.None);
+            Assert.False(listed.Controls.Single(c => c.Name == "exposure_time_absolute").Inactive);
+        }
+
+        // Started again (NOVA restarted, the webcam's own settings back to its defaults): the saved ones come back once it streams.
+        var source = new FakeSource();
+        await using var again = Service(source);
+        Assert.Equal(0, again.SimulatedControls.Brightness);
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+        await again.Watch(cts.Token).Take(3).ToListAsync(cts.Token);
+        for (var i = 0; i < 50 && again.SimulatedControls.Brightness != 20; i++) await Task.Delay(20, cts.Token);
+        Assert.Equal(20, again.SimulatedControls.Brightness);
+
+        // Reset: the webcam's defaults, nothing saved.
+        await again.ResetControlsAsync(CancellationToken.None);
+        Assert.Equal(0, again.SimulatedControls.Brightness);
+        var after = await again.ControlsAsync(CancellationToken.None);
+        Assert.Equal(3, after.Controls.Single(c => c.Name == "auto_exposure").Value);
+        Assert.Null(after.Error);
+    }
+
     [Fact]
     public void ListsWebcamsFromSys()
     {

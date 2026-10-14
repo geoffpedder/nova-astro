@@ -8,7 +8,8 @@ What changed in each release. The newest is first. A release's section here beco
 - **Webcam view:** a USB webcam on the mini PC in a **Webcam** tab, to watch the rig from indoors, with **Pop out** to
   keep a small floating view over the other tabs, and **Snapshot**. It runs only while watched and passes the
   webcam's MJPEG on unconverted, so it costs next to nothing. Setup installs ffmpeg; the install adds NOVA's user to
-  the `video` group.
+  the `video` group. **Controls** beside it sets the webcam's own brightness, exposure, white balance, focus and so
+  on (v4l2-ctl), kept per webcam and set again when it starts.
 - **Drivers dialog filter:** *All installed*, *Ticked* (your equipment's drivers) or *Running* (a device connected
   now), with counts, next to the search.
 - **Predictive PEC** (NOVA's guider, RA): learns the mount's periodic error while guiding (its period found

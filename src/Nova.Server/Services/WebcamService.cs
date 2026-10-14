@@ -55,18 +55,153 @@ public sealed class WebcamService : IAsyncDisposable
     private string? _note;
     private readonly Queue<DateTime> _recent = new();
 
+    private readonly string _controlsFile;
+    private Dictionary<string, Dictionary<string, int>> _saved; // webcam name → control → value the user set
+
     public WebcamService(IOptions<NovaOptions> options, ActivityLog log, string sysRoot = "/sys/class/video4linux")
     {
         _log = log;
         _file = System.IO.Path.Combine(options.Value.ResolveConfigDirectory(), "webcam.json");
+        _controlsFile = System.IO.Path.Combine(options.Value.ResolveConfigDirectory(), "webcam-controls.json");
         _simulator = !options.Value.Backend.Equals("Indi", StringComparison.OrdinalIgnoreCase);
         _sysRoot = sysRoot;
         _settings = Load();
+        _saved = LoadControls();
+        TestCard = new TestCardWebcamSource(() => SimulatedControls.Brightness);
     }
 
     /// <summary>Where frames come from; the ffmpeg source for webcams and the test card for "sim" unless replaced (tests).</summary>
     public IWebcamSource Webcams { get; set; } = new FfmpegWebcamSource();
-    public IWebcamSource TestCard { get; set; } = new TestCardWebcamSource();
+    public IWebcamSource TestCard { get; set; }
+
+    /// <summary>A webcam's controls (v4l2-ctl), and the simulator's pretend ones.</summary>
+    public IWebcamControls V4l2 { get; set; } = new V4l2Controls();
+    public SimulatedWebcamControls SimulatedControls { get; } = new();
+
+    // ---- Controls ----
+
+    private IWebcamControls ControlsFor(WebcamDevice device) => device.Path == "sim" ? SimulatedControls : V4l2;
+
+    /// <summary>The webcam's controls (brightness, exposure, white balance…) with their ranges and values now.</summary>
+    public async Task<WebcamControls> ControlsAsync(CancellationToken ct)
+    {
+        var device = Chosen();
+        if (device is null) return new WebcamControls(null, [], "No webcam found");
+        try
+        {
+            return new WebcamControls(device.Path, await ControlsFor(device).ListAsync(device.Path, ct), null);
+        }
+        catch (InvalidOperationException ex)
+        {
+            return new WebcamControls(device.Path, [], ex.Message);
+        }
+    }
+
+    /// <summary>Sets one control (checked against the webcam's own range or choices) and remembers it for this webcam.</summary>
+    public async Task SetControlAsync(string name, int value, CancellationToken ct)
+    {
+        var device = Chosen() ?? throw new InvalidOperationException("No webcam found");
+        var controls = ControlsFor(device);
+        var control = (await controls.ListAsync(device.Path, ct)).FirstOrDefault(c => c.Name == name)
+            ?? throw new ArgumentException($"This webcam has no control '{name}'");
+        var ok = control.Type switch
+        {
+            "bool" => value is 0 or 1,
+            "menu" => control.Menu.Count == 0 ? value >= control.Min && value <= control.Max : control.Menu.Any(m => m.Value == value),
+            _ => value >= control.Min && value <= control.Max,
+        };
+        if (!ok) throw new ArgumentException($"{control.Label} can't be {value}");
+        await controls.SetAsync(device.Path, name, value, ct);
+        lock (_sync)
+        {
+            if (!_saved.TryGetValue(device.Name, out var mine)) _saved[device.Name] = mine = [];
+            mine[name] = value;
+        }
+        SaveControls();
+    }
+
+    /// <summary>Puts every control back to the webcam's default and forgets what was set.</summary>
+    public async Task ResetControlsAsync(CancellationToken ct)
+    {
+        var device = Chosen() ?? throw new InvalidOperationException("No webcam found");
+        var controls = ControlsFor(device);
+        foreach (var c in AutoFirst(await controls.ListAsync(device.Path, ct)))
+        {
+            if (c.Value == c.Default) continue;
+            try
+            {
+                await controls.SetAsync(device.Path, c.Name, c.Default, ct);
+            }
+            catch (InvalidOperationException)
+            {
+                // inactive now (set by an automatic mode): fine
+            }
+        }
+        lock (_sync) _saved.Remove(device.Name);
+        SaveControls();
+        _log.Info($"Webcam {device.Name}: controls back to its defaults");
+    }
+
+    /// <summary>The saved values again, once the webcam streams (some webcams reset their controls when opened).</summary>
+    private async Task ApplySavedAsync(WebcamDevice device, Task streaming, CancellationToken ct)
+    {
+        Dictionary<string, int>? mine;
+        lock (_sync) mine = _saved.TryGetValue(device.Name, out var m) ? new(m) : null;
+        if (mine is null || mine.Count == 0) return;
+        try
+        {
+            await streaming.WaitAsync(ct);
+            var controls = ControlsFor(device);
+            var known = await controls.ListAsync(device.Path, ct);
+            foreach (var c in AutoFirst(known.Where(k => mine.ContainsKey(k.Name))))
+            {
+                try
+                {
+                    await controls.SetAsync(device.Path, c.Name, mine[c.Name], ct);
+                }
+                catch (InvalidOperationException)
+                {
+                    // one that can't be set now: the others still
+                }
+            }
+        }
+        catch (Exception ex) when (ex is OperationCanceledException or InvalidOperationException)
+        {
+        }
+    }
+
+    /// <summary>Automatic modes first: switching auto exposure off is what makes exposure time settable.</summary>
+    private static IEnumerable<WebcamControl> AutoFirst(IEnumerable<WebcamControl> controls) =>
+        controls.OrderBy(c => c.Name.Contains("auto", StringComparison.OrdinalIgnoreCase) ? 0 : 1);
+
+    private Dictionary<string, Dictionary<string, int>> LoadControls()
+    {
+        try
+        {
+            if (File.Exists(_controlsFile))
+                return JsonSerializer.Deserialize<Dictionary<string, Dictionary<string, int>>>(File.ReadAllText(_controlsFile)) ?? [];
+        }
+        catch (Exception ex) when (ex is IOException or JsonException)
+        {
+            _log.Warn($"Ignoring unreadable {_controlsFile}: {ex.Message}");
+        }
+        return [];
+    }
+
+    private void SaveControls()
+    {
+        try
+        {
+            string json;
+            lock (_sync) json = JsonSerializer.Serialize(_saved);
+            Directory.CreateDirectory(System.IO.Path.GetDirectoryName(_controlsFile)!);
+            File.WriteAllText(_controlsFile, json);
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            _log.Error($"Could not save the webcam controls to {_controlsFile}", ex);
+        }
+    }
 
     public WebcamSettings Settings => _settings;
 
@@ -270,6 +405,9 @@ public sealed class WebcamService : IAsyncDisposable
                 {
                     var source = device.Path == "sim" ? TestCard : Webcams;
                     if (lastProblem is null) _log.Info($"Webcam {device.Name}: streaming {settings.Width}×{settings.Height} at {settings.Fps} fps while it's watched");
+                    Task firstFrame;
+                    lock (_sync) firstFrame = _next.Task;
+                    _ = ApplySavedAsync(device, firstFrame, run.Token);
                     try
                     {
                         await source.RunAsync(device.Path, settings, OnFrame, note => { lock (_sync) _note = note; }, run.Token);
@@ -475,8 +613,8 @@ public sealed class FfmpegWebcamSource : IWebcamSource
     }
 }
 
-/// <summary>The simulator's webcam: a dark test card with a light sweeping across, as PNG frames.</summary>
-public sealed class TestCardWebcamSource : IWebcamSource
+/// <summary>The simulator's webcam: a dark test card with a light sweeping across, as PNG frames; follows the pretend brightness.</summary>
+public sealed class TestCardWebcamSource(Func<int>? brightness = null) : IWebcamSource
 {
     public async Task RunAsync(string device, WebcamSettings s, Action<WebcamFrame> frame, Action<string> note, CancellationToken ct)
     {
@@ -493,7 +631,7 @@ public sealed class TestCardWebcamSource : IWebcamSource
                 var v = 12 + 20 * y / h;
                 if (x > w * 0.4 && x < w * 0.6 && y > h * 0.35) v = 70;
                 if (Math.Abs(x - sweep) < 6 && y > h * 0.1 && y < h * 0.3) v = 230;
-                pixels[y * w + x] = (byte)v;
+                pixels[y * w + x] = (byte)Math.Clamp(v + 2 * (brightness?.Invoke() ?? 0), 0, 255);
             }
             frame(new WebcamFrame(Png.EncodeGray8(w, h, pixels), "image/png", DateTime.UtcNow));
             await Task.Delay(TimeSpan.FromSeconds(1.0 / s.Fps), ct);

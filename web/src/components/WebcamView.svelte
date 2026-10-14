@@ -3,7 +3,7 @@
   import { act } from '../lib/state.svelte'
   import { mainView } from '../lib/inbox.svelte'
   import { liveStream, saveWebcamLayout, webcamLayout, webcamStreamUrl } from '../lib/webcam.svelte'
-  import type { WebcamSettings, WebcamStatus } from '../lib/types'
+  import type { WebcamControl, WebcamControls, WebcamSettings, WebcamStatus } from '../lib/types'
 
   // The webcam on the mini PC, full size: for watching the rig from indoors. It streams only while this tab shows
   // (or the popped-out window does); NOVA stops the webcam a little after nobody watches.
@@ -11,6 +11,35 @@
 
   let status = $state<WebcamStatus | null>(null)
   let src = $state<string | null>(null)
+
+  // The webcam's own controls (brightness, exposure, white balance…), beside the picture when opened.
+  let showControls = $state(false)
+  let controls = $state<WebcamControls | null>(null)
+  let dragging = $state<Record<string, number>>({}) // a slider's value while it's being moved
+  async function loadControls() {
+    try {
+      controls = await api.webcamControls()
+    } catch {
+      controls = null
+    }
+  }
+  $effect(() => {
+    if (active && showControls) loadControls()
+  })
+  async function setControl(c: WebcamControl, value: number) {
+    await act(() => api.setWebcamControl(c.name, value))
+    delete dragging[c.name]
+    await loadControls() // switching an automatic mode changes what else can be set
+  }
+  async function resetControls() {
+    await act(api.resetWebcamControls)
+    await loadControls()
+  }
+  const groups = $derived.by(() => {
+    const byGroup = new Map<string, WebcamControl[]>()
+    for (const c of controls?.controls ?? []) byGroup.set(c.group, [...(byGroup.get(c.group) ?? []), c])
+    return [...byGroup]
+  })
 
   async function refresh() {
     try {
@@ -82,8 +111,11 @@
     {/if}
     <button class="secondary" onclick={snapshot} title="Save a picture from the webcam">Snapshot</button>
     <button class="secondary" onclick={popOut} title="A small floating view that stays on screen over the other tabs">Pop out</button>
+    <button class="secondary" class:on={showControls} aria-pressed={showControls} onclick={() => (showControls = !showControls)}
+      title="The webcam's own settings: brightness, exposure, white balance…">Controls</button>
   </div>
 
+  <div class="body" class:with-controls={showControls}>
   <div class="view">
     <!-- The stream stays open while waiting or after a failure: NOVA keeps trying (a webcam plugged in starts by itself). -->
     {#if src}{#key src}<img class="frame" class:hidden={status?.state === 'Error' || status?.state === 'Waiting'} {src} alt="The webcam's live view" use:liveStream />{/key}{/if}
@@ -92,6 +124,43 @@
     {:else if status?.state === 'Waiting'}
       <p class="muted">Waiting for a webcam: plug one into the mini PC (a different USB port from the cameras). It starts by itself.</p>
     {/if}
+  </div>
+  {#if showControls}
+    <aside class="controls">
+      {#if controls?.error}
+        <p class="bad small">{controls.error}</p>
+      {:else if !controls}
+        <p class="muted small">Reading the webcam's controls…</p>
+      {:else if controls.controls.length === 0}
+        <p class="muted small">This webcam has no settings to change.</p>
+      {:else}
+        {#each groups as [group, list] (group)}
+          <h4>{group}</h4>
+          {#each list as c (c.name)}
+            <label class="control" class:inactive={c.inactive} title={c.inactive ? 'Set automatically now (turn the automatic mode off to set it)' : c.name}>
+              <span class="name">{c.label}</span>
+              {#if c.type === 'bool'}
+                <input type="checkbox" checked={c.value === 1} disabled={c.inactive} onchange={(e) => setControl(c, e.currentTarget.checked ? 1 : 0)} />
+              {:else if c.type === 'menu'}
+                <select value={c.value} disabled={c.inactive} onchange={(e) => setControl(c, Number(e.currentTarget.value))}>
+                  {#each c.menu as m (m.value)}<option value={m.value}>{m.label}</option>{/each}
+                </select>
+              {:else}
+                <span class="slider">
+                  <input type="range" min={c.min} max={c.max} step={c.step} value={dragging[c.name] ?? c.value} disabled={c.inactive}
+                    oninput={(e) => (dragging[c.name] = Number(e.currentTarget.value))}
+                    onchange={(e) => setControl(c, Number(e.currentTarget.value))} />
+                  <span class="mono value">{dragging[c.name] ?? c.value}</span>
+                </span>
+              {/if}
+            </label>
+          {/each}
+        {/each}
+        <button class="secondary reset" onclick={resetControls} title="Every control back to the webcam's own default">Reset to defaults</button>
+        <p class="muted small">Kept for this webcam and set again each time it starts.</p>
+      {/if}
+    </aside>
+  {/if}
   </div>
   {#if status?.note}<p class="warn small">{status.note}</p>{/if}
   <p class="muted small">
@@ -121,6 +190,73 @@
   }
   .head select {
     font-size: 12px;
+  }
+  .body {
+    flex: 1;
+    min-height: 0;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 10px;
+  }
+  .body.with-controls {
+    grid-template-columns: minmax(0, 1fr) 280px;
+  }
+  .controls {
+    overflow-y: auto;
+    overflow-x: hidden;
+    padding-right: 4px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    font-size: 12px;
+  }
+  .controls h4 {
+    margin: 6px 0 2px;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--muted);
+  }
+  .control {
+    display: grid;
+    grid-template-columns: 100px minmax(0, 1fr);
+    align-items: center;
+    gap: 8px;
+  }
+  .control.inactive {
+    opacity: 0.5;
+  }
+  .control select {
+    min-width: 0;
+    font-size: 12px;
+  }
+  .slider {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .slider input {
+    flex: 1;
+    min-width: 0;
+  }
+  .slider .value {
+    flex-shrink: 0;
+    min-width: 44px;
+    text-align: right;
+  }
+  .reset {
+    align-self: flex-start;
+    margin-top: 8px;
+    font-size: 12px;
+  }
+  button.on {
+    color: var(--accent);
+    border-color: var(--accent);
+  }
+  @media (max-width: 900px) {
+    .body.with-controls {
+      grid-template-columns: minmax(0, 1fr);
+    }
   }
   .view {
     flex: 1;

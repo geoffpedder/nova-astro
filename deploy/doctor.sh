@@ -177,6 +177,8 @@ fi
 section "Webcam view (optional)"
 if ! has ffmpeg; then note "ffmpeg isn't installed: the Webcam tab can't show a USB webcam" "$setup   (or: sudo pacman -S ffmpeg, sudo apt install ffmpeg)"
 else pass "ffmpeg $(ffmpeg -version 2>/dev/null | head -1 | awk '{print $3}')"; fi
+if ! has v4l2-ctl; then note "v4l-utils isn't installed: the webcam's controls (brightness, exposure…) can't be shown" "$setup   (or: sudo pacman -S v4l-utils, sudo apt install v4l-utils)"
+else pass "v4l2-ctl (the webcam's controls)"; fi
 cams=$(for d in /sys/class/video4linux/video*; do
   [ -f "$d/index" ] && [ "$(cat "$d/index")" = 0 ] && cat "$d/name"
 done 2>/dev/null | paste -sd, -)

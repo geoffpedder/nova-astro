@@ -612,6 +612,28 @@ export interface WebcamSettings {
   fps: number
 }
 
+/** One of the webcam's controls (V4L2): a slider, a switch or a choice; inactive ones are set automatically for now. */
+export interface WebcamControl {
+  name: string
+  label: string
+  group: string
+  type: 'int' | 'bool' | 'menu'
+  min: number
+  max: number
+  step: number
+  default: number
+  value: number
+  inactive: boolean
+  menu: { value: number; label: string }[]
+}
+
+export interface WebcamControls {
+  device: string | null
+  controls: WebcamControl[]
+  /** Why they can't be shown (v4l-utils missing, no webcam). */
+  error: string | null
+}
+
 export interface WebcamStatus {
   devices: { path: string; name: string }[]
   settings: WebcamSettings

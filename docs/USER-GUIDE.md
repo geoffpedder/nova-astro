@@ -461,14 +461,18 @@ A USB webcam on the mini PC, pointed at the rig, lets you watch it from indoors:
 the dew shield, the flat panel. Plug it in and open the **Webcam** tab: the live view, with the webcam, size and frame
 rate (640×480 at 5 fps is plenty), and **Snapshot** to save a picture. **Pop out** puts it in a small window that stays
 on screen over the other tabs (drag it by its title; ⤢ goes back to the tab, ✕ closes it); each browser remembers it.
-Night mode turns it red like the rest.
+Night mode turns it red like the rest. **Controls** opens the webcam's own settings beside the picture, as the webcam
+offers them: brightness, contrast, gain, exposure (turn *Auto exposure* to manual to set the time, useful at night),
+white balance, focus, power line frequency (match your mains, 50 or 60 Hz, to stop flicker under lights). They change
+straight away, are kept for that webcam and set again whenever it starts; **Reset to defaults** goes back.
 
 It costs next to nothing: the webcam runs only while the tab or the popped-out window is open (it stops 10 s after
 nobody watches), and its frames are passed on as the webcam compresses them, without converting. A few things help:
 - **Plug it into a different USB port from the cameras.** A webcam on the same USB 2 hub as a USB 2 guide camera (the
   ASI120MM Mini) can take bandwidth it needs, and guide frames come late or not at all.
 - **Tape over its light**, and for seeing anything in the dark use one with infrared night vision, or a dim red lamp.
-- It needs `ffmpeg` (setup installs it; `nova doctor` checks it and lists the webcams it sees).
+- It needs `ffmpeg`, and `v4l-utils` for the controls (setup installs both; `nova doctor` checks them and lists the
+  webcams it sees).
 
 ## Notifications
 

@@ -60,10 +60,11 @@
   color: var(--muted);
   opacity: 1;
 }
-/* Colour emoji icons (📶 📡 📌 🔒…) keep their own colours whatever the text colour, so they're turned red like the
-   pictures. Put them in a span class="emoji". */
+/* Colour emoji icons (📶 📡 📌 🔒…) keep their own colours whatever the text colour, so in night mode each is drawn as
+   its outline's shadow in the text's red instead (the glyph itself made see-through). Put them in a span class="emoji". */
 :root[data-theme='night'] .emoji {
-  filter: grayscale(1) sepia(1) saturate(6) hue-rotate(-50deg) brightness(0.7);
+  color: transparent;
+  text-shadow: 0 0 0 var(--text);
 }
 :root[data-theme='night'] img.frame,
 :root[data-theme='night'] .viewport > img {

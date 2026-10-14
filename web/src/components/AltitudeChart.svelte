@@ -38,13 +38,17 @@
     }),
   )
 
+  // Hour labels every 2 hours, or every 4, 6 or 12 when the chart is too narrow for them not to touch.
+  const LabelSpace = 34 // px a "00:00" label needs (about 28) and a gap
   const hours = $derived.by(() => {
     const ticks: { x: number; text: string }[] = []
+    const perHour = (W - PAD.left - PAD.right) / Math.max(1, (t1 - t0) / 3600_000)
+    const every = [2, 4, 6, 12].find((h) => h * perHour >= LabelSpace) ?? 12
     const start = new Date(t0)
     start.setMinutes(0, 0, 0)
     for (let t = start.getTime() + 3600_000; t < t1; t += 3600_000) {
       const d = new Date(t)
-      if (d.getHours() % 2 === 0) ticks.push({ x: x(t), text: d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) })
+      if (d.getHours() % every === 0) ticks.push({ x: x(t), text: d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) })
     }
     return ticks
   })

@@ -131,13 +131,63 @@ public class WebcamTests : IDisposable
     }
 
     [Fact]
-    public async Task NoWebcamIsAnError()
+    public async Task WaitsForAWebcamToBePluggedInAndCopesWithFailures()
     {
         var options = Opts.Create(new NovaOptions { Backend = "Indi", ConfigDirectory = _folder });
         var log = new ActivityLog(new NullHubContext(), NullLogger<ActivityLog>.Instance);
-        await using var webcam = new WebcamService(options, log, Path.Combine(_folder, "no-sys"));
-        Assert.Null(await webcam.SnapshotAsync(new CancellationTokenSource(TimeSpan.FromSeconds(1)).Token));
-        Assert.Equal("Error", webcam.Status.State);
+        var sys = Path.Combine(_folder, "sys");
+        var source = new FakeSource();
+        await using var webcam = new WebcamService(options, log, sys) { Webcams = source, RetryAfter = TimeSpan.FromMilliseconds(100) };
+
+        // Watched with nothing plugged in: it waits, saying so.
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+        var frames = webcam.Watch(cts.Token).GetAsyncEnumerator(cts.Token);
+        var first = frames.MoveNextAsync().AsTask();
+        await Task.Delay(300, cts.Token);
+        Assert.Equal("Waiting", webcam.Status.State);
         Assert.Contains("No webcam found", webcam.Status.Error);
+        Assert.False(first.IsCompleted);
+
+        // Plugged in: it starts by itself and the waiting viewer gets frames.
+        var dir = Directory.CreateDirectory(Path.Combine(sys, "video0")).FullName;
+        File.WriteAllText(Path.Combine(dir, "name"), "USB Camera");
+        File.WriteAllText(Path.Combine(dir, "index"), "0");
+        Assert.True(await first.WaitAsync(cts.Token));
+        Assert.Equal("Streaming", webcam.Status.State);
+        Assert.Null(webcam.Status.Error);
+        await frames.DisposeAsync();
+    }
+
+    [Fact]
+    public async Task TriesAgainAfterTheWebcamFails()
+    {
+        var options = Opts.Create(new NovaOptions { Backend = "Simulator", ConfigDirectory = _folder });
+        var log = new ActivityLog(new NullHubContext(), NullLogger<ActivityLog>.Instance);
+        var flaky = new FlakySource();
+        await using var webcam = new WebcamService(options, log, Path.Combine(_folder, "no-sys"))
+        {
+            TestCard = flaky, RetryAfter = TimeSpan.FromMilliseconds(100),
+        };
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+        // The first start fails ("busy"); the next works.
+        var frame = await webcam.Watch(cts.Token).FirstAsync(cts.Token);
+        Assert.NotNull(frame);
+        Assert.Equal(2, flaky.Starts);
+        Assert.Equal("Streaming", webcam.Status.State);
+    }
+
+    private sealed class FlakySource : IWebcamSource
+    {
+        public int Starts;
+
+        public async Task RunAsync(string device, WebcamSettings settings, Action<WebcamFrame> frame, Action<string> note, CancellationToken ct)
+        {
+            if (Interlocked.Increment(ref Starts) == 1) throw new InvalidOperationException("/dev/video0 is busy");
+            while (!ct.IsCancellationRequested)
+            {
+                frame(new WebcamFrame([0xFF, 0xD8, 0xFF, 0xD9], "image/jpeg", DateTime.UtcNow));
+                await Task.Delay(20, ct);
+            }
+        }
     }
 }

@@ -63,7 +63,7 @@
   <div class="head">
     <h2>Webcam</h2>
     {#if status}
-      <span class="badge {status.state === 'Streaming' ? 'ok' : status.state === 'Error' ? 'danger' : 'muted'}">{status.state}</span>
+      <span class="badge {status.state === 'Streaming' ? 'ok' : status.state === 'Error' ? 'danger' : status.state === 'Waiting' ? 'warn' : 'muted'}">{status.state}</span>
       {#if status.fps != null}<span class="muted small mono">{status.fps.toFixed(1)} fps</span>{/if}
     {/if}
     <span class="gap"></span>
@@ -85,10 +85,12 @@
   </div>
 
   <div class="view">
+    <!-- The stream stays open while waiting or after a failure: NOVA keeps trying (a webcam plugged in starts by itself). -->
+    {#if src}{#key src}<img class="frame" class:hidden={status?.state === 'Error' || status?.state === 'Waiting'} {src} alt="The webcam's live view" use:liveStream />{/key}{/if}
     {#if status?.state === 'Error'}
-      <p class="bad">{status.error}</p>
-    {:else if src}
-      {#key src}<img class="frame" {src} alt="The webcam's live view" use:liveStream />{/key}
+      <p class="bad">{status.error}<br /><span class="muted small">Trying again every couple of seconds.</span></p>
+    {:else if status?.state === 'Waiting'}
+      <p class="muted">Waiting for a webcam: plug one into the mini PC (a different USB port from the cameras). It starts by itself.</p>
     {/if}
   </div>
   {#if status?.note}<p class="warn small">{status.note}</p>{/if}
@@ -134,6 +136,13 @@
     max-width: 100%;
     max-height: 100%;
     object-fit: contain;
+  }
+  .view img.hidden {
+    display: none;
+  }
+  .view p {
+    padding: 16px;
+    text-align: center;
   }
   .small {
     font-size: 12px;

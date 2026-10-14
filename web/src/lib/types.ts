@@ -617,7 +617,8 @@ export interface WebcamStatus {
   settings: WebcamSettings
   /** The webcam in use (or that would be). */
   device: string | null
-  state: 'Idle' | 'Starting' | 'Streaming' | 'Error'
+  /** Waiting: watched, but no webcam plugged in yet (it starts by itself when one is). Error: it tries again every couple of seconds. */
+  state: 'Idle' | 'Waiting' | 'Starting' | 'Streaming' | 'Error'
   viewers: number
   fps: number | null
   error: string | null

@@ -14,7 +14,8 @@ public sealed record WebcamSettings(string? Device = null, int Width = 640, int 
 /// <summary>One frame, as the webcam sent it (JPEG; the test card is PNG).</summary>
 public sealed record WebcamFrame(byte[] Data, string ContentType, DateTime Utc);
 
-/// <param name="State">"Idle" (nobody watching), "Starting", "Streaming" or "Error".</param>
+/// <param name="State">"Idle" (nobody watching), "Waiting" (watched, but no webcam plugged in yet), "Starting", "Streaming"
+/// or "Error" (it tries again every couple of seconds while watched).</param>
 /// <param name="Note">Something worth knowing while it streams, e.g. that it has to transcode.</param>
 public sealed record WebcamStatus(
     IReadOnlyList<WebcamDevice> Devices, WebcamSettings Settings, string? Device, string State, int Viewers,
@@ -233,43 +234,73 @@ public sealed class WebcamService : IAsyncDisposable
         return _settings.Device is { } d ? devices.FirstOrDefault(x => x.Path == d) : devices.FirstOrDefault();
     }
 
+    /// <summary>How long to wait before looking again for a webcam, or trying again after it failed or was unplugged.</summary>
+    public TimeSpan RetryAfter { get; set; } = TimeSpan.FromSeconds(2);
+
+    /// <summary>
+    /// Runs the capture for as long as anyone watches: waits for a webcam to be plugged in, starts it, and starts again
+    /// if it's unplugged or ffmpeg stops, so plugging one in (or back in) just works.
+    /// </summary>
     private void StartLocked()
     {
         var run = new CancellationTokenSource();
         _run = run;
         (_latest, _error, _note) = (null, null, null);
         _recent.Clear();
-        var device = Chosen();
-        _device = device?.Path;
-        if (device is null)
-        {
-            (_state, _error) = ("Error", "No webcam found: plug one into the mini PC (a different USB port from the cameras)");
-            return;
-        }
         _state = "Starting";
-        var settings = _settings;
-        var source = device.Path == "sim" ? TestCard : Webcams;
         _ = Task.Run(async () =>
         {
-            try
+            string? lastProblem = null;
+            while (!run.IsCancellationRequested)
             {
-                await source.RunAsync(device.Path, settings, OnFrame, note => { lock (_sync) _note = note; }, run.Token);
-                lock (_sync) if (_run == run && _state != "Error") _state = "Idle";
-            }
-            catch (OperationCanceledException) when (run.IsCancellationRequested)
-            {
-            }
-            catch (Exception ex)
-            {
+                WebcamDevice? device;
+                WebcamSettings settings;
                 lock (_sync)
                 {
                     if (_run != run) return;
-                    (_state, _error) = ("Error", ex.Message);
+                    device = Chosen();
+                    settings = _settings;
+                    _device = device?.Path;
+                    if (device is null)
+                        (_state, _error) = ("Waiting", "No webcam found yet: plug one into the mini PC (a different USB port from the cameras)");
+                    else if (_state != "Streaming")
+                        (_state, _error) = ("Starting", null);
                 }
-                _log.Warn($"Webcam {device.Name}: {ex.Message}");
+                if (device is not null)
+                {
+                    var source = device.Path == "sim" ? TestCard : Webcams;
+                    if (lastProblem is null) _log.Info($"Webcam {device.Name}: streaming {settings.Width}×{settings.Height} at {settings.Fps} fps while it's watched");
+                    try
+                    {
+                        await source.RunAsync(device.Path, settings, OnFrame, note => { lock (_sync) _note = note; }, run.Token);
+                        lastProblem = null; // it ran and stopped (unplugged?): look again
+                    }
+                    catch (OperationCanceledException) when (run.IsCancellationRequested)
+                    {
+                        return;
+                    }
+                    catch (Exception ex)
+                    {
+                        lock (_sync)
+                        {
+                            if (_run != run) return;
+                            (_state, _error) = ("Error", ex.Message);
+                        }
+                        // Said once, not every couple of seconds while it keeps failing the same way.
+                        if (ex.Message != lastProblem) _log.Warn($"Webcam {device.Name}: {ex.Message}");
+                        lastProblem = ex.Message;
+                    }
+                }
+                try
+                {
+                    await Task.Delay(RetryAfter, run.Token);
+                }
+                catch (OperationCanceledException)
+                {
+                    return;
+                }
             }
         });
-        _log.Info($"Webcam {device.Name}: streaming {settings.Width}×{settings.Height} at {settings.Fps} fps while it's watched");
 
         void OnFrame(WebcamFrame frame)
         {
@@ -278,7 +309,7 @@ public sealed class WebcamService : IAsyncDisposable
             {
                 if (_run != run) return;
                 _latest = frame;
-                _state = "Streaming";
+                (_state, _error) = ("Streaming", null);
                 _recent.Enqueue(frame.Utc);
                 while (_recent.Count > 20) _recent.Dequeue();
                 signal = _next;
@@ -292,7 +323,7 @@ public sealed class WebcamService : IAsyncDisposable
     {
         _run?.Cancel();
         _run = null;
-        _state = _error is null ? "Idle" : _state;
+        (_state, _error) = ("Idle", null);
         _latest = null;
         _recent.Clear();
     }

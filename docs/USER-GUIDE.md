@@ -112,8 +112,9 @@ frame from an earlier run that hasn't been copied off yet. The Image tab shows i
 star count, HFR, FWHM and statistics underneath; **Names** labels the stars once the frame is solved, and
 **Header** shows the FITS header. **Expose** at the start of the Image tab's toolbar takes a frame with the Camera
 panel's settings (exposure, Save FITS, Loop) and becomes **Abort** while it exposes, handy with the panels folded
-away. **Pop out** keeps the latest image in a small window over the other tabs, following each new frame (drag it by
-its title, resize it from its bottom-right corner; ⤢ goes back to the Image tab, ✕ closes it).
+away. **Pop out** opens the latest image in a small window that stays on screen whichever tab is showing, following each
+new frame (drag it by its title, resize it from its bottom-right corner; ⤢ goes to the Image tab, ✕ or **Pop out**
+again closes it).
 
 **Default gain and offset:** camera drivers start with their own (the INDI ZWO driver's gain is 200). A ZWO imaging
 camera gets **gain 100, offset 50** from NOVA each time it connects: at 100 the newer ZWO sensors (ASI2600, ASI533
@@ -462,8 +463,8 @@ Three ways to use [Stellarium](https://stellarium.org/) on the computer you brow
 
 A USB webcam on the mini PC, pointed at the rig, lets you watch it from indoors: the mount turning, a cable snagging,
 the dew shield, the flat panel. Plug it in and open the **Webcam** tab: the live view, with the webcam, size and frame
-rate (640×480 at 5 fps is plenty), and **Snapshot** to save a picture. **Pop out** puts it in a small window that stays
-on screen over the other tabs (drag it by its title, resize it from its bottom-right corner; ⤢ goes back to the tab, ✕ closes it); each browser remembers it.
+rate (640×480 at 5 fps is plenty), and **Snapshot** to save a picture. **Pop out** opens it in a small window that stays
+on screen whichever tab is showing (drag it by its title, resize it from its bottom-right corner; ⤢ goes to the tab, ✕ or **Pop out** again closes it); each browser remembers it.
 Night mode turns it red like the rest. **Controls** opens the webcam's own settings beside the picture, as the webcam
 offers them: brightness, contrast, gain, exposure (turn *Auto exposure* to manual to set the time, useful at night),
 white balance, focus, power line frequency (match your mains, 50 or 60 Hz, to stop flicker under lights). They change

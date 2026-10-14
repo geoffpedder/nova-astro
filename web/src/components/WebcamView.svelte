@@ -1,7 +1,6 @@
 <script lang="ts">
   import { api } from '../lib/api'
   import { act } from '../lib/state.svelte'
-  import { mainView } from '../lib/inbox.svelte'
   import { liveStream, saveWebcamLayout, webcamLayout, webcamStreamUrl } from '../lib/webcam.svelte'
   import type { WebcamControl, WebcamControls, WebcamSettings, WebcamStatus } from '../lib/types'
 
@@ -81,10 +80,10 @@
     a.click()
   }
 
+  // A floating window over the tabs, as well as this view; pressed again it closes.
   function popOut() {
-    webcamLayout.popped = true
+    webcamLayout.popped = !webcamLayout.popped
     saveWebcamLayout()
-    mainView.view = 'image'
   }
 </script>
 
@@ -110,7 +109,7 @@
       </select>
     {/if}
     <button class="secondary" onclick={snapshot} title="Save a picture from the webcam">Snapshot</button>
-    <button class="secondary" onclick={popOut} title="A small floating view that stays on screen over the other tabs">Pop out</button>
+    <button class="secondary" class:on={webcamLayout.popped} aria-pressed={webcamLayout.popped} onclick={popOut} title="A small floating view that stays on screen over the other tabs">Pop out</button>
     <button class="secondary" class:on={showControls} aria-pressed={showControls} onclick={() => (showControls = !showControls)}
       title="The webcam's own settings: brightness, exposure, white balance…">Controls</button>
   </div>

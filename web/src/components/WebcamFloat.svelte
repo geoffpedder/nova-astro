@@ -3,8 +3,8 @@
   import { liveStream, saveWebcamLayout, webcamLayout, webcamStreamUrl } from '../lib/webcam.svelte'
   import FloatWindow from './FloatWindow.svelte'
 
-  // The webcam popped out: a small window over every tab (but the Webcam tab itself).
-  const visible = $derived(webcamLayout.popped && mainView.view !== 'webcam')
+  // The webcam popped out: a small window over every tab.
+  const visible = $derived(webcamLayout.popped)
   let src = $state<string | null>(null)
   $effect(() => {
     src = visible ? webcamStreamUrl() : null

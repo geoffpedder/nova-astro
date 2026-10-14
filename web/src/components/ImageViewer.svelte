@@ -460,7 +460,9 @@
     </button>
     <button
       class="secondary small"
-      onclick={() => ((imageFloat.layout.popped = true), imageFloat.save())}
+      class:on={imageFloat.layout.popped}
+      aria-pressed={imageFloat.layout.popped}
+      onclick={() => ((imageFloat.layout.popped = !imageFloat.layout.popped), imageFloat.save())}
       title="A small floating view of the latest image that stays on screen over the other tabs"
     >
       Pop out

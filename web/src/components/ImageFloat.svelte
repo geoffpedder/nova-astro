@@ -6,9 +6,9 @@
   import type { PreviewMode } from '../lib/types'
   import FloatWindow from './FloatWindow.svelte'
 
-  // The latest image popped out: just the picture, over every tab but the Image tab, following each new frame.
+  // The latest image popped out: just the picture, over every tab, following each new frame.
   const layout = imageFloat.layout
-  const visible = $derived(layout.popped && mainView.view !== 'image')
+  const visible = $derived(layout.popped)
   const image = $derived(nova.image)
 
   // Shown as the Image tab shows it (its colour and stretch choices, read again whenever it reappears or a frame comes).

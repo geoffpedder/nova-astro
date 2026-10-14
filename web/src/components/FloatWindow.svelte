@@ -84,8 +84,10 @@
 
 <svelte:window bind:innerWidth={viewWidth} bind:innerHeight={viewHeight} />
 
-<div class="float panel" bind:this={box} bind:offsetWidth={boxWidth} bind:offsetHeight={boxHeight}
+<!-- The shadow is on the outside, so it follows the cut corner clipped off the window inside. -->
+<div class="float" bind:this={box} bind:offsetWidth={boxWidth} bind:offsetHeight={boxHeight}
   style:right="{shownRight}px" style:bottom="{shownBottom}px" style:width="{layout.width}px">
+<div class="window panel">
   <div class="bar" role="presentation" onpointerdown={down} onpointermove={move} onpointerup={up} onpointercancel={up}>
     <span class="title">{title}</span>
     <span class="gap"></span>
@@ -95,15 +97,32 @@
   <div class="content">{@render children()}</div>
   <div class="grip" role="presentation" title="Drag to resize" onpointerdown={resizeDown} onpointermove={resizeMove} onpointerup={resizeUp} onpointercancel={resizeUp}></div>
 </div>
+</div>
 
 <style>
   .float {
     position: fixed;
     z-index: 35; /* under dialogs and their backdrop (40 and up) */
     max-width: calc(100vw - 16px);
+    filter: drop-shadow(0 8px 18px rgb(0 0 0 / 0.45));
+    pointer-events: none; /* the clipped-off corner lets clicks through too */
+  }
+  /* Over pictures and the sky chart there's no plain background to paint the cut corner in (as panels do), so it's
+     clipped off, see-through, with just the line along the cut. */
+  .window {
     padding: 0;
     overflow: hidden;
-    box-shadow: 0 8px 24px rgb(0 0 0 / 0.45);
+    clip-path: polygon(0 0, calc(100% - var(--cut)) 0, 100% var(--cut), 100% 100%, 0 100%);
+    pointer-events: auto;
+  }
+  .window::after {
+    background: linear-gradient(
+      to top right,
+      transparent calc(50% - 1.2px),
+      var(--cut-line) calc(50% - 1.2px),
+      var(--cut-line) 50%,
+      transparent 50%
+    );
   }
   .bar {
     display: flex;

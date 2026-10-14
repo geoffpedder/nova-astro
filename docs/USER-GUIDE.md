@@ -46,13 +46,15 @@ The checklist goes away once the steps are done. **Setup** in the header brings 
 
 - **Left column:** the equipment panels (Equipment, Mount, Camera, Focuser, Filter wheel, Rotator, Flat
   panel, Guider). Click a panel's title to fold it away; NOVA remembers.
-- **Main area:** the **Image**, **Sequence**, **Targets**, **Polar alignment**, **PHD2** and **Activity** tabs.
+- **Main area:** the **Image**, **Sequence**, **Targets**, **Polar alignment**, **PHD2** (or **Guiding**, with NOVA's
+  own guider), **Webcam** and **Activity** tabs.
   Underneath, one line shows the latest activity (yellow for a warning, red for an error); click it for the
   **Activity** tab, the whole log, with *Warnings and errors only* to pick out problems. A dot on the tab means a
   warning or error came in since you last looked. Above the log, **Mini PC** shows its CPU use (with load and
   temperature), memory in use (and NOVA's share), free space on the image disk (and the USB drive when frames go
   there) and how long it's been up; the bars turn yellow at 75% and red at 90%.
-- **Header:** the connection, the network, a running sequence's progress (from any tab), **Setup**,
+- **Header:** the connection, the network (click it for the **Network** dialog and the
+  [Wi-Fi hotspot](#wi-fi-hotspot-no-wi-fi-at-the-site)), a running sequence's progress (from any tab), **Setup**,
   **Full screen**, **Night** (everything in red, to keep your night vision) and ⏻ (restart or shut down the
   mini PC).
 
@@ -61,7 +63,13 @@ a sequence. Open NOVA from as many browsers as you like; they all show the same 
 
 **On a tablet:** **◂ Hide panels** (top of the panel column) folds the column away to a strip down the left edge;
 click the strip to bring it back. Each browser remembers its own layout. Pinch with two fingers to zoom the image and the
-Targets tab's sky chart.
+Targets tab's sky chart. To open NOVA like an app, add it to the home screen (Safari: Share → Add to Home Screen); it
+gets NOVA's star icon.
+
+**Pop-outs:** the Webcam tab, the Image tab and the guiding graph (Guiding tab, or under the Guider panel's graph)
+each have **Pop out**, which keeps a small window of it on screen whichever tab is showing. Drag one by its title,
+resize it from its bottom-right corner; ⤢ opens its tab, ✕ or **Pop out** again closes it. Each browser remembers where
+they are, and they stay inside the browser window when it's made smaller.
 
 ## Equipment and drivers
 

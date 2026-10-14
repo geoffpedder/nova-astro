@@ -19,11 +19,14 @@ network, with nothing to install there. It's inspired by [N.I.N.A.](https://nigh
 - **Sequences:** a whole night unattended, for several targets: centring, autofocus with per-filter offsets,
   guiding, dithering, meridian flips, flats, the camera's rotation matched for each target, and a stop at dawn.
 - **Focusing** (V-curve autofocus), **polar alignment** (three-point, or with the camera on the pole),
-  **guiding** through PHD2 (which runs on the mini PC and shows in a tab) or NOVA's own guider, a **flats wizard**, and a
-  **Stellarium** link.
+  **guiding** through PHD2 (which runs on the mini PC and shows in a tab) or NOVA's own guider (with predictive PEC
+  for strain-wave mounts, a guiding assistant and PHD2-style logs), a **flats wizard**, and a **Stellarium** link.
+- **Watch the rig from indoors** with a USB webcam on the mini PC, and pop the webcam, the latest image or the guiding
+  graph out into small windows that stay on screen whichever tab you're on.
 - **Built for the field:** no internet needed, a red night mode, and work that carries on when your laptop
   sleeps or the Wi-Fi drops, because everything runs on the mini PC. Optional messages to your phone when a
-  sequence finishes or needs you. Frames can be saved straight to a USB drive.
+  sequence finishes or needs you. Frames can be saved straight to a USB drive. With no Wi-Fi at the site, the mini PC
+  starts its own hotspot so a phone or tablet can still reach it.
 - **Works on a tablet:** the panels fold away, and the image and sky chart pinch to zoom.
 
 ## Screenshots

@@ -12,9 +12,12 @@ What changed in each release. The newest is first. A release's section here beco
   http://10.42.0.1:5000. While nobody is on it, it tries Wi-Fi again every 5 minutes; **Start hotspot now** tries it
   out (back to Wi-Fi in 3 minutes if nobody joins) and **Back to Wi-Fi** ends it. Works with Ubuntu Server's
   netplan (systemd-networkd, with hostapd, which setup now installs), NetworkManager and iwd; `nova doctor` checks it.
+- **An icon:** a four-pointed star in the browser tab, and for an iPhone or iPad home screen (Share → Add to Home Screen).
 
 ### Fixed
 - A popped-out window (webcam, image, guiding) no longer ends up off screen when the browser window is made smaller: it stays inside, and goes back where you put it when the window grows again.
+- The cut corner of dialogs and pop-outs is see-through (it was a patch of the page's colour over the dimmed page or a
+  picture), and the FITS header, driver settings and map dialogs open above any pop-outs.
 
 ## [0.3.7] - 2026-10-13
 

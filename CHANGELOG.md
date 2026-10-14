@@ -4,6 +4,8 @@ What changed in each release. The newest is first. A release's section here beco
 
 ## [Unreleased]
 
+## [0.3.8] - 2026-10-14
+
 ### Added
 - **Wi-Fi hotspot fallback:** when the mini PC finds no Wi-Fi to join for 90 seconds, it starts its own network
   (name and password set in the new **Network** dialog: click the network name in the header), reachable at
@@ -255,7 +257,8 @@ The first release: ready-made downloads for 64-bit PCs (`linux-x64`) and the Ras
 - **Stellarium:** take its selection, act as its telescope, and turn its Oculars frame to the camera's angle.
 - **The mini PC:** restart and shut down from the page, network status, night mode.
 
-[Unreleased]: https://github.com/geoffpedder/nova-astro/compare/v0.3.7...HEAD
+[Unreleased]: https://github.com/geoffpedder/nova-astro/compare/v0.3.8...HEAD
+[0.3.8]: https://github.com/geoffpedder/nova-astro/releases/tag/v0.3.8
 [0.3.7]: https://github.com/geoffpedder/nova-astro/releases/tag/v0.3.7
 [0.3.6]: https://github.com/geoffpedder/nova-astro/releases/tag/v0.3.6
 [0.3.5]: https://github.com/geoffpedder/nova-astro/releases/tag/v0.3.5

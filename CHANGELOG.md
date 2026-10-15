@@ -4,6 +4,8 @@ What changed in each release. The newest is first. A release's section here beco
 
 ## [Unreleased]
 
+## [0.3.10] - 2026-10-15
+
 ### Added
 - **Focuser backlash for every move:** the autofocus settings' backlash now applies to all focuser moves (filter
   offsets, In/Out, Go to and saved positions, not just autofocus), and *Final approach* chooses whether moves finish
@@ -313,7 +315,8 @@ The first release: ready-made downloads for 64-bit PCs (`linux-x64`) and the Ras
 - **Stellarium:** take its selection, act as its telescope, and turn its Oculars frame to the camera's angle.
 - **The mini PC:** restart and shut down from the page, network status, night mode.
 
-[Unreleased]: https://github.com/geoffpedder/nova-astro/compare/v0.3.9...HEAD
+[Unreleased]: https://github.com/geoffpedder/nova-astro/compare/v0.3.10...HEAD
+[0.3.10]: https://github.com/geoffpedder/nova-astro/releases/tag/v0.3.10
 [0.3.9]: https://github.com/geoffpedder/nova-astro/releases/tag/v0.3.9
 [0.3.8]: https://github.com/geoffpedder/nova-astro/releases/tag/v0.3.8
 [0.3.7]: https://github.com/geoffpedder/nova-astro/releases/tag/v0.3.7

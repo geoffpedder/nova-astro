@@ -115,6 +115,28 @@ public class MeridianFlipTests : IDisposable
     }
 
     [Fact]
+    public async Task SaysTheFlipWaitsForTheFrameRunningThen()
+    {
+        // A 6 s frame started 1 s before the meridian ends 5 s past it: after the flip time (2 s) but within the limit
+        // (30 s), so it's taken and the flip comes when it ends, which is what the status says.
+        var (_, sequencer, target) = await SetUpAsync(secondsEast: 1);
+        string? note = null;
+        DateTime? due = null, latest = null;
+        Assert.True(sequencer.Start(Plan(target, exposure: 6, count: 2, flipAfterSeconds: 2, latestSeconds: 30), out var error), error);
+
+        var status = await WaitForEnd(sequencer, s =>
+        {
+            if (s.FlipNote is { } n && note is null) (note, due, latest) = (n, s.FlipDueUtc, s.FlipLatestUtc);
+        });
+        Assert.Equal("Done", status.State);
+        Assert.Equal(1, status.Flips);
+        Assert.NotNull(note);
+        Assert.StartsWith("after this frame", note);
+        Assert.True(latest > due, $"latest {latest:HH:mm:ss} should be after the flip {due:HH:mm:ss}");
+        Assert.Null(status.FlipDueUtc); // flipped: nothing due now
+    }
+
+    [Fact]
     public async Task LeavesAMountOnTheNormalSideAlone()
     {
         // Already past the meridian when the mount went there: it's on the East side, so no flip is due.

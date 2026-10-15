@@ -341,11 +341,13 @@
   }
   /* The frame gets what the window has left after the header, tabs, toolbar and graph (at least 260 px); in a short
      window the tab scrolls rather than squeezing the frame under the graph. */
+  /* The frame takes whatever height the rest leaves, so the tab fits the window without scrolling (it scrolls only
+     when the window is too short for a 260 px frame). */
   .main {
     display: flex;
     gap: 12px;
-    flex: none;
-    height: clamp(260px, calc(100vh - 460px), 75vh);
+    flex: 1 1 0;
+    min-height: 260px;
   }
   .frame {
     flex: 1;

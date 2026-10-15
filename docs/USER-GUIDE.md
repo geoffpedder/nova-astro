@@ -295,8 +295,9 @@ PHD2 stays the default until it has proven itself under the sky, and you can swi
   **Use** turns them off; **Clear** deletes them. Taking them again after a few months does no harm, as sensors gain
   hot pixels with age.
 - **Guiding settings** has those numbers, Dec corrections both ways, one way or off, the calibration step (0 works it
-  out from the Guide scope optics and the mount's guide rate) and *Reverse Dec after flip*, for the few mounts whose
-  Dec pulses change sense after a flip.
+  out from the Guide scope optics and the mount's guide rate) and *Reverse Dec after flip*, for mounts whose Dec
+  pulses change sense after a flip. ZWO's AM mounts need it, so it's turned on for them; if Dec runs away after a
+  flip on another mount, turn it on there too.
 
 **The Guiding tab** (it takes the PHD2 tab's place while NOVA is the guider) shows it all full size: the whole guide
 frame with the guide star (green square, the cross where it should be) and the stars averaged with it (yellow rings,
@@ -412,10 +413,12 @@ The **Sequence** tab runs a night's imaging unattended, for one target or severa
    row or cycled (L, R, G, B, L…, so clouds later still leave a full set). Saved to `<night>/<target>/` in the
    image folder.
 3. **Between frames:** dither every N frames (waits for PHD2 to settle); refocus when the filter changes, the
-   temperature moves, HFR gets worse or every N frames; restart guiding if it stopped.
+   temperature moves (2 °C by default), HFR gets worse or every N frames; restart guiding if it stopped.
 4. **Meridian flip** (German equatorial mounts): once the target is N minutes past the meridian, stop
    guiding, GoTo the target again so the mount changes sides, re-centre, optionally refocus, and guide again.
-   A frame that would run past the latest time isn't started; the sequence waits for the flip. If the mount
+   A frame that would run past the latest time isn't started; the sequence waits for the flip. Flips happen between
+   frames, so one due while a frame runs comes when that frame ends: the Sequence tab shows when it will actually be
+   ("flip ≈ 22:31, after this frame (latest 22:41)"), and the log warns about 5 minutes ahead. If the mount
    stays on the same side (some track past the meridian until their own limit), it retries every few minutes
    and stops after three tries.
 5. **End:** stop guiding, optionally take flats, warm the camera gradually, park.
@@ -429,7 +432,8 @@ where the Sun never gets 18° down (short summer nights far north) it uses nauti
 **Pause** (after the current frame), **Resume**, **Skip row** and **Abort** work while it runs. A target ends
 when its frames are done, at its *stop at* time (no frame is started that would run past it), or when it
 sinks below its minimum altitude. One whose window has passed, or that won't rise in time, is skipped.
-Frame counts can be changed while it runs. Sequences are saved by name in `~/.config/nova/sequences/`.
+Frame counts, *Refocus when* and *At the end* (including when the night ends) can be changed while it runs; the
+rest is fixed once it starts. Sequences are saved by name in `~/.config/nova/sequences/`.
 
 ## Flats
 

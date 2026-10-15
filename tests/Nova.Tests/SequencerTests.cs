@@ -318,4 +318,22 @@ public class LiveCountTests : IDisposable
         Assert.True(sequencer.Status!.Rows[0].Done <= done + 1); // at most the frame already under way
         Assert.Equal(2, sequencer.Status.Rows[1].Done);
     }
+
+    [Fact]
+    public async Task RefocusAndTheEndCanChangeWhileItRuns()
+    {
+        var sequencer = await StartAsync(new SequenceRow("L", 0.2, 200));
+        await WaitFor(() => sequencer.Status?.FramesDone >= 1, "the first frame");
+
+        // Stop at a set time and park at the end, decided after it started.
+        var stopAt = DateTime.Now.AddHours(3).ToString("HH:mm");
+        sequencer.UpdateLiveSettings(new SequenceAutofocus(TemperatureChange: 3), new SequenceEnd(StopAt: stopAt, Park: true));
+        Assert.Equal($"the night's stop time ({stopAt})", sequencer.Status!.NightEnd);
+        Assert.Throws<ArgumentException>(() => sequencer.UpdateLiveSettings(new SequenceAutofocus(EveryFrames: -1), new SequenceEnd()));
+
+        sequencer.SetCount(0, 0, sequencer.Status!.Rows[0].Done); // finish now
+        await WaitFor(() => !sequencer.Running, "the end");
+        Assert.Equal("Done", sequencer.Status!.State);
+        Assert.Throws<InvalidOperationException>(() => sequencer.UpdateLiveSettings(new SequenceAutofocus(), new SequenceEnd()));
+    }
 }

@@ -34,7 +34,7 @@
           ? { everyFrames: d.ditherEveryFrames, pixels: d.ditherPixels, raOnly: false, settlePixels: d.settlePixels, settleSeconds: d.settleSeconds, settleTimeout: d.settleTimeout }
           : { everyFrames: 3, pixels: 5, raOnly: false, settlePixels: 1.5, settleSeconds: 10, settleTimeout: 60 }
       })(),
-      autofocus: { afterFilterChange: false, temperatureChange: 1, hfrIncreasePercent: 15, everyFrames: null },
+      autofocus: { afterFilterChange: false, temperatureChange: 2, hfrIncreasePercent: 15, everyFrames: null },
       end: { stopGuiding: true, warmCamera: false, park: false, stopAt: 'AstronomicalDawn' },
       meridianFlip: blankFlip(),
     }
@@ -196,6 +196,22 @@
       plan = blank()
   }
 
+  // While it runs, the refocus triggers and the end of the night can change too: sent a moment after each edit.
+  let liveSent = ''
+  let liveTimer: ReturnType<typeof setTimeout> | undefined
+  $effect(() => {
+    const live = JSON.stringify({ autofocus: plan.autofocus, end: plan.end })
+    if (!running || liveSent === '') {
+      liveSent = live // what it starts with (or what this page showed when it opened): only edits after that are sent
+      return
+    }
+    if (live === liveSent) return
+    clearTimeout(liveTimer)
+    liveTimer = setTimeout(async () => {
+      if (await act(() => api.sequenceLive($state.snapshot(plan.autofocus), $state.snapshot(plan.end)))) liveSent = live
+    }, 700)
+  })
+
   // While running, only the counts can change: the server takes the new number straight away.
   async function changeCount(target: number, row: number, count: number) {
     if (!Number.isFinite(count)) return
@@ -287,7 +303,12 @@
         <span>{status.autofocuses} autofocus</span>
         <span>{status.dithers} dithers</span>
         {#if status.flips}<span>{status.flips} meridian flip{status.flips > 1 ? 's' : ''}</span>{/if}
-        {#if running && status.flipDueUtc}<span class="flip-due">flip ≈ {clock(status.flipDueUtc)}</span>{/if}
+        {#if running && status.flipDueUtc}<span class="flip-due"
+            title="Meridian flips happen between frames: {status.flipNote ?? 'when the target is far enough past the meridian'}. The log warns about 5 minutes before."
+            >flip ≈ {clock(status.flipDueUtc)}{status.flipNote?.startsWith('after this frame') ? ', after this frame' : status.flipNote?.startsWith('waiting') ? ', waiting for it' : ''}{status.flipLatestUtc
+              ? ` (latest ${clock(status.flipLatestUtc)})`
+              : ''}</span
+          >{/if}
         {#if status.failures}<span class="bad">{status.failures} failed</span>{/if}
       </div>
     </section>
@@ -358,11 +379,12 @@
         >
         <span class="muted small">Targets run in order. Each can wait for a start time or altitude, and stop at a time.</span>
       </div>
-      {#if running}<p class="muted small">While it runs, you can change the counts; the rest is locked.</p>{/if}
+      {#if running}<p class="muted small">While it runs, you can change the counts, when to refocus and the end of the night; the rest is locked.</p>{/if}
     </section>
 
-    <fieldset disabled={running}>
+    <fieldset>
       <div class="two">
+        <fieldset class="lock" disabled={running}>
         <section>
           <h3>Dither</h3>
           <div class="checks">
@@ -374,6 +396,7 @@
             <label class="check"><input type="checkbox" bind:checked={plan.dither.raOnly} /> RA only</label>
           </div>
         </section>
+        </fieldset>
 
         <section>
           <h3>Refocus when</h3>
@@ -413,6 +436,7 @@
           </div>
         </section>
 
+        <fieldset class="lock" disabled={running}>
         <section>
           <h3>
             <label class="check"><input type="checkbox" bind:checked={plan.meridianFlip.enabled} /> Meridian flip</label>
@@ -434,6 +458,7 @@
             <p class="muted small">Off: for fork or alt-az mounts, or targets that won't reach the meridian.</p>
           {/if}
         </section>
+        </fieldset>
 
         <section>
           <h3>At the end</h3>
@@ -472,7 +497,7 @@
 
   <div class="run">
     {#if running}
-      <span class="muted">Only the frame counts can change while the sequence runs.</span>
+      <span class="muted">While it runs: frame counts, refocus and the end of the night can change.</span>
     {:else}
       <button class="start" disabled={!nova.status?.camera?.connected || totals.frames === 0} onclick={start}>▶ Start sequence</button>
       {#if !nova.status?.camera?.connected}<span class="muted">Connect a camera first.</span>{/if}
@@ -583,6 +608,10 @@
     margin: 0;
     display: grid;
     gap: 14px;
+  }
+  /* Locks its section while the sequence runs, without being a box of its own in the layout. */
+  fieldset.lock {
+    display: contents;
   }
   section h3 {
     font-size: 12px;

@@ -179,6 +179,8 @@ export const api = {
   sequenceSkip: () => post('/api/sequence/skip'),
   /** Change a row's frame count while the sequence runs (not below the frames already taken). */
   sequenceCount: (target: number, row: number, count: number) => post('/api/sequence/count', { target, row, count }),
+  /** While it runs: the refocus triggers and the end of the night. */
+  sequenceLive: (autofocus: Sequence['autofocus'], end: Sequence['end']) => post('/api/sequence/live', { autofocus, end }),
   sequenceSkipTarget: () => post('/api/sequence/skip-target'),
   sequenceAbort: () => post('/api/sequence/abort'),
   sequenceSave: (sequence: Sequence) => post('/api/sequences', sequence),

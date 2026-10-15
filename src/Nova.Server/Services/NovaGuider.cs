@@ -153,18 +153,22 @@ public sealed class NovaGuider : IAsyncDisposable
 
     /// <summary>
     /// The first time a ZWO AM mount shows up, sets the guide settings for it (the "ZWO AM mount" preset), unless they
-    /// were already changed from NOVA's defaults: then they're left alone and the log points at the preset.
+    /// were already changed from NOVA's defaults: then they're left alone and the log points at the preset. Either way
+    /// it turns on Reverse Dec after flip, which these mounts need (their Dec guide pulses change sense after a meridian
+    /// flip); setups that had the AM defaults before that was added get it once too.
     /// </summary>
     private void ApplyMountDefaults()
     {
         var mount = _equipment.Mount?.Name;
         if (!GuidePresets.IsZwoAm(mount)) return;
-        bool untouched;
+        bool untouched, first, reversed;
         lock (_sync)
         {
-            if (_saved.MountDefaults == "zwo-am") return;
-            untouched = _saved.Nova with { Camera = null, Output = null } == new NovaGuiderSettings();
-            _saved = _saved with { MountDefaults = "zwo-am" };
+            if (_saved.MountDefaults == "zwo-am-2") return;
+            first = _saved.MountDefaults != "zwo-am";
+            untouched = first && _saved.Nova with { Camera = null, Output = null } == new NovaGuiderSettings();
+            reversed = !_saved.Nova.ReverseDecAfterFlip;
+            _saved = _saved with { MountDefaults = "zwo-am-2", Nova = _saved.Nova with { ReverseDecAfterFlip = true } };
             if (untouched)
             {
                 _saved = _saved with { Nova = WithPreset(GuidePresets.ZwoAm, _saved.Nova) };
@@ -172,9 +176,12 @@ public sealed class NovaGuider : IAsyncDisposable
             }
             SaveLocked();
         }
-        _log.Info(untouched
-            ? $"{mount}: guide settings set for a ZWO AM mount (1.5 s exposures, gain 60; dithers 2.5 px, settle within 0.7 px)"
-            : $"{mount}: the 'ZWO AM mount' guide profile suits it (your guide settings were left as they are)");
+        if (first)
+            _log.Info(untouched
+                ? $"{mount}: guide settings set for a ZWO AM mount (1.5 s exposures, gain 60; dithers 2.5 px, settle within 0.7 px; Dec reversed after a flip)"
+                : $"{mount}: the 'ZWO AM mount' guide profile suits it (your guide settings were left as they are, apart from Reverse Dec after flip, which it needs)");
+        else if (reversed)
+            _log.Info($"{mount}: Reverse Dec after flip turned on in NOVA's guide settings (ZWO AM mounts need it)");
     }
 
     private static NovaGuiderSettings WithPreset(GuidePreset preset, NovaGuiderSettings s) =>

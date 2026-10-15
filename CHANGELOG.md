@@ -8,6 +8,20 @@ What changed in each release. The newest is first. A release's section here beco
 - **Focuser backlash for every move:** the autofocus settings' backlash now applies to all focuser moves (filter
   offsets, In/Out, Go to and saved positions, not just autofocus), and *Final approach* chooses whether moves finish
   inward (as before) or outward, for a focuser whose load pushes it in. Like NINA's overshoot method.
+- **Change refocus and end-of-night settings while a sequence runs** (*Refocus when* and *At the end*, including
+  when the night ends), as well as the frame counts.
+- **Clearer meridian flip timing:** the Sequence tab shows when the flip will actually happen (flips wait for the
+  frame running then: "flip ≈ 22:31, after this frame (latest 22:41)"), and the log warns about 5 minutes ahead.
+
+### Changed
+- New sequences refocus when the temperature moves 2 °C (was 1 °C).
+- *Reverse Dec after flip* is on for ZWO AM mounts (NOVA's guider), including setups that already had the AM defaults.
+- The guiding verdict (seeing-limited, chasing…) is worked out every 30 seconds instead of every second, so it
+  doesn't keep changing.
+
+### Fixed
+- The Guiding tab fits the window without a few pixels of scrolling: the guide frame takes whatever height is left.
+- The Image tab's Abort button keeps one width while it counts down (and while downloading).
 
 ## [0.3.9] - 2026-10-14
 

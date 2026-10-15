@@ -835,6 +835,13 @@
   .shoot-group .shoot {
     border-radius: 0 var(--radius) var(--radius) 0;
   }
+  /* Abort with the countdown: one width throughout ("Abort 9/300 s", "Abort 120/300 s", "Abort (downloading)"), so the
+     toolbar doesn't shift as it counts. */
+  .shoot-group .shoot.danger {
+    min-width: 11.8em;
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+  }
   .toolbar {
     display: flex;
     align-items: center;

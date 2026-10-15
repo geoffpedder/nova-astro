@@ -302,6 +302,10 @@ export interface SequencerStatus {
   flips: number
   /** When the next meridian flip is due, while one is. */
   flipDueUtc: string | null
+  /** The latest the flip can be (the frames' limit past the meridian). */
+  flipLatestUtc?: string | null
+  /** How the flip is timed: after this frame, after the frame running at the flip time, or waiting for it. */
+  flipNote?: string | null
   /** Every target's progress; state is Waiting, Running, Done, Skipped or Stopped. */
   targets: { name: string; state: string; rows: { done: number; count: number; skipped: boolean }[]; note: string | null }[] | null
   currentTarget: number

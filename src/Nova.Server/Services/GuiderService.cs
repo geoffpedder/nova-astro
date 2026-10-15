@@ -67,6 +67,14 @@ public sealed class GuiderService : IAsyncDisposable
     /// Adds the verdict on the recent guiding (seeing-limited, or settings worth changing): against the seeing NOVA's
     /// guiding assistant measured when NOVA guides, from the errors' pattern alone with PHD2.
     /// </summary>
+    // The verdict is worked out again every half minute, not every second: it reads the last few minutes anyway, and
+    // wording that changes every second is distracting.
+    private static readonly TimeSpan DiagnoseEvery = TimeSpan.FromSeconds(30);
+    private readonly object _diagnosisSync = new();
+    private GuideDiagnosis? _diagnosis;
+    private DateTime _diagnosedUtc = DateTime.MinValue;
+    private int _diagnosedPoints;
+
     private GuiderStatus WithDiagnosis(GuiderStatus status)
     {
         var seeing = IsNova && status.Stats.Units == "arcsec" ? _nova!.Seeing : null;
@@ -74,9 +82,20 @@ public sealed class GuiderService : IAsyncDisposable
         double? scale = status.Stats.Units == "arcsec" ? status.PixelScale : 1;
         var a = _nova?.Settings.Algorithms;
         var (minRa, minDec) = IsNova && a is not null && scale is { } s ? (a.RaMinMove * s, a.DecMinMove * s) : ((double?)null, (double?)null);
+        var now = DateTime.UtcNow;
+        lock (_diagnosisSync)
+        {
+            // Again now if it's due, there's none yet, or the history started over (a new guiding run).
+            if (now - _diagnosedUtc >= DiagnoseEvery || _diagnosis is null || status.History.Count < _diagnosedPoints)
+            {
+                _diagnosis = GuidingDiagnosis.Diagnose(status.History, status.Stats.Units, seeing?.Ra, seeing?.Dec, minRa, minDec);
+                (_diagnosedUtc, _diagnosedPoints) = (_diagnosis is null ? DateTime.MinValue : now, status.History.Count);
+            }
+            else _diagnosedPoints = status.History.Count;
+        }
         return status with
         {
-            Diagnosis = GuidingDiagnosis.Diagnose(status.History, status.Stats.Units, seeing?.Ra, seeing?.Dec, minRa, minDec),
+            Diagnosis = _diagnosis,
             // Dither and settle defaults for the mount (the panels' Guide/Dither and new sequences), with either guider.
             Defaults = _nova?.Defaults,
         };

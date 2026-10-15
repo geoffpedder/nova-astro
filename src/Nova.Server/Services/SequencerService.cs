@@ -24,7 +24,7 @@ public sealed record SequencerStatus(
     double? LastHfr, int Autofocuses, int Dithers, int Failures,
     DateTime StartedUtc, DateTime? EtaUtc, DateTime? FinishedUtc, int Flips = 0, DateTime? FlipDueUtc = null,
     IReadOnlyList<SequenceTargetProgress>? Targets = null, int CurrentTarget = 0,
-    DateTime? NightEndUtc = null, string? NightEnd = null);
+    DateTime? NightEndUtc = null, string? NightEnd = null, DateTime? FlipLatestUtc = null, string? FlipNote = null);
 
 public sealed record SequencerInfo(bool Running, SequencerStatus? Status, IReadOnlyList<string> Saved);
 
@@ -199,6 +199,36 @@ public sealed class SequencerService
     /// <summary>Moves on to the next target (also while waiting for this one).</summary>
     public void SkipTarget() => _skipTargetRequested = true;
 
+    // The running sequence's refocus triggers and end-of-night steps: changeable while it runs.
+    private SequenceAutofocus? _liveAutofocus;
+    private SequenceEnd? _liveEnd;
+
+    /// <summary>
+    /// Changes when the running sequence refocuses, and what happens at the end of the night (and when it ends), from
+    /// the next frame on. A new stop time is worked out from now.
+    /// </summary>
+    public void UpdateLiveSettings(SequenceAutofocus autofocus, SequenceEnd end)
+    {
+        if (!Running || _liveAutofocus is null || _liveEnd is null) throw new InvalidOperationException("No sequence is running");
+        if (Status?.Step is "Ending" or "Done") throw new InvalidOperationException("The sequence is already ending");
+        if (autofocus.TemperatureChange is < 0 || autofocus.HfrIncreasePercent is < 0 || autofocus.EveryFrames is < 0)
+            throw new ArgumentException("Refocus triggers can't be negative");
+        var changes = new List<string>();
+        if (autofocus != _liveAutofocus) changes.Add("refocus triggers");
+        if (end.StopAt != _liveEnd.StopAt)
+        {
+            var nightEnd = SequenceEnd.NightEnd(end.StopAt, DateTime.UtcNow, Site());
+            _nightEnd = nightEnd;
+            Status = Status! with { NightEndUtc = nightEnd?.Utc, NightEnd = nightEnd?.Label };
+            changes.Add(nightEnd is { } n ? $"stop at {n.Label}" : "no stop time");
+        }
+        if (end with { StopAt = _liveEnd.StopAt } != _liveEnd) changes.Add("end steps");
+        _liveAutofocus = autofocus;
+        _liveEnd = end;
+        if (changes.Count > 0) _log.Info($"Sequence changed while running: {string.Join(", ", changes)}");
+        RefreshStatus?.Invoke();
+    }
+
     /// <summary>
     /// Changes how many frames a row of the running sequence takes, e.g. to add more when there's time. Not
     /// below the frames already taken (setting it to that finishes the row); raising a skipped row's count
@@ -254,7 +284,11 @@ public sealed class SequencerService
         // Meridian flip: for mounts that don't report their pier side, "seen east of the meridian, not yet flipped".
         public bool SeenEast, Flipped, WarnedNoSite;
         public int Flips, FlipAttempts;
-        public DateTime? FlipDueUtc, FlipRetryUtc;
+        /// <summary>When the flip should actually happen (it waits for the frame running then), the latest it can, and how.</summary>
+        public DateTime? FlipDueUtc, FlipRetryUtc, FlipLatestUtc;
+        public string? FlipNote;
+        /// <summary>The flip this warning was for (its due time), so each flip is announced once.</summary>
+        public DateTime? FlipWarnedFor;
         public (double? Gain, double? Offset, int? Binning, FrameType? Type) Applied;
 
         /// <summary>Starting the next target: keep what describes the equipment and the night, not the target.</summary>
@@ -296,6 +330,7 @@ public sealed class SequencerService
         if (_nightEnd is null && sequence.EndSettings.StopAt is SequenceEnd.AstronomicalDawn or SequenceEnd.NauticalDawn or SequenceEnd.Sunrise)
             _log.Warn("Not stopping at dawn: set your site (latitude and longitude) in the Mount panel");
         Status = Status with { NightEndUtc = _nightEnd?.Utc, NightEnd = _nightEnd?.Label };
+        (_liveAutofocus, _liveEnd) = (sequence.AutofocusSettings, sequence.EndSettings);
         _log.Info($"Sequence '{sequence.Name}' started: {total} frames" +
                   (plans.Count > 1 ? $" of {plans.Count} targets ({string.Join(", ", plans.Select((_, k) => Name(k)))})"
                       : plans[0].Target is { } only ? $" of {only.Name}" : ""));
@@ -312,6 +347,7 @@ public sealed class SequencerService
                 FramesDone = FramesDone(), FramesTotal = states.Sum(s => s.Count.Sum()), LastHfr = state.LastHfr,
                 Autofocuses = state.Autofocuses, Dithers = state.Dithers, Failures = state.Failures,
                 EtaUtc = Eta(parts, states, targetState, current), Flips = state.Flips, FlipDueUtc = state.FlipDueUtc,
+                FlipLatestUtc = state.FlipLatestUtc, FlipNote = state.FlipNote,
                 Targets = TargetsProgress(), CurrentTarget = current,
             };
 
@@ -323,7 +359,7 @@ public sealed class SequencerService
             var lines = plans.Select((_, k) =>
                 $"{Name(k)}: {states[k].Done.Sum()} of {states[k].Count.Sum()} frames" +
                 (targetState[k] is "Done" ? "" : $" ({targetState[k].ToLowerInvariant()}{(notes[k] is { } note ? $": {note}" : "")})"));
-            var end = sequence.EndSettings.Park ? "\nThe mount is parked." : "";
+            var end = (_liveEnd ?? sequence.EndSettings).Park ? "\nThe mount is parked." : "";
             return string.Join("\n", lines) + end;
         }
 
@@ -432,8 +468,9 @@ public sealed class SequencerService
             }
             current = Math.Min(current, parts.Count - 1);
 
-            await EndStepsAsync(sequence.EndSettings, Report, ct,
-                beforeWarming: sequence.FlatsSettings.Enabled ? () => FlatsAsync(waitLimit: null, leaveCovered: sequence.EndSettings.Park) : null);
+            var endSteps = _liveEnd ?? sequence.EndSettings;
+            await EndStepsAsync(endSteps, Report, ct,
+                beforeWarming: sequence.FlatsSettings.Enabled ? () => FlatsAsync(waitLimit: null, leaveCovered: endSteps.Park) : null);
             Report("Done", $"Finished: {FramesDone()} frames");
             Status = Status! with { State = "Done", FinishedUtc = DateTime.UtcNow, CurrentRow = null, PauseRequested = false };
             _log.Info($"Sequence '{sequence.Name}' finished: {FramesDone()} frames, {state.Autofocuses} autofocus runs, {state.Dithers} dithers");
@@ -591,7 +628,7 @@ public sealed class SequencerService
         if (row.Filter is { } filter && filter != state.Filter) await SetFilterAsync(filter, state, report, ct);
         await ApplyCameraAsync(row, state, ct);
 
-        if (AutofocusReason(sequence.AutofocusSettings, row, state) is { } reason)
+        if (AutofocusReason(_liveAutofocus ?? sequence.AutofocusSettings, row, state) is { } reason)
         {
             await AutofocusAsync(state, reason, report, ct);
             if (sequence.Start.StartGuiding && !_guider.IsGuiding) await StartGuidingAsync(sequence, report, ct);
@@ -656,7 +693,7 @@ public sealed class SequencerService
     private async Task MeridianAsync(Sequence sequence, SequenceRow row, RunState state, Action<string, string> report, CancellationToken ct)
     {
         var flip = sequence.MeridianFlipSettings;
-        state.FlipDueUtc = null;
+        (state.FlipDueUtc, state.FlipLatestUtc, state.FlipNote) = (null, null, null);
         if (!flip.Enabled || _equipment.Mount is not { IsConnected: true } mount || mount.State == MountState.Parked) return;
         if (Site() is not { } site)
         {
@@ -681,14 +718,24 @@ public sealed class SequencerService
         var minutesPast = Horizon.SiderealToClock(hourAngle).TotalMinutes;
         var flipAt = DateTime.UtcNow.AddMinutes(flip.MinutesAfterMeridian - minutesPast);
         if (state.FlipRetryUtc is { } retry && retry > flipAt) flipAt = retry;
-        state.FlipDueUtc = flipAt;
+        var latest = DateTime.UtcNow.AddMinutes(flip.MaxMinutesAfterMeridian - minutesPast);
+        (state.FlipDueUtc, state.FlipLatestUtc) = (flipAt, latest);
 
         if (flipAt > DateTime.UtcNow)
         {
-            // Not time yet: take the frame if it ends before the latest time, else wait for the flip.
+            // Not time yet: take the frame if it ends before the latest time, else wait for the flip. Flips happen between
+            // frames, so a frame that runs past the flip time puts the flip off until it ends.
             var frameEnds = DateTime.UtcNow.AddSeconds(row.ExposureSeconds + state.OverheadSeconds);
-            var latest = DateTime.UtcNow.AddMinutes(flip.MaxMinutesAfterMeridian - minutesPast);
-            if (frameEnds <= latest) return;
+            if (frameEnds <= latest)
+            {
+                if (frameEnds >= flipAt)
+                    (state.FlipDueUtc, state.FlipNote) = (frameEnds, $"after this frame (due {Clock(flipAt)}; at the latest {Clock(latest)})");
+                else state.FlipNote = $"after the frame running at {Clock(flipAt)} (at the latest {Clock(latest)})";
+                WarnOfFlip(state, report);
+                return;
+            }
+            state.FlipNote = $"waiting for it rather than start a frame that would end after {Clock(latest)}";
+            WarnOfFlip(state, report);
             while (flipAt - DateTime.UtcNow is { TotalSeconds: > 0 } wait)
             {
                 report("Meridian flip", $"Waiting {Describe(wait)} for the meridian flip (the next frame would run past the limit)");
@@ -697,6 +744,28 @@ public sealed class SequencerService
         }
         await FlipAsync(sequence, mount, state, report, ct);
     }
+
+    private static string Clock(DateTime utc) => utc.ToLocalTime().ToString("HH:mm");
+
+    /// <summary>Puts the coming flip in the log about 5 minutes ahead (once per flip), so whoever is watching knows.</summary>
+    private void WarnOfFlip(RunState state, Action<string, string> report)
+    {
+        if (state.FlipDueUtc is not { } due || state.FlipWarnedFor is { } warned && Math.Abs((warned - due).TotalMinutes) < 2) return;
+        var lead = due - DateTime.UtcNow - FlipWarning;
+        if (lead > TimeSpan.FromMinutes(30)) return; // checked again before each frame
+        state.FlipWarnedFor = due;
+        var flips = state.Flips;
+        _ = Task.Run(async () =>
+        {
+            if (lead > TimeSpan.Zero) await Task.Delay(lead);
+            // Still coming (not already flipped, the sequence still running)?
+            if (!Running || state.Flips != flips || state.FlipDueUtc is not { } now) return;
+            var minutes = Math.Max(1, (int)Math.Round((now - DateTime.UtcNow).TotalMinutes));
+            _log.Warn($"Meridian flip in about {minutes} min (≈{Clock(now)}, {state.FlipNote}): guiding stops and the mount slews to the other side of the pier");
+        });
+    }
+
+    private static readonly TimeSpan FlipWarning = TimeSpan.FromMinutes(5);
 
     private async Task FlipAsync(Sequence sequence, IMount mount, RunState state, Action<string, string> report, CancellationToken ct)
     {
@@ -731,7 +800,7 @@ public sealed class SequencerService
             state.Flips++;
             state.FlipAttempts = 0;
             state.FlipRetryUtc = null;
-            state.FlipDueUtc = null;
+            (state.FlipDueUtc, state.FlipLatestUtc, state.FlipNote) = (null, null, null);
         }
 
         // The flip's settle counts from the end of the slew, which has already settled for the general time.

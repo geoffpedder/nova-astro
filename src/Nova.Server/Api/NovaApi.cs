@@ -68,6 +68,9 @@ public sealed record GuiderBackendRequest(string Backend);
 /// <summary>Dark exposures (seconds) for the guide camera, and how many darks to take at each.</summary>
 public sealed record GuideDarksRequest(double[] Exposures, int Frames = 5);
 
+/// <summary>A running sequence's new refocus triggers and end-of-night steps.</summary>
+public sealed record SequenceLiveRequest(SequenceAutofocus Autofocus, SequenceEnd End);
+
 /// <summary>One of the webcam's controls (its V4L2 name) and the value to set.</summary>
 public sealed record WebcamControlRequest(string Name, int Value);
 
@@ -759,6 +762,23 @@ public static class NovaApi
         {
             sequencer.Resume();
             return Results.NoContent();
+        });
+        // While it runs: the refocus triggers and the end-of-night steps (the rest is fixed once it starts).
+        api.MapPost("/sequence/live", (SequenceLiveRequest request, SequencerService sequencer) =>
+        {
+            try
+            {
+                sequencer.UpdateLiveSettings(request.Autofocus, request.End);
+                return Results.NoContent();
+            }
+            catch (ArgumentException ex)
+            {
+                return Results.Problem(ex.Message, statusCode: StatusCodes.Status400BadRequest);
+            }
+            catch (InvalidOperationException ex)
+            {
+                return Results.Problem(ex.Message, statusCode: StatusCodes.Status409Conflict);
+            }
         });
         api.MapPost("/sequence/count", (SequenceCountRequest request, SequencerService sequencer) =>
         {

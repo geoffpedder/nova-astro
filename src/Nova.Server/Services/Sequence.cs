@@ -35,7 +35,7 @@ public sealed record SequenceDither(int EveryFrames = 3, double Pixels = 5, bool
 /// <param name="TemperatureChange">°C the focuser's temperature has moved since the last autofocus.</param>
 /// <param name="HfrIncreasePercent">How much worse HFR may get than just after the last autofocus (same filter).</param>
 public sealed record SequenceAutofocus(
-    bool AfterFilterChange = false, double? TemperatureChange = 1, double? HfrIncreasePercent = 15, int? EveryFrames = null);
+    bool AfterFilterChange = false, double? TemperatureChange = 2, double? HfrIncreasePercent = 15, int? EveryFrames = null);
 
 /// <summary>
 /// Meridian flip for German equatorial mounts: once the target is <see cref="MinutesAfterMeridian"/> past the

@@ -1,0 +1,7 @@
+[Unit]
+Description=Keep <hostname>.local (set Avahi's name back if it renamed itself <hostname>-2)
+After=avahi-daemon.service
+
+[Service]
+Type=oneshot
+ExecStart=/opt/nova/nova-mdns.sh

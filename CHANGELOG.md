@@ -4,6 +4,11 @@ What changed in each release. The newest is first. A release's section here beco
 
 ## [Unreleased]
 
+### Fixed
+- **The mini PC stays at `<name>.local`:** Avahi sometimes renamed itself `<name>-2.local` (at boot, or after a
+  network change) and never changed back. A check every 30 seconds (`nova-mdns.timer`, added by the install) now
+  sets the name back.
+
 ## [0.3.10] - 2026-10-15
 
 ### Added

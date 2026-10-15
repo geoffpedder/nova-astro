@@ -179,7 +179,13 @@ else
 fi
 
 section "Network names (optional: http://<minipc>.local:5000)"
-if systemctl is-active --quiet avahi-daemon 2>/dev/null; then pass "avahi-daemon running"
+if systemctl is-active --quiet avahi-daemon 2>/dev/null; then
+  pass "avahi-daemon running"
+  name="$(busctl --system call org.freedesktop.Avahi / org.freedesktop.Avahi.Server GetHostName 2>/dev/null | sed -E 's/^s "(.*)"$/\1/')"
+  if [ -n "$name" ] && [ "$name" != "$(hostname -s)" ]; then
+    note "Avahi is answering to $name.local, not $(hostname -s).local (it thought another computer had the name)" "sudo systemctl restart avahi-daemon"
+  elif [ -n "$name" ]; then pass "answers to $name.local"; fi
+  systemctl is-enabled --quiet nova-mdns.timer 2>/dev/null || note "the check that keeps $(hostname -s).local isn't installed" "$reinstall"
 else note "avahi-daemon not running: use the IP address, or" "sudo pacman -S avahi nss-mdns && sudo systemctl enable --now avahi-daemon"; fi
 
 section "Firewall"

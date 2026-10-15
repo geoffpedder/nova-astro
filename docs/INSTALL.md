@@ -231,6 +231,11 @@ what's happening right now.
   computers and phones, though not always on older Android. If the IP address doesn't open either, check the
   mini PC's firewall: the install opens NOVA's ports in `ufw` and `firewalld` (`nova doctor` says which is
   on), but any other firewall needs TCP 5000 opened by hand.
+- **It's at `<name>-2.local` instead.** Avahi renames itself when it thinks another computer has its name, which
+  it can wrongly think at boot or after a network change (its own announcement coming back, e.g. repeated by mesh
+  access points). The install adds a check (`nova-mdns.timer`) that sets the name back within 30 seconds; the
+  journal says when it did (`journalctl -u nova-mdns`). If it keeps happening, another device may really have the
+  name: give the mini PC another (`sudo hostnamectl set-hostname …`).
 - **Setup stops with *Release file … is not valid yet* (Debian, Ubuntu).** The mini PC's clock is behind, often
   after Windows was on the machine. Turn on time sync with `sudo timedatectl set-ntp true` and check with
   `timedatectl` (*System clock synchronized: yes*), then run setup again. Ubuntu 26.04 syncs securely (NTS),

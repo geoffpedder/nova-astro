@@ -32,6 +32,8 @@ install -m 644 "$HERE/openbox-rc.xml" /opt/nova/openbox-rc.xml
 install -m 755 "$HERE/nova-wm.sh" /opt/nova/nova-wm.sh
 # The Wi-Fi hotspot's root helper (run by nova-hotspot.service only), root-owned so NOVA can't change it.
 install -m 755 "$HERE/nova-hotspot.sh" /opt/nova/nova-hotspot.sh
+# Keeps <hostname>.local: sets Avahi's name back if it renames itself "<hostname>-2" (nova-mdns.timer, as root).
+install -m 755 "$HERE/nova-mdns.sh" /opt/nova/nova-mdns.sh
 install -d /opt/nova/icewm
 install -m 644 "$HERE"/icewm/* /opt/nova/icewm/
 # The maintenance scripts and the "nova" command (nova update, nova doctor, ...), so they work without a copy of the
@@ -53,7 +55,7 @@ chown "$NOVA_USER" /etc/nova/indi.env
 chown "$NOVA_USER" /etc/nova/hotspot.conf
 chmod 600 /etc/nova/hotspot.conf
 
-for unit in indiserver nova nova-display nova-wm phd2 nova-screen nova-hotspot; do
+for unit in indiserver nova nova-display nova-wm phd2 nova-screen nova-hotspot nova-mdns; do
   sed "s/NOVA_USER/$NOVA_USER/" "$HERE/$unit.service" > "/etc/systemd/system/$unit.service"
 done
 
@@ -79,8 +81,10 @@ else
   echo "polkit isn't installed, so NOVA can't restart or shut down the mini PC. To allow it, install polkit (Arch: polkit, Debian/Ubuntu: polkitd), then run this again."
 fi
 
+install -m 644 "$HERE/nova-mdns.timer" /etc/systemd/system/nova-mdns.timer
 systemctl daemon-reload
 systemctl enable indiserver.service nova.service
+if systemctl list-unit-files avahi-daemon.service >/dev/null 2>&1; then systemctl enable --now nova-mdns.timer >/dev/null 2>&1 || true; fi
 systemctl restart indiserver.service nova.service
 
 # Headless PHD2 (optional): runs on a virtual display, viewable in the browser on port 6080.

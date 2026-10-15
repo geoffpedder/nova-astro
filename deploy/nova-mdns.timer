@@ -1,0 +1,10 @@
+[Unit]
+Description=Check every 30 seconds that the mini PC still answers to <hostname>.local
+
+[Timer]
+OnBootSec=20
+OnUnitActiveSec=30
+AccuracySec=5
+
+[Install]
+WantedBy=timers.target

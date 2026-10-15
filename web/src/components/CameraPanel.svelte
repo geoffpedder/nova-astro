@@ -80,6 +80,8 @@
 
   {#if !camera}
     <p class="muted">No camera.</p>
+    <!-- Storage stays reachable without a camera: copying a night's frames to a USB drive needs none. -->
+    <StorageEditor />
   {:else}
     {#if controls}
       <div class="settings">

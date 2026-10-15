@@ -21,6 +21,7 @@ What changed in each release. The newest is first. A release's section here beco
   doesn't keep changing.
 
 ### Fixed
+- The Camera panel's **Storage** (USB drive, copying a night's frames) shows with no camera connected too.
 - The Guiding tab fits the window without a few pixels of scrolling: the guide frame takes whatever height is left.
 - The Image tab's Abort button keeps one width while it counts down (and while downloading).
 

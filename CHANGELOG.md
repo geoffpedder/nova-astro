@@ -11,7 +11,8 @@ What changed in each release. The newest is first. A release's section here beco
 - **Change refocus and end-of-night settings while a sequence runs** (*Refocus when* and *At the end*, including
   when the night ends), as well as the frame counts.
 - **Clearer meridian flip timing:** the Sequence tab shows when the flip will actually happen (flips wait for the
-  frame running then: "flip ≈ 22:31, after this frame (latest 22:41)"), and the log warns about 5 minutes ahead.
+  frame running then: "flip ≈ 22:31, after this frame (latest 22:41)"), and the log warns about 5 minutes ahead, as
+  does a phone notification (Notifications: *a meridian flip is about 5 minutes away*, on by default).
 
 ### Changed
 - New sequences refocus when the temperature moves 2 °C (was 1 °C).

@@ -923,6 +923,8 @@ export interface NotificationSettings {
   guidingLostMinutes: number
   /** Frames had to go to the mini PC although a USB drive is chosen. */
   storage: boolean
+  /** About 5 minutes before a sequence's meridian flip. */
+  meridianFlip: boolean
 }
 export interface NotificationSettingsView extends NotificationSettings {
   hasToken: boolean

@@ -13,14 +13,14 @@ namespace Nova.Server.Services;
 public sealed record NotificationSettings(
     bool Enabled = false, string Server = "https://ntfy.sh", string Topic = "", string? Token = null,
     bool SequenceDone = true, bool SequenceFailed = true, bool TargetSkipped = true, bool NeedsYou = true,
-    bool GuidingLost = true, double GuidingLostMinutes = 3, bool Storage = true);
+    bool GuidingLost = true, double GuidingLostMinutes = 3, bool Storage = true, bool MeridianFlip = true);
 
 /// <summary>What the page sees of the settings: the token itself never goes back to a browser.</summary>
 public sealed record NotificationSettingsView(
     bool Enabled, string Server, string Topic, bool HasToken, bool SequenceDone, bool SequenceFailed, bool TargetSkipped,
-    bool NeedsYou, bool GuidingLost, double GuidingLostMinutes, string? LastError, bool Storage = true);
+    bool NeedsYou, bool GuidingLost, double GuidingLostMinutes, string? LastError, bool Storage = true, bool MeridianFlip = true);
 
-public enum NotificationKind { SequenceDone, SequenceFailed, TargetSkipped, NeedsYou, GuidingLost, Test, Storage }
+public enum NotificationKind { SequenceDone, SequenceFailed, TargetSkipped, NeedsYou, GuidingLost, Test, Storage, MeridianFlip }
 
 /// <summary>
 /// Messages to your phone through ntfy (https://ntfy.sh): a free app that shows whatever is posted to a topic you
@@ -60,7 +60,7 @@ public sealed class NotificationService : BackgroundService
         {
             var s = Settings;
             return new(s.Enabled, s.Server, s.Topic, !string.IsNullOrEmpty(s.Token), s.SequenceDone, s.SequenceFailed,
-                s.TargetSkipped, s.NeedsYou, s.GuidingLost, s.GuidingLostMinutes, _lastError, s.Storage);
+                s.TargetSkipped, s.NeedsYou, s.GuidingLost, s.GuidingLostMinutes, _lastError, s.Storage, s.MeridianFlip);
         }
     }
 
@@ -104,6 +104,7 @@ public sealed class NotificationService : BackgroundService
             NotificationKind.NeedsYou => s.NeedsYou,
             NotificationKind.GuidingLost => s.GuidingLost,
             NotificationKind.Storage => s.Storage,
+            NotificationKind.MeridianFlip => s.MeridianFlip,
             _ => true,
         };
         if ((!s.Enabled && kind != NotificationKind.Test) || !wanted || string.IsNullOrEmpty(s.Topic)) return null;
@@ -114,6 +115,7 @@ public sealed class NotificationService : BackgroundService
             NotificationKind.SequenceFailed or NotificationKind.GuidingLost or NotificationKind.Storage => (4, new[] { "warning" }),
             NotificationKind.NeedsYou => (4, new[] { "bell" }),
             NotificationKind.TargetSkipped => (3, new[] { "fast_forward" }),
+            NotificationKind.MeridianFlip => (3, new[] { "arrows_counterclockwise" }),
             NotificationKind.SequenceDone => (3, new[] { "telescope" }),
             _ => (3, new[] { "telescope" }),
         };

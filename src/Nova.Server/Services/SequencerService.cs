@@ -762,6 +762,8 @@ public sealed class SequencerService
             if (!Running || state.Flips != flips || state.FlipDueUtc is not { } now) return;
             var minutes = Math.Max(1, (int)Math.Round((now - DateTime.UtcNow).TotalMinutes));
             _log.Warn($"Meridian flip in about {minutes} min (≈{Clock(now)}, {state.FlipNote}): guiding stops and the mount slews to the other side of the pier");
+            Notifications?.Notify(NotificationKind.MeridianFlip, $"Meridian flip in about {minutes} min",
+                $"At about {Clock(now)}, {state.FlipNote}. Guiding stops and the mount slews to the other side of the pier.");
         });
     }
 

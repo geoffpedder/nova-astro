@@ -58,8 +58,9 @@ public class NotificationTests : IDisposable
         var service = NewService(ntfy);
         await service.SendAsync(NotificationKind.SequenceFailed, "t", "m", CancellationToken.None); // off by default
 
-        service.Save(new NotificationSettings(Enabled: true, Topic: "nova-abc123", GuidingLost: false), null);
+        service.Save(new NotificationSettings(Enabled: true, Topic: "nova-abc123", GuidingLost: false, MeridianFlip: false), null);
         await service.SendAsync(NotificationKind.GuidingLost, "t", "m", CancellationToken.None);
+        await service.SendAsync(NotificationKind.MeridianFlip, "t", "m", CancellationToken.None);
         Assert.Empty(ntfy.Posts);
 
         await service.SendAsync(NotificationKind.SequenceFailed, "t", "m", CancellationToken.None);

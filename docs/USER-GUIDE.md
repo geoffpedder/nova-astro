@@ -149,7 +149,10 @@ drive** plugged into it (in a `Nova` folder on the drive). Each night gets a fol
 - **Eject** finishes the frame being saved and unmounts the drive: unplug it after that. Until it's plugged in
   again, frames go to the mini PC.
 - **Copy a night from the mini PC** copies a night saved on the mini PC to the drive, skipping files already
-  there, for when you'd rather save locally and take a copy home in the morning.
+  there, for when you'd rather save locally and take a copy home in the morning. Each file is written all the way
+  to the drive before it counts as copied (so it takes as long as the drive needs), and a file only counts as
+  already there if it's a finished copy: one left half-written by a drive pulled out early is copied again.
+  **Eject** before unplugging, all the same.
 
 Drive formats:
 

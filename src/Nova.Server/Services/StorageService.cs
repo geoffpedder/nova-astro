@@ -156,7 +156,8 @@ public sealed class StorageService : BackgroundService
             try
             {
                 Directory.CreateDirectory(Path.GetDirectoryName(path)!);
-                await File.WriteAllBytesAsync(path, bytes);
+                if (root == _localRoot) await File.WriteAllBytesAsync(path, bytes);
+                else await WriteDurablyAsync(path, bytes, CancellationToken.None); // on the drive before it counts as saved
                 return path;
             }
             catch (Exception ex) when (root != _localRoot && ex is IOException or UnauthorizedAccessException)
@@ -232,6 +233,53 @@ public sealed class StorageService : BackgroundService
         await RefreshAsync(ct);
     }
 
+    // A USB drive's writes sit in the mini PC's memory until Linux gets round to them, so a copy can "finish" with most
+    // of it not yet on the drive; unplugged then (or disconnected), the drive keeps files of the right size full of
+    // nothing. Everything written to the drive is flushed to it (fsync) before it counts as done, and an earlier copy
+    // only counts as there if it's the same size, the same time and has the same ends.
+
+    /// <summary>Writes a file and waits until it's on the drive itself, not just in memory.</summary>
+    private static async Task WriteDurablyAsync(string path, byte[] bytes, CancellationToken ct)
+    {
+        await using var output = new FileStream(path, FileMode.Create, FileAccess.Write, FileShare.None, 1 << 20, FileOptions.Asynchronous);
+        await output.WriteAsync(bytes, ct);
+        output.Flush(flushToDisk: true);
+    }
+
+    /// <summary>Copies a file to the drive, waits until it's on the drive, and gives it the original's time (the mark of a finished copy).</summary>
+    public static async Task CopyDurablyAsync(FileInfo file, string target, CancellationToken ct)
+    {
+        var partial = target + ".part";
+        await using (var input = new FileStream(file.FullName, FileMode.Open, FileAccess.Read, FileShare.Read, 1 << 20, FileOptions.Asynchronous | FileOptions.SequentialScan))
+        await using (var output = new FileStream(partial, FileMode.Create, FileAccess.Write, FileShare.None, 1 << 20, FileOptions.Asynchronous))
+        {
+            await input.CopyToAsync(output, 1 << 20, ct);
+            output.Flush(flushToDisk: true);
+        }
+        File.Move(partial, target, overwrite: true);
+        File.SetLastWriteTimeUtc(target, file.LastWriteTimeUtc);
+    }
+
+    /// <summary>
+    /// Whether a finished copy of the file is already at the target: same size, the original's time (set only once a
+    /// copy is complete; within 2 s, as FAT and exFAT keep times to the even second), and the same first and last 64 KB.
+    /// </summary>
+    public static async Task<bool> SameFileAsync(FileInfo file, string target, CancellationToken ct)
+    {
+        var copy = new FileInfo(target);
+        if (!copy.Exists || copy.Length != file.Length) return false;
+        if (Math.Abs((copy.LastWriteTimeUtc - file.LastWriteTimeUtc).TotalSeconds) > 2) return false;
+        var block = (int)Math.Min(64 * 1024, file.Length);
+        foreach (var offset in new[] { 0L, Math.Max(0, file.Length - block) })
+        {
+            var (a, b) = (new byte[block], new byte[block]);
+            await using (var s = File.OpenRead(file.FullName)) { s.Position = offset; await s.ReadExactlyAsync(a, ct); }
+            await using (var s = File.OpenRead(target)) { s.Position = offset; await s.ReadExactlyAsync(b, ct); }
+            if (!a.AsSpan().SequenceEqual(b)) return false;
+        }
+        return true;
+    }
+
     /// <summary>Copies a night saved on the mini PC to the drive's Nova folder, skipping files already there.</summary>
     public void StartCopy(string night)
     {
@@ -268,16 +316,14 @@ public sealed class StorageService : BackgroundService
                 {
                     cts.Token.ThrowIfCancellationRequested();
                     var target = Path.Combine(destination, Path.GetRelativePath(source, file.FullName));
-                    if (File.Exists(target) && new FileInfo(target).Length == file.Length) skipped++;
+                    if (await SameFileAsync(file, target, cts.Token)) skipped++;
                     else
                     {
                         Directory.CreateDirectory(Path.GetDirectoryName(target)!);
                         await _writes.WaitAsync(cts.Token);
                         try
                         {
-                            await using var input = File.OpenRead(file.FullName);
-                            await using var output = File.Create(target);
-                            await input.CopyToAsync(output, cts.Token);
+                            await CopyDurablyAsync(file, target, cts.Token);
                         }
                         finally
                         {

@@ -163,6 +163,7 @@ public class StorageTests : IDisposable
         await File.WriteAllBytesAsync(Path.Combine(night, "M 31", "b.fits"), new byte[2000]);
         Directory.CreateDirectory(Path.Combine(Usb, "Nova", "2026-10-09", "M 31"));
         await File.WriteAllBytesAsync(Path.Combine(Usb, "Nova", "2026-10-09", "M 31", "a.fits"), new byte[1000]);
+        File.SetLastWriteTimeUtc(Path.Combine(Usb, "Nova", "2026-10-09", "M 31", "a.fits"), File.GetLastWriteTimeUtc(Path.Combine(night, "M 31", "a.fits")));
 
         storage.StartCopy("2026-10-09");
         for (var i = 0; i < 100 && storage.Status.Copy is { Running: true }; i++) await Task.Delay(20);
@@ -174,6 +175,35 @@ public class StorageTests : IDisposable
 
         Assert.Throws<ArgumentException>(() => storage.StartCopy("../etc"));
         Assert.Throws<ArgumentException>(() => storage.StartCopy("2020-01-01"));
+    }
+
+    [Fact]
+    public async Task ACopyOfTheRightSizeButNotFinishedIsCopiedAgain()
+    {
+        // As left by a drive unplugged before Linux had written it all out: the full size, the start of the data, then
+        // nothing. Even with the original's time on it, it isn't taken for a finished copy.
+        var dir = Directory.CreateDirectory(Path.Combine(Local, "frames")).FullName;
+        var original = new byte[300_000];
+        new Random(1).NextBytes(original);
+        var source = Path.Combine(dir, "a.fits");
+        await File.WriteAllBytesAsync(source, original);
+        var target = Path.Combine(dir, "copy.fits");
+        var broken = new byte[original.Length];
+        original.AsSpan(0, 30_000).CopyTo(broken);
+        await File.WriteAllBytesAsync(target, broken);
+        File.SetLastWriteTimeUtc(target, File.GetLastWriteTimeUtc(source));
+
+        var file = new FileInfo(source);
+        Assert.False(await StorageService.SameFileAsync(file, target, CancellationToken.None));
+        await StorageService.CopyDurablyAsync(file, target, CancellationToken.None);
+        Assert.Equal(original, await File.ReadAllBytesAsync(target));
+        Assert.False(File.Exists(target + ".part"));
+        Assert.Equal(file.LastWriteTimeUtc, File.GetLastWriteTimeUtc(target)); // the mark of a finished copy
+        Assert.True(await StorageService.SameFileAsync(file, target, CancellationToken.None));
+
+        // The same bytes but a different time (another file of the same size, an older copy): copied again.
+        File.SetLastWriteTimeUtc(target, file.LastWriteTimeUtc.AddMinutes(-10));
+        Assert.False(await StorageService.SameFileAsync(file, target, CancellationToken.None));
     }
 
     [Fact]

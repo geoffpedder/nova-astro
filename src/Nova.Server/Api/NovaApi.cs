@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Nova.Core.Astronomy;
 using Nova.Core.Equipment;
+using Nova.Core.Focusing;
 using Nova.Core.Guiding;
 using Nova.Server.Services;
 
@@ -670,18 +671,21 @@ public static class NovaApi
 
     private static void MapFocuser(RouteGroupBuilder api)
     {
-        api.MapPost("/focuser/move", (FocuserMoveRequest request, EquipmentService equipment) =>
+        // Moves by hand take up backlash like every other move (the autofocus settings' Backlash and Approach).
+        api.MapPost("/focuser/move", (FocuserMoveRequest request, EquipmentService equipment, AutofocusService autofocus) =>
         {
             if (equipment.Focuser is { IsConnected: true } f && f.MaxPosition > f.MinPosition
                 && (request.Position < f.MinPosition || request.Position > f.MaxPosition))
                 return Results.Problem($"Position must be between {f.MinPosition} and {f.MaxPosition}", statusCode: StatusCodes.Status400BadRequest);
             return OperationResult(equipment.StartFocuserOperation($"Focuser to {request.Position}",
-                (focuser, ct) => focuser.MoveToAsync(request.Position, ct), out var error), error);
+                (focuser, ct) => FocuserMoves.MoveToAsync(focuser, request.Position, autofocus.Settings.Backlash, autofocus.Settings.Approach, ct),
+                out var error), error);
         });
-        api.MapPost("/focuser/step", (FocuserStepRequest request, EquipmentService equipment) =>
+        api.MapPost("/focuser/step", (FocuserStepRequest request, EquipmentService equipment, AutofocusService autofocus) =>
             OperationResult(equipment.StartFocuserOperation(
                 $"Focuser {(request.Steps < 0 ? "in" : "out")} {Math.Abs(request.Steps)} steps",
-                (focuser, ct) => focuser.MoveRelativeAsync(request.Steps, ct), out var error), error));
+                (focuser, ct) => FocuserMoves.MoveRelativeAsync(focuser, request.Steps, autofocus.Settings.Backlash, autofocus.Settings.Approach, ct),
+                out var error), error));
         api.MapPost("/focuser/presets", (FocusPresetRequest request, FocusPresetService presets, EquipmentService equipment) =>
             BadRequestOnArgument(() =>
             {

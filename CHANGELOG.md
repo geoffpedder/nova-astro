@@ -4,6 +4,11 @@ What changed in each release. The newest is first. A release's section here beco
 
 ## [Unreleased]
 
+### Added
+- **Focuser backlash for every move:** the autofocus settings' backlash now applies to all focuser moves (filter
+  offsets, In/Out, Go to and saved positions, not just autofocus), and *Final approach* chooses whether moves finish
+  inward (as before) or outward, for a focuser whose load pushes it in. Like NINA's overshoot method.
+
 ## [0.3.9] - 2026-10-14
 
 ### Added

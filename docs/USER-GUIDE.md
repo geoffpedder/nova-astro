@@ -181,7 +181,15 @@ Settings in `/etc/nova/nova.env`: `Nova__SolveExposureSeconds`, `Nova__CenterTol
 The Focuser panel moves the focuser in and out, goes to a position and saves named positions (presets).
 **Autofocus** runs a V-curve: it steps through focus, measures the stars' HFR at each point, fits the curve
 and finishes at the sharpest point. Its settings (⚙): the step size, the number of steps each side of focus,
-the exposure and backlash. Sequences refocus by themselves (see below).
+the exposure, and the focuser's backlash. Sequences refocus by themselves (see below).
+
+**Backlash** (in the autofocus settings, for every focuser move): a focuser's gears have some slack, so the same
+position can give a slightly different focus depending on which way the focuser came. With *Backlash (all moves)*
+set, every move arrives from the same direction, the *Final approach* (inward, the usual; outward if a heavy camera
+or the scope pointing high pushes the focuser in): a move that would arrive the other way goes that many steps past
+the target and comes back, as NINA's overshoot method does. It applies to autofocus, filter offsets, In/Out, Go to
+and saved positions alike, so a filter change lands where the offsets say. Start with a little more than the slack
+(a few tens of steps for most focusers; the ZWO EAF rarely needs any); 0 turns it off.
 
 **Filter offsets** (Focuser panel, with a filter wheel): filters focus at slightly different positions. With
 offsets on, every filter change, by hand or in a sequence, moves the focuser by the difference between the two

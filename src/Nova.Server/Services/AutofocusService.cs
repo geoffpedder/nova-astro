@@ -9,10 +9,14 @@ namespace Nova.Server.Services;
 /// <param name="StepsPerSide">Measurements either side of the start position (2 × this + 1 in all).</param>
 /// <param name="ExposureSeconds">Per measurement; long enough for plenty of stars.</param>
 /// <param name="Backlash">
-/// Overshoot for outward moves: the focuser goes this far past the target and comes back in, so every
-/// position is reached moving inward and gear slack doesn't shift the curve. 0 = off.
+/// The focuser's backlash compensation, for every move (autofocus, filter offsets, by hand): a move that would arrive
+/// the other way from <paramref name="Approach"/> goes this far past the target and comes back, so every position is
+/// reached the same way and gear slack doesn't shift focus. 0 = off.
 /// </param>
-public sealed record AutofocusSettings(int StepSize = 100, int StepsPerSide = 4, double ExposureSeconds = 3, int Backlash = 0)
+/// <param name="Approach">The direction every move finishes in: inward (the usual), or outward for a focuser whose load
+/// (a heavy camera, the scope pointing high) pushes it in.</param>
+public sealed record AutofocusSettings(int StepSize = 100, int StepsPerSide = 4, double ExposureSeconds = 3, int Backlash = 0,
+    FocusApproach Approach = FocusApproach.Inward)
 {
     public string? Validate() =>
         StepSize < 1 ? "Step size must be at least 1"
@@ -168,7 +172,7 @@ public sealed class AutofocusService
                     moving = Task.Run(async () =>
                     {
                         await Task.Delay(MoveMargin, ct);
-                        await MoveAsync(focuser, target, settings.Backlash, ct);
+                        await MoveAsync(focuser, target, settings, ct);
                     }, ct);
                     Interlocked.Increment(ref pipelined);
                 }
@@ -194,7 +198,7 @@ public sealed class AutofocusService
         async Task MeasureAsync(int position)
         {
             Report($"Moving to {position}");
-            await MoveAsync(focuser, position, settings.Backlash, ct);
+            await MoveAsync(focuser, position, settings, ct);
             await ExposeAtAsync(position, next: null);
             await Task.WhenAll(measuring);
         }
@@ -212,7 +216,7 @@ public sealed class AutofocusService
                 if (k == 0)
                 {
                     Report($"Moving to {sweep[0]}");
-                    await MoveAsync(focuser, sweep[0], settings.Backlash, ct);
+                    await MoveAsync(focuser, sweep[0], settings, ct);
                 }
                 else if (moving is { } move)
                 {
@@ -222,7 +226,7 @@ public sealed class AutofocusService
                 }
                 else
                 {
-                    await MoveAsync(focuser, sweep[k], settings.Backlash, ct);
+                    await MoveAsync(focuser, sweep[k], settings, ct);
                 }
                 await ExposeAtAsync(sweep[k], k + 1 < sweep.Count ? sweep[k + 1] : null);
             }
@@ -260,7 +264,7 @@ public sealed class AutofocusService
                 // never worse), which also gives the next run a better place to start from.
                 if (points.MinBy(p => p.Hfr) is { } sharpest && sharpest.Position != start)
                 {
-                    await MoveAsync(focuser, sharpest.Position, settings.Backlash, CancellationToken.None);
+                    await MoveAsync(focuser, sharpest.Position, settings, CancellationToken.None);
                     Status = Status with
                     {
                         Running = false, Succeeded = false, BestPosition = sharpest.Position, FinalHfr = sharpest.Hfr,
@@ -271,14 +275,14 @@ public sealed class AutofocusService
                               $"(HFR {sharpest.Hfr:0.00} px)");
                     return;
                 }
-                await ReturnToStartAsync(focuser, start, settings.Backlash);
+                await ReturnToStartAsync(focuser, start, settings);
                 Status = Status with { Running = false, Succeeded = false, Message = problem };
                 _log.Warn($"Autofocus failed: {problem}. Focuser back at {start}");
                 return;
             }
 
             Report($"Moving to best focus {fit!.BestPosition}");
-            await MoveAsync(focuser, fit.BestPosition, settings.Backlash, ct);
+            await MoveAsync(focuser, fit.BestPosition, settings, ct);
             Report("Checking");
             var check = await _imaging.CaptureAsync(settings.ExposureSeconds, save: false, ct, keep: false);
             var final = check.Stars.MedianHfr;
@@ -291,7 +295,7 @@ public sealed class AutofocusService
                     : $"no stars measured at {fit.BestPosition}";
                 // Like any failed run: end at the sharpest position measured (the start, if nothing beat it).
                 var sharpest = points.MinBy(p => p.Hfr)!;
-                await MoveAsync(focuser, sharpest.Position, settings.Backlash, CancellationToken.None);
+                await MoveAsync(focuser, sharpest.Position, settings, CancellationToken.None);
                 var where = sharpest.Position == start
                     ? $"focuser back at {start}"
                     : $"moved to the sharpest position measured, {sharpest.Position} (HFR {sharpest.Hfr:0.00} px)";
@@ -314,14 +318,14 @@ public sealed class AutofocusService
         catch (OperationCanceledException)
         {
             await SettleAsync(moving);
-            await ReturnToStartAsync(focuser, start, settings.Backlash);
+            await ReturnToStartAsync(focuser, start, settings);
             Status = Status! with { Running = false, Succeeded = false, Message = "Cancelled" };
             _log.Warn($"Autofocus cancelled. Focuser back at {start}");
         }
         catch (Exception ex)
         {
             await SettleAsync(moving);
-            await ReturnToStartAsync(focuser, start, settings.Backlash);
+            await ReturnToStartAsync(focuser, start, settings);
             Status = Status! with { Running = false, Succeeded = false, Message = ex.Message };
             _log.Error("Autofocus failed", ex);
         }
@@ -343,20 +347,16 @@ public sealed class AutofocusService
 
     private static FocusFit? FitOrNull(List<FocusPoint> points) => points.Count >= 3 ? FocusCurve.Fit(points) : null;
 
-    /// <summary>Moves so the last motion is inward: outward moves overshoot by the backlash and come back.</summary>
-    private static async Task MoveAsync(IFocuser focuser, int position, int backlash, CancellationToken ct)
-    {
-        if (backlash > 0 && position > focuser.Position)
-            await focuser.MoveToAsync(Math.Min(position + backlash, focuser.MaxPosition), ct);
-        await focuser.MoveToAsync(position, ct);
-    }
+    /// <summary>Moves with the backlash compensation: arriving in the chosen direction, overshooting if need be.</summary>
+    private static Task MoveAsync(IFocuser focuser, int position, AutofocusSettings settings, CancellationToken ct) =>
+        FocuserMoves.MoveToAsync(focuser, position, settings.Backlash, settings.Approach, ct);
 
-    private async Task ReturnToStartAsync(IFocuser focuser, int start, int backlash)
+    private async Task ReturnToStartAsync(IFocuser focuser, int start, AutofocusSettings settings)
     {
         try
         {
             using var timeout = new CancellationTokenSource(TimeSpan.FromMinutes(2));
-            await MoveAsync(focuser, start, backlash, timeout.Token);
+            await MoveAsync(focuser, start, settings, timeout.Token);
         }
         catch (Exception ex)
         {

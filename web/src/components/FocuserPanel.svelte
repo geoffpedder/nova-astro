@@ -60,7 +60,7 @@
   const afRunning = $derived(af?.running ?? false)
   const cameraReady = $derived(nova.status?.camera?.connected ?? false)
   let editing = $state(false)
-  let draft = $state<AutofocusSettings>({ stepSize: 100, stepsPerSide: 4, exposureSeconds: 3, backlash: 0 })
+  let draft = $state<AutofocusSettings>({ stepSize: 100, stepsPerSide: 4, exposureSeconds: 3, backlash: 0, approach: 'Inward' })
   function editSettings() {
     if (af) draft = { ...af.settings }
     editing = !editing
@@ -193,7 +193,9 @@
             onclick={editSettings}>⚙</button
           >
           <span class="muted summary">
-            {af.settings.stepSize} steps × {af.settings.stepsPerSide} each side, {af.settings.exposureSeconds} s exposures
+            {af.settings.stepSize} steps × {af.settings.stepsPerSide} each side, {af.settings.exposureSeconds} s exposures{af.settings.backlash
+              ? `, backlash ${af.settings.backlash} (${af.settings.approach.toLowerCase()})`
+              : ''}
           </span>
         </div>
 
@@ -211,9 +213,16 @@
               Exposure (s)
               <input type="number" min="0" step="0.5" bind:value={draft.exposureSeconds} />
             </label>
-            <label title="Overshoot on outward moves to take up gear slack; 0 = off (the EAF rarely needs it)">
-              Backlash
+            <label title="Every focuser move (autofocus, filter offsets, In/Out, Go to) arrives from the same direction: one that would arrive the other way goes this many steps past and comes back, taking up the gears' slack. 0 = off (the EAF rarely needs it)">
+              Backlash (all moves)
               <input type="number" min="0" bind:value={draft.backlash} />
+            </label>
+            <label title="The direction every move finishes in: inward usually; outward if the focuser's load (a heavy camera, the scope pointing high) pushes it in">
+              Final approach
+              <select bind:value={draft.approach} disabled={!draft.backlash}>
+                <option value="Inward">Inward</option>
+                <option value="Outward">Outward</option>
+              </select>
             </label>
           </div>
           <div class="row">

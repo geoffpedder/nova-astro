@@ -389,8 +389,10 @@ export interface AutofocusSettings {
   /** Measurements either side of the start (2 × this + 1 in all). */
   stepsPerSide: number
   exposureSeconds: number
-  /** Overshoot for outward moves so every position is reached moving inward; 0 = off. */
+  /** Backlash compensation for every focuser move: a move arriving the wrong way overshoots by this and comes back; 0 = off. */
   backlash: number
+  /** The direction every focuser move finishes in (backlash compensation overshoots the other way). */
+  approach: 'Inward' | 'Outward'
 }
 
 export interface FocusPoint {

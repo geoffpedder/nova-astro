@@ -1,6 +1,7 @@
 using System.Text.Json;
 using Microsoft.Extensions.Options;
 using Nova.Core.Equipment;
+using Nova.Core.Focusing;
 
 namespace Nova.Server.Services;
 
@@ -95,7 +96,7 @@ public sealed class FocusOffsetService
         if (delta is not { } steps || steps == 0) return;
         var target = Math.Clamp(focuser.Position + steps, focuser.MinPosition, focuser.MaxPosition > focuser.MinPosition ? focuser.MaxPosition : int.MaxValue);
         _log.Info($"{before} → {after}: focuser {steps:+0;-0} steps (filter offsets), to {target}");
-        await focuser.MoveToAsync(target, ct);
+        await FocuserMoves.MoveToAsync(focuser, target, _autofocus.Settings.Backlash, _autofocus.Settings.Approach, ct);
     }
 
     public const int DefaultPasses = 3;

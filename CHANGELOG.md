@@ -4,6 +4,8 @@ What changed in each release. The newest is first. A release's section here beco
 
 ## [Unreleased]
 
+## [0.3.11] - 2026-10-15
+
 ### Fixed
 - **The mini PC stays at `<name>.local`:** Avahi sometimes renamed itself `<name>-2.local` (at boot, or after a
   network change) and never changed back. A check every 30 seconds (`nova-mdns.timer`, added by the install) now
@@ -320,7 +322,8 @@ The first release: ready-made downloads for 64-bit PCs (`linux-x64`) and the Ras
 - **Stellarium:** take its selection, act as its telescope, and turn its Oculars frame to the camera's angle.
 - **The mini PC:** restart and shut down from the page, network status, night mode.
 
-[Unreleased]: https://github.com/geoffpedder/nova-astro/compare/v0.3.10...HEAD
+[Unreleased]: https://github.com/geoffpedder/nova-astro/compare/v0.3.11...HEAD
+[0.3.11]: https://github.com/geoffpedder/nova-astro/releases/tag/v0.3.11
 [0.3.10]: https://github.com/geoffpedder/nova-astro/releases/tag/v0.3.10
 [0.3.9]: https://github.com/geoffpedder/nova-astro/releases/tag/v0.3.9
 [0.3.8]: https://github.com/geoffpedder/nova-astro/releases/tag/v0.3.8

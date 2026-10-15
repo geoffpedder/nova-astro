@@ -19,8 +19,9 @@ network, with nothing to install there. It's inspired by [N.I.N.A.](https://nigh
 - **Sequences:** a whole night unattended, for several targets: centring, autofocus with per-filter offsets,
   guiding, dithering, meridian flips, flats, the camera's rotation matched for each target, and a stop at dawn.
 - **Focusing** (V-curve autofocus), **polar alignment** (three-point, or with the camera on the pole),
-  **guiding** through PHD2 (which runs on the mini PC and shows in a tab) or NOVA's own guider (with predictive PEC
-  for strain-wave mounts, a guiding assistant and PHD2-style logs), a **flats wizard**, and a **Stellarium** link.
+  **guiding** with NOVA's own guider (predictive PEC for strain-wave mounts, Dec backlash compensation, a guiding
+  assistant and PHD2-style logs) or PHD2 (which runs on the mini PC and shows in a tab), a **flats wizard**, and a
+  **Stellarium** link.
 - **Watch the rig from indoors** with a USB webcam on the mini PC, and pop the webcam, the latest image or the guiding
   graph out into small windows that stay on screen whichever tab you're on.
 - **Built for the field:** no internet needed, a red night mode, and work that carries on when your laptop

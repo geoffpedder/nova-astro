@@ -1267,8 +1267,26 @@ public sealed class NovaGuider : IAsyncDisposable
         {
             _log.Warn($"Ignoring unreadable {_file}: {ex.Message}");
         }
-        return new GuiderFile();
+        // A new install guides with NOVA's own guider; one that has been used already (a site, optics or a sequence set
+        // up, from before NOVA had a guider of its own, so it was using PHD2) keeps PHD2. Either can be switched in the
+        // Guider panel. The choice is saved straight away, so it doesn't change once other settings appear.
+        var settings = Path.GetDirectoryName(_file)!;
+        var used = UsedSettings.Any(name => File.Exists(Path.Combine(settings, name)) || Directory.Exists(Path.Combine(settings, name)));
+        var fresh = new GuiderFile(Backend: used ? "phd2" : "nova");
+        try
+        {
+            Directory.CreateDirectory(settings);
+            File.WriteAllText(_file, JsonSerializer.Serialize(fresh, Json));
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            // decided again next start
+        }
+        return fresh;
     }
+
+    /// <summary>Settings that only exist once NOVA has been used (set up by hand, not written at start).</summary>
+    private static readonly string[] UsedSettings = ["sites.json", "optics.json", "sequences", "autofocus.json", "flats.json", "image-history.json"];
 
     private void Save()
     {

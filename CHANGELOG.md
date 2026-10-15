@@ -15,6 +15,8 @@ What changed in each release. The newest is first. A release's section here beco
   does a phone notification (Notifications: *a meridian flip is about 5 minutes away*, on by default).
 
 ### Changed
+- **NOVA's own guider is the default on a new install** (PHD2 is still installed and one click away in the
+  Guider panel). An install that's been used already keeps the guider it had.
 - New sequences refocus when the temperature moves 2 °C (was 1 °C).
 - *Reverse Dec after flip* is on for ZWO AM mounts (NOVA's guider), including setups that already had the AM defaults.
 - The guiding verdict (seeing-limited, chasing…) is worked out every 30 seconds instead of every second, so it

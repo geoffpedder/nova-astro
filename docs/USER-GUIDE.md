@@ -227,8 +227,9 @@ the refracted pole.
 
 ## Guiding
 
-The Guider panel's switch at the top picks the guider: **PHD2** (the default) or **NOVA**, NOVA's own guider (new,
-see [below](#novas-own-guider)). Guide, Stop, Dither, the RMS and the graph work the same with either, and so do
+The Guider panel's switch at the top picks the guider: **NOVA**, NOVA's own guider (the default on a new install,
+see [below](#novas-own-guider)), or **PHD2**. An install from before NOVA had its own guider stays on PHD2 until you
+switch. Guide, Stop, Dither, the RMS and the graph work the same with either, and so do
 sequences: they guide, dither and wait for settling with whichever is chosen. **Pop out** (under the Guider panel's
 graph, or beside the Guiding tab's) opens the graph and RMS in a small window that stays on screen whichever tab is
 showing; move it by its title, resize it from its corner.
@@ -259,8 +260,9 @@ Targets chart shades that patch of sky (within 1.5 hours of the meridian and 20Â
 
 ### NOVA's own guider
 
-NOVA can guide by itself, with no PHD2, no virtual screen and nothing to set up beyond the Guider panel. It's new:
-PHD2 stays the default until it has proven itself under the sky, and you can switch back at any time.
+NOVA can guide by itself, with no PHD2, no virtual screen and nothing to set up beyond the Guider panel. It's the
+default on a new install; PHD2 is still there (setup installs it) if you'd rather use it, and you can switch at any
+time.
 
 - **Profiles** (the list at the top): save the guide settings under a name (**Save asâ€¦**: camera, output, exposure,
   gain, binning, darks and the algorithms), and switch between them, e.g. one per guide scope or for windy nights.

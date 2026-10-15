@@ -369,6 +369,32 @@ public class NovaGuiderTests : IDisposable
     }
 
     [Fact]
+    public async Task ANewInstallGuidesWithNovaAndAUsedOneKeepsPhd2()
+    {
+        NovaGuider Make(string folder)
+        {
+            var options = Opts.Create(new NovaOptions { Backend = "Simulator", ConfigDirectory = folder, Phd2AutoConnect = false });
+            var log = new ActivityLog(new NullHubContext(), NullLogger<ActivityLog>.Instance);
+            var equipment = new EquipmentService(options, log);
+            return new NovaGuider(equipment, new OpticsService(equipment, options, log), options, log);
+        }
+
+        // Nothing set up yet: NOVA's guider, and that's kept (it doesn't change when a site is added later).
+        var fresh = Path.Combine(_config, "fresh");
+        Assert.Equal("nova", Make(fresh).Backend);
+        await File.WriteAllTextAsync(Path.Combine(fresh, "sites.json"), "{}");
+        Assert.Equal("nova", Make(fresh).Backend);
+
+        // Used before (a site set up, no guider settings): PHD2, as it was.
+        var used = Directory.CreateDirectory(Path.Combine(_config, "used")).FullName;
+        await File.WriteAllTextAsync(Path.Combine(used, "sites.json"), "{}");
+        var guider = Make(used);
+        Assert.Equal("phd2", guider.Backend);
+        guider.SetBackend("nova");
+        Assert.Equal("nova", Make(used).Backend); // a choice made is kept
+    }
+
+    [Fact]
     public async Task SwitchingBackendsAndRefusals()
     {
         await using var rig = await SetUpAsync();

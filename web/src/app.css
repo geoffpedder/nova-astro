@@ -67,6 +67,7 @@
   text-shadow: 0 0 0 var(--text);
 }
 :root[data-theme='night'] img.frame,
+:root[data-theme='night'] image.frame,
 :root[data-theme='night'] .viewport > img {
   filter: grayscale(1) sepia(1) saturate(6) hue-rotate(-50deg) brightness(0.55);
 }

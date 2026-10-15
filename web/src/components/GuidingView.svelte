@@ -151,7 +151,7 @@
       {#if w && h}
         <!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_noninteractive_element_interactions -->
         <svg bind:this={frameSvg} viewBox="0 0 {w} {h}" class:lost={phase === 'LostLock'} role="img" aria-label="Guide frame: click a star to guide on it" onclick={pick}>
-          {#if shown}<image href={shown} x="0" y="0" width={w} height={h} preserveAspectRatio="none" />{/if}
+          {#if shown}<image class="frame" href={shown} x="0" y="0" width={w} height={h} preserveAspectRatio="none" />{/if}
           {#each n?.stars ?? [] as m, i (i)}
             {#if !m.lock}
               <circle class="ref" class:missing={!m.found} cx={m.x} cy={m.y} r={mark * 0.8} stroke-width={mark / 8} />
@@ -177,7 +177,7 @@
     <aside>
       <svg class="zoom" viewBox={star ? `${star.lockX - 32} ${star.lockY - 32} 64 64` : '0 0 64 64'} role="img" aria-label="The guide star close up">
         {#if shown && star}
-          <image href={shown} x="0" y="0" width={w} height={h} preserveAspectRatio="none" />
+          <image class="frame" href={shown} x="0" y="0" width={w} height={h} preserveAspectRatio="none" />
           <line class="cross" x1={star.lockX - 32} y1={star.lockY} x2={star.lockX + 32} y2={star.lockY} stroke-width="0.3" />
           <line class="cross" x1={star.lockX} y1={star.lockY - 32} x2={star.lockX} y2={star.lockY + 32} stroke-width="0.3" />
           <circle class="ring" cx={star.x} cy={star.y} r="4" stroke-width="0.4" />

@@ -163,7 +163,7 @@
 
   {#if view}
     <svg class="star" class:lost viewBox={view.box} role="img" aria-label="Guide star">
-      {#if shown}<image href={shown} x="0" y="0" width={view.w} height={view.h} preserveAspectRatio="none" />{/if}
+      {#if shown}<image class="frame" href={shown} x="0" y="0" width={view.w} height={view.h} preserveAspectRatio="none" />{/if}
       {#if view.star}
         <line class="cross" x1={view.star.lockX - 40} y1={view.star.lockY} x2={view.star.lockX + 40} y2={view.star.lockY} />
         <line class="cross" x1={view.star.lockX} y1={view.star.lockY - 40} x2={view.star.lockX} y2={view.star.lockY + 40} />

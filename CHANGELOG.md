@@ -26,6 +26,7 @@ What changed in each release. The newest is first. A release's section here beco
   start in them; a later copy then skipped them as already there. Every file written to the drive (copies, and frames
   saved straight to it) is now flushed to the drive before it counts as done, and a file only counts as already
   copied if its size, time and first and last 64 KB match. Copy the night again: damaged files are replaced.
+- Night mode: the guide frame (Guiding tab, its close-up, and the Guider panel's) is red too.
 - The Camera panel's **Storage** (USB drive, copying a night's frames) shows with no camera connected too.
 - The Guiding tab fits the window without a few pixels of scrolling: the guide frame takes whatever height is left.
 - The Image tab's Abort button keeps one width while it counts down (and while downloading).

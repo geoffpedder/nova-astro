@@ -59,8 +59,10 @@ network, with nothing to install there. It's inspired by [N.I.N.A.](https://nigh
 
 ## Install
 
-A used ex-office mini PC (a Lenovo ThinkCentre M710q or similar) is cheap, fast and ideal: cheaper than a
-Raspberry Pi kit these days. See [Choosing a computer](docs/INSTALL.md#choosing-a-computer).
+<img src="docs/images/mini-pc.webp" width="240" align="right" alt="A Lenovo ThinkCentre Tiny mini PC labelled nova.local:5000">
+
+A used ex-office mini PC (a Lenovo ThinkCentre M710q or similar, like the one on the right) is cheap, fast and
+ideal: cheaper than a Raspberry Pi kit these days. See [Choosing a computer](docs/INSTALL.md#choosing-a-computer).
 
 On a 64-bit Arch, Debian 13, Raspberry Pi OS (trixie) or Ubuntu 26.04 system:
 

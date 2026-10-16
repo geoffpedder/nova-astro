@@ -36,6 +36,9 @@ browser on any computer, tablet or phone on the same network.
 
 ## Choosing a computer
 
+<p align="center"><img src="images/mini-pc.webp" width="55%" alt="A Lenovo ThinkCentre Tiny mini PC with a Wi-Fi antenna, labelled nova.local:5000"><br>
+<em>A used Lenovo ThinkCentre Tiny running NOVA, labelled with its address.</em></p>
+
 **A used ex-office mini PC is the best value for NOVA.** Raspberry Pis have become expensive: by the time a Pi 5
 has enough memory, a case, a cooler, a power supply and decent storage, it often costs more than a second-hand
 business mini PC that is faster in every way. Offices replace these "tiny" PCs in bulk, so they're plentiful and

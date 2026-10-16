@@ -55,7 +55,7 @@ network, with nothing to install there. It's inspired by [N.I.N.A.](https://nigh
   </tr>
 </table>
 
-<p align="center"><a href="docs/images/polar-aligning.webp"><img src="docs/images/polar-aligning.webp" width="70%" alt="At night: the refractor on its mount in red light, and a laptop showing NOVA's polar alignment"></a><br><em>Polar aligning with NOVA, in night mode under a red light.</em></p>
+<p align="center"><a href="docs/images/polar-aligning.webp"><img src="docs/images/polar-aligning.webp" width="70%" alt="At night: the refractor on its mount in red light, and a laptop showing NOVA's polar alignment"></a><br><em>Polar aligning with NOVA.</em></p>
 
 ## Install
 

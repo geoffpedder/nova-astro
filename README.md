@@ -57,6 +57,21 @@ network, with nothing to install there. It's inspired by [N.I.N.A.](https://nigh
 
 <p align="center"><a href="docs/images/polar-aligning.webp"><img src="docs/images/polar-aligning.webp" width="70%" alt="At night: the refractor on its mount in red light, and a laptop showing NOVA's polar alignment"></a><br><em>Polar aligning with NOVA: the only time you need to be at the telescope.</em></p>
 
+## Taken with NOVA
+
+Captured with NOVA and guided by NOVA's own guider (ZWO AM3, ASI2600MC Pro).
+
+<table>
+  <tr>
+    <td width="50%"><a href="docs/images/m33.webp"><img src="docs/images/m33.webp" alt="M 33, the Triangulum Galaxy: a face-on spiral with blue arms and pink star-forming regions"></a></td>
+    <td width="50%"><a href="docs/images/cave-nebula.webp"><img src="docs/images/cave-nebula.webp" alt="Sh2-155, the Cave Nebula: a glowing red cloud edged by dark dust in a dense star field"></a></td>
+  </tr>
+  <tr>
+    <td><b>M 33</b>, the Triangulum Galaxy</td>
+    <td><b>Sh2-155</b>, the Cave Nebula</td>
+  </tr>
+</table>
+
 ## Install
 
 <img src="docs/images/mini-pc.webp" width="240" align="right" alt="A Lenovo ThinkCentre Tiny mini PC labelled nova.local:5000">

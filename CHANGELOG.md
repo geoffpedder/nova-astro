@@ -4,6 +4,13 @@ What changed in each release. The newest is first. A release's section here beco
 
 ## [Unreleased]
 
+### Fixed
+
+- **The clock on networks that block Ubuntu's secure time servers:** Ubuntu's chrony only trusts its NTS
+  servers, which need TCP port 4460 as well as UDP 123, so behind many home routers the clock was never set.
+  `nova setup` adds the ordinary public servers (pool.ntp.org) as a fallback, used only while no secure server
+  answers.
+
 ## [0.3.16] - 2026-10-20
 
 ### Changed

@@ -347,6 +347,18 @@ if [ "$family" = arch ]; then setup_arch; else setup_apt; fi
 say "Network names"
 sudo systemctl enable --now avahi-daemon
 
+# Ubuntu's chrony only trusts its secure (NTS) time servers, which need TCP port 4460 as well as UDP 123: many home
+# routers and networks block one, and then the clock is never set. Add the ordinary public servers as a fallback,
+# used only while no secure one answers (authselectmode prefer).
+if [ -d /etc/chrony/sources.d ] && grep -qs ' nts' /etc/chrony/sources.d/*.sources; then
+  say "Time servers (a fallback for networks that block Ubuntu's secure ones)"
+  [ -f /etc/chrony/sources.d/nova.sources ] || echo "pool pool.ntp.org iburst" | sudo tee /etc/chrony/sources.d/nova.sources >/dev/null
+  if [ -d /etc/chrony/conf.d ] && ! grep -qs '^authselectmode' /etc/chrony/conf.d/*.conf /etc/chrony/chrony.conf; then
+    echo "authselectmode prefer" | sudo tee /etc/chrony/conf.d/nova.conf >/dev/null
+  fi
+  sudo systemctl try-restart chrony || true
+fi
+
 # --- NOVA itself ---
 if [ "$build" = yes ]; then
   if ! has dotnet || ! dotnet --list-sdks 2>/dev/null | grep -q '^10\.'; then

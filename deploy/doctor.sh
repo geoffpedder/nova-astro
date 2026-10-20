@@ -245,7 +245,7 @@ if has timedatectl; then
     note "clock isn't synced from the internet (it says $(date -u '+%Y-%m-%d %H:%M UTC'))" "sudo timedatectl set-ntp true"
   elif has chronyc; then
     note "clock not synced yet (it says $(date -u '+%Y-%m-%d %H:%M UTC')): fine for a few minutes after a boot, or on the hotspot" \
-      "chronyc -N sources   (no server marked *: the network may block time servers, UDP 123 and TCP 4460)"
+      "chronyc -N sources   (no server marked *: the network may block Ubuntu's secure time servers; $setup adds a fallback)"
   else
     note "clock not synced yet (it says $(date -u '+%Y-%m-%d %H:%M UTC')): fine for a few minutes after a boot, or on the hotspot" \
       "timedatectl timesync-status"

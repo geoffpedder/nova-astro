@@ -4,6 +4,8 @@ What changed in each release. The newest is first. A release's section here beco
 
 ## [Unreleased]
 
+## [0.3.16] - 2026-10-20
+
 ### Changed
 
 - **Optics presets are shared by every camera:** another camera on the same telescope just picks the same
@@ -364,7 +366,8 @@ The first release: ready-made downloads for 64-bit PCs (`linux-x64`) and the Ras
 - **Stellarium:** take its selection, act as its telescope, and turn its Oculars frame to the camera's angle.
 - **The mini PC:** restart and shut down from the page, network status, night mode.
 
-[Unreleased]: https://github.com/geoffpedder/nova-astro/compare/v0.3.15...HEAD
+[Unreleased]: https://github.com/geoffpedder/nova-astro/compare/v0.3.16...HEAD
+[0.3.16]: https://github.com/geoffpedder/nova-astro/releases/tag/v0.3.16
 [0.3.15]: https://github.com/geoffpedder/nova-astro/releases/tag/v0.3.15
 [0.3.14]: https://github.com/geoffpedder/nova-astro/releases/tag/v0.3.14
 [0.3.13]: https://github.com/geoffpedder/nova-astro/releases/tag/v0.3.13

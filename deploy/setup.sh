@@ -273,6 +273,29 @@ setup_arch() {
 }
 
 # --- Debian, Raspberry Pi OS and Ubuntu ---
+# ttyd (the terminal in NOVA's Activity tab): from the system's packages where it has one (Ubuntu), otherwise ttyd's
+# own ready-made program from its GitHub release, checked against the release's checksums (Debian 13 and Raspberry
+# Pi OS have no package). Optional: NOVA works without it.
+TTYD_VERSION=1.7.7
+install_ttyd() {
+  has ttyd && return 0
+  if apt-cache show ttyd >/dev/null 2>&1; then sudo apt-get install -y ttyd && return 0; fi
+  local build
+  case "$(uname -m)" in
+    x86_64) build=x86_64 ;;
+    aarch64) build=aarch64 ;;
+    *) echo "No ttyd for $(uname -m): the terminal in NOVA's Activity tab won't be offered."; return 0 ;;
+  esac
+  say "ttyd $TTYD_VERSION (the terminal), from its GitHub release"
+  local base="https://github.com/tsl0922/ttyd/releases/download/$TTYD_VERSION"
+  if curl -fsSL -o "$work/ttyd.$build" "$base/ttyd.$build" && curl -fsSL -o "$work/ttyd.sums" "$base/SHA256SUMS"      && (cd "$work" && grep " ttyd.$build\$" ttyd.sums | sha256sum -c --status); then
+    sudo install -m 755 "$work/ttyd.$build" /usr/local/bin/ttyd
+  else
+    echo "Couldn't download ttyd (checksum or network): the terminal in NOVA's Activity tab won't be offered." >&2
+  fi
+  return 0
+}
+
 setup_apt() {
   say "Package lists"
   sudo apt-get update
@@ -300,7 +323,7 @@ setup_apt() {
   # The self-contained NOVA build still needs the system's ICU (text and number formats).
   local icu
   icu="$(apt-cache pkgnames libicu | grep -E '^libicu[0-9]+$' | sort -V | tail -1)"
-  local packages="indi-bin libindi1 indi-3rdparty-drivers avahi-daemon libnss-mdns polkitd udisks2 iw ffmpeg v4l-utils hostapd ttyd tar $icu"
+  local packages="indi-bin libindi1 indi-3rdparty-drivers avahi-daemon libnss-mdns polkitd udisks2 iw ffmpeg v4l-utils hostapd tar $icu"
   [ "$phd2" = yes ] && packages="$packages phd2 xvfb x11vnc icewm novnc websockify"
   [ "$gsc" = yes ] && packages="$packages gsc"
   [ "$public" = no ] && packages="$packages gh"
@@ -308,6 +331,7 @@ setup_apt() {
   say "Packages"
   # shellcheck disable=SC2086
   sudo apt-get install -y $packages
+  install_ttyd
 
   [ -z "$astap_found" ] && install_astap_cli
   if [ -n "$database" ]; then

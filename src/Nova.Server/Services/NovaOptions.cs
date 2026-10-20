@@ -65,14 +65,24 @@ public sealed class NovaOptions
     public string? ConfigDirectory { get; set; }
 
     public string ResolveConfigDirectory() =>
-        string.IsNullOrWhiteSpace(ConfigDirectory)
-            // ApplicationData is $XDG_CONFIG_HOME (~/.config) on Linux, %APPDATA% on Windows.
-            ? Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "nova")
-            : ConfigDirectory;
+        string.IsNullOrWhiteSpace(ConfigDirectory) ? DefaultConfigDirectory() : ConfigDirectory;
+
+    /// <summary>
+    /// ~/.config/nova on Linux ($XDG_CONFIG_HOME), nova in %APPDATA% on Windows. Asked for without checking it exists:
+    /// .NET otherwise answers "" when ~/.config isn't there yet (a fresh Ubuntu Server user), which made the
+    /// settings folder a bare "nova" relative to /opt/nova, where nothing can be saved.
+    /// </summary>
+    public static string DefaultConfigDirectory()
+    {
+        var appData = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData, Environment.SpecialFolderOption.DoNotVerify);
+        if (string.IsNullOrWhiteSpace(appData))
+            appData = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile, Environment.SpecialFolderOption.DoNotVerify), ".config");
+        return Path.Combine(appData, "nova");
+    }
 
     public string ResolveImageDirectory()
     {
-        var home = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
+        var home = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile, Environment.SpecialFolderOption.DoNotVerify);
         if (string.IsNullOrWhiteSpace(ImageDirectory)) return Path.Combine(home, "Pictures", "Nova");
         return ImageDirectory.StartsWith('~') ? Path.Combine(home, ImageDirectory[1..].TrimStart('/', '\\')) : ImageDirectory;
     }

@@ -4,6 +4,11 @@ What changed in each release. The newest is first. A release's section here beco
 
 ## [Unreleased]
 
+### Fixed
+- **A fresh install couldn't save anything** (settings, sites, optics, equipment, even frames: "Access to the path
+  '/opt/nova/nova' is denied"). With no `~/.config` folder yet (a new Ubuntu Server user), .NET gave no settings
+  folder, so NOVA used `nova` relative to `/opt/nova`. It now always uses `~/.config/nova`, made at start.
+
 ## [0.3.11] - 2026-10-15
 
 ### Fixed

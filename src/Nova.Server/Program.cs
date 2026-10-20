@@ -36,6 +36,8 @@ builder.Services.Configure<GzipCompressionProviderOptions>(o => o.Level = Compre
 // The optional password: signed-in browsers keep a cookie for 30 days. Its keys live in the config folder, so
 // restarts and updates don't sign anyone out.
 var configDirectory = (builder.Configuration.GetSection("Nova").Get<NovaOptions>() ?? new NovaOptions()).ResolveConfigDirectory();
+// Made here, at the start, so every setting can be saved from the first one (a fresh user has no ~/.config yet).
+Directory.CreateDirectory(configDirectory);
 builder.Services.AddDataProtection().PersistKeysToFileSystem(new DirectoryInfo(Path.Combine(configDirectory, "keys")));
 builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme).AddCookie(o =>
 {

@@ -4,6 +4,11 @@ What changed in each release. The newest is first. A release's section here beco
 
 ## [Unreleased]
 
+### Changed
+
+- **Camera cooler:** a switch instead of the "Cooler on" / "Cooler off" button, so it's clear at a glance whether
+  the cooler is on.
+
 ### Fixed
 
 - **The clock on networks that block Ubuntu's secure time servers:** Ubuntu's chrony only trusts its NTS

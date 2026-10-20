@@ -170,9 +170,11 @@
                 Set
               </button>
               <div class="spacer"></div>
-              <button class={cooler.on ? 'danger' : ''} onclick={() => apply({ coolerOn: !cooler.on })}>
-                {cooler.on ? 'Cooler off' : 'Cooler on'}
-              </button>
+              <label class="switch" title={cooler.on ? 'The cooler is on: switch it off' : 'The cooler is off: switch it on'}>
+                <input type="checkbox" role="switch" checked={cooler.on} onchange={(e) => apply({ coolerOn: e.currentTarget.checked })} />
+                <span class="track" aria-hidden="true"><span class="knob"></span></span>
+                Cooler
+              </label>
             </div>
           {/if}
         </div>
@@ -294,5 +296,48 @@
     text-align: center;
     font-size: 12px;
     line-height: 20px;
+  }
+  .switch {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    cursor: pointer;
+    font-size: 13px;
+  }
+  .switch input {
+    position: absolute;
+    opacity: 0;
+    width: 1px;
+    height: 1px;
+  }
+  .track {
+    width: 32px;
+    height: 18px;
+    border-radius: 999px;
+    background: var(--input);
+    border: 1px solid var(--panel-border);
+    position: relative;
+    transition: background 0.15s;
+  }
+  .knob {
+    position: absolute;
+    top: 2px;
+    left: 2px;
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    background: var(--muted);
+    transition: transform 0.15s, background 0.15s;
+  }
+  .switch input:checked + .track {
+    background: color-mix(in srgb, var(--accent) 35%, var(--input));
+  }
+  .switch input:checked + .track .knob {
+    transform: translateX(14px);
+    background: var(--accent);
+  }
+  .switch input:focus-visible + .track {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
   }
 </style>

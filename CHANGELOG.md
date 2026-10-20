@@ -4,6 +4,11 @@ What changed in each release. The newest is first. A release's section here beco
 
 ## [Unreleased]
 
+### Added
+
+- `nova doctor` checks the clock: says when the time zone is still UTC (Ubuntu Server's default) and how to
+  set yours, and whether the clock is synced from the internet.
+
 ## [0.3.14] - 2026-10-20
 
 ### Added

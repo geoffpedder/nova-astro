@@ -231,6 +231,27 @@ if [ -n "$cams" ]; then
   else note "this user isn't in the video group, so NOVA can't open the webcam" "$reinstall"; fi
 fi
 
+section "Clock"
+# Altitudes, the Sun and meridian flips are worked out in UTC, so a wrong time zone only makes NOVA's
+# times read oddly; a wrong clock puts everything in the wrong place.
+if has timedatectl; then
+  zone=$(timedatectl show -p Timezone --value 2>/dev/null)
+  if [ -z "$zone" ] || [[ "$zone" == UTC || "$zone" == Etc/UTC || "$zone" == Etc/Universal ]]; then
+    note "time zone is UTC: NOVA's times (logs, sequences, \"start after\") show UTC, not your local time" \
+      "sudo timedatectl set-timezone Europe/London   (yours: timedatectl list-timezones), then: sudo systemctl restart nova"
+  else pass "time zone $zone ($(date +%H:%M) now)"; fi
+  if [ "$(timedatectl show -p NTPSynchronized --value 2>/dev/null)" = yes ]; then pass "clock synced from the internet ($(date -u '+%H:%M UTC'))"
+  elif [ "$(timedatectl show -p NTP --value 2>/dev/null)" != yes ]; then
+    note "clock isn't synced from the internet (it says $(date -u '+%Y-%m-%d %H:%M UTC'))" "sudo timedatectl set-ntp true"
+  elif has chronyc; then
+    note "clock not synced yet (it says $(date -u '+%Y-%m-%d %H:%M UTC')): fine for a few minutes after a boot, or on the hotspot" \
+      "chronyc -N sources   (no server marked *: the network may block time servers, UDP 123 and TCP 4460)"
+  else
+    note "clock not synced yet (it says $(date -u '+%Y-%m-%d %H:%M UTC')): fine for a few minutes after a boot, or on the hotspot" \
+      "timedatectl timesync-status"
+  fi
+fi
+
 section "Password"
 nova_home=$(getent passwd "${nova_user:-$(id -un)}" | cut -d: -f6)
 if [ -f "${Nova__ConfigDirectory:-${nova_home:-$HOME}/.config/nova}/auth.json" ]; then pass "set: browsers sign in to use NOVA"

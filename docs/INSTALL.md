@@ -151,6 +151,9 @@ deploy/setup.sh                  # as yourself, not with sudo
 It's safe to run again: it only adds what's missing (for example PHD2, or another maker's drivers). It
 finishes by running `nova doctor`, which checks everything.
 
+Ubuntu Server starts on UTC. Set your own time zone so NOVA's times read as local time (find yours with
+`timedatectl list-timezones`): `sudo timedatectl set-timezone Europe/London`, then `sudo systemctl restart nova`.
+
 Arch's AUR driver packages require exactly the version of INDI that Arch ships, so `setup.sh` always updates
 the whole system (`pacman -Syu`) before installing them.
 

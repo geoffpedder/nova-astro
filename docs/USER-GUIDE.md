@@ -134,8 +134,10 @@ and others) switch to their low-noise mode, at about unity gain. For other value
 and offset you want, then **Make these the default** under them. Sequence rows with a gain or offset filled in still
 use their own. The cooling target starts at -10 °C.
 
-**Optics** (in the Camera panel): presets of focal length and aperture for each camera, e.g. one for the
-telescope and one with a reducer. The active preset is written into the FITS headers and tells the plate
+**Optics** (in the Camera panel): presets of focal length and aperture, e.g. one for the telescope and one
+with a reducer. The presets are shared by every camera, so a second camera on the same telescope (or one
+swapped in) just picks the same preset; each camera remembers its own choice. Changing a shared preset
+changes it for every camera using it. The active preset is written into the FITS headers and tells the plate
 solver and the Targets tab how big the field is.
 
 **Storage** (in the Camera panel): where frames are saved, on the **Mini PC** (`~/Pictures/Nova`) or a **USB

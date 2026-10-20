@@ -153,7 +153,7 @@ over SignalR at `/hub`. The main endpoints:
 | POST | `/api/equipment/connect` · `/disconnect` | |
 | POST | `/api/equipment/select` | `{ "kind": "Camera", "name": "ZWO CCD ASI2600MC Pro" }` — kind is Camera, Mount or Focuser; `null` name = automatic |
 | POST | `/api/camera/settings` | `{ "coolerOn": true, "targetTemperature": -10, "gain": 100, "offset": 50, "binning": 2, "frameType": "Dark" }` (any subset) |
-| POST | `/api/optics` | `{ "camera": "ZWO CCD ASI2600MC Pro", "name": "RedCat + 0.8x", "focalLength": 200, "aperture": 51, "originalName": null }` — add/update/rename a preset and make it active |
+| POST | `/api/optics` | `{ "camera": "ZWO CCD ASI2600MC Pro", "name": "RedCat + 0.8x", "focalLength": 200, "aperture": 51, "originalName": null }` — add a preset (`originalName` null; a name already used is refused) or change/rename one (presets are shared by every camera, so this changes it for each using it), and make it this camera's |
 | POST | `/api/optics/select` · `/delete` | `{ "camera": "…", "name": "RedCat 51" }` — the active preset is sent to the driver whenever that camera connects |
 | POST | `/api/camera/defaults` | `{ "camera": "…", "gain": 100, "offset": 50 }` — set whenever that camera connects (both null: the driver's own; a ZWO imaging camera then gets 100/50) |
 | POST | `/api/camera/expose` | `{ "duration": 5, "save": true }` |

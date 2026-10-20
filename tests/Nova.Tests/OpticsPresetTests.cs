@@ -69,7 +69,7 @@ public class OpticsPresetTests : IDisposable
         await optics.SelectPresetAsync(Camera, "RedCat 51", CancellationToken.None);
         Assert.Equal(250, optics.All.Single(c => c.Camera == Camera).FocalLength);
 
-        // Names are unique per camera (ignoring case), but a preset can keep its own name when edited.
+        // Names are unique (ignoring case), but a preset can keep its own name when edited.
         await Assert.ThrowsAsync<ArgumentException>(() =>
             optics.SavePresetAsync(Camera, new OpticsPreset("redcat 51", 300, 60), "RedCat + 0.8x", CancellationToken.None));
         await optics.SavePresetAsync(Camera, new OpticsPreset("RedCat 51", 255, 51), "RedCat 51", CancellationToken.None);
@@ -89,6 +89,58 @@ public class OpticsPresetTests : IDisposable
         var reloaded = CreateService().All.Single(c => c.Camera == Camera);
         Assert.Equal("RedCat 51", reloaded.ActivePreset);
         Assert.Single(reloaded.Presets);
+    }
+
+    [Fact]
+    public async Task CamerasShareThePresets()
+    {
+        const string Guide = "Simulated Guide Camera";
+        var optics = CreateService();
+        await optics.SavePresetAsync(Camera, new OpticsPreset("RedCat 51", 250, 51), null, CancellationToken.None);
+        await optics.SavePresetAsync(Guide, new OpticsPreset("Guide scope", 120, 30), null, CancellationToken.None);
+
+        // The other camera can pick it without typing it again; each keeps its own choice.
+        await optics.SelectPresetAsync(Guide, "RedCat 51", CancellationToken.None);
+        var guide = optics.All.Single(c => c.Camera == Guide);
+        Assert.Equal(["RedCat 51", "Guide scope"], guide.Presets.Select(p => p.Name));
+        Assert.Equal(250, guide.FocalLength);
+        Assert.Equal([Camera], guide.Presets.Single(p => p.Name == "RedCat 51").UsedBy!);
+
+        // Changing or renaming it changes it for both.
+        await optics.SavePresetAsync(Camera, new OpticsPreset("RedCat 51 + reducer", 200, 51), "RedCat 51", CancellationToken.None);
+        guide = optics.All.Single(c => c.Camera == Guide);
+        Assert.Equal(("RedCat 51 + reducer", 200d), (guide.ActivePreset, guide.FocalLength!.Value));
+
+        // Names are unique across every camera.
+        await Assert.ThrowsAsync<ArgumentException>(() =>
+            optics.SavePresetAsync(Guide, new OpticsPreset("guide SCOPE", 100, 25), null, CancellationToken.None));
+
+        // Deleted from one camera: gone for both, and the other is left with none rather than a stranger's optics.
+        await optics.DeletePresetAsync(Camera, "RedCat 51 + reducer", CancellationToken.None);
+        Assert.Equal("Guide scope", optics.All.Single(c => c.Camera == Camera).ActivePreset);
+        Assert.Null(CreateService().All.Single(c => c.Camera == Guide).ActivePreset);
+    }
+
+    [Fact]
+    public void PoolsPresetsSavedPerCamera()
+    {
+        Directory.CreateDirectory(_config);
+        File.WriteAllText(Path.Combine(_config, "optics.json"), $$"""
+            {
+              "{{Camera}}": { "Active": "Scope", "Presets": [ { "Name": "Scope", "FocalLength": 250, "Aperture": 51 },
+                                                            { "Name": "Spare", "FocalLength": 400, "Aperture": 80 } ], "Gain": 100 },
+              "Simulated Guide Camera": { "Active": "Scope", "Presets": [ { "Name": "Scope", "FocalLength": 120, "Aperture": 30 },
+                                                                         { "Name": "Spare", "FocalLength": 400, "Aperture": 80 } ] }
+            }
+            """);
+
+        var all = CreateService().All;
+        var main = all.Single(c => c.Camera == Camera);
+        var guide = all.Single(c => c.Camera == "Simulated Guide Camera");
+        // The same name with the same optics is one preset; with different optics, each gets its camera's name.
+        Assert.Equal(["Scope (Simulated Camera)", "Scope (Simulated Guide Camera)", "Spare"], main.Presets.Select(p => p.Name).Order());
+        Assert.Equal(("Scope (Simulated Camera)", 250d, 100d), (main.ActivePreset, main.FocalLength!.Value, main.DefaultGain!.Value));
+        Assert.Equal(("Scope (Simulated Guide Camera)", 120d), (guide.ActivePreset, guide.FocalLength!.Value));
     }
 
     [Fact]

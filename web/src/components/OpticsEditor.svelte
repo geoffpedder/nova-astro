@@ -32,6 +32,7 @@
   const isImagingCamera = $derived(imaging && camera === defaultCamera)
   const target = $derived(editing ?? info?.activePreset ?? (presets.length === 0 ? NewPreset : null))
   const existing = $derived(presets.find((p) => p.name === target) ?? null)
+  const sharedWith = $derived((existing?.usedBy ?? []).map(nick).join(', '))
 
   // Load the fields when the camera or preset being shown changes; leave them alone while typing.
   $effect(() => {
@@ -78,7 +79,8 @@
 
   async function remove() {
     if (!camera || !existing) return
-    if (!(await ask(`Delete the optics preset "${existing.name}"?`, { message: `For ${camera}.`, confirm: 'Delete', danger: true }))) return
+    const message = sharedWith ? `It's also used by ${sharedWith}, which will have no optics until you pick another.` : undefined
+    if (!(await ask(`Delete the optics preset "${existing.name}"?`, { message, confirm: 'Delete', danger: true }))) return
     if (await act(() => api.deleteOptics(camera, existing!.name))) editing = null
   }
 </script>
@@ -105,7 +107,11 @@
       Preset
       <select value={target ?? ''} onchange={(e) => choosePreset(e.currentTarget.value)} title="Picking a preset makes it the one in use">
         {#each presets as p (p.name)}
-          <option value={p.name}>{p.name}{p.name === info?.activePreset ? ' ✓' : ''} — {p.focalLength} mm f/{p.focalRatio.toFixed(1)}</option>
+          <option value={p.name}
+            >{p.name}{p.name === info?.activePreset ? ' ✓' : ''} — {p.focalLength} mm f/{p.focalRatio.toFixed(1)}{p.usedBy?.length
+              ? ` (also ${p.usedBy.map(nick).join(', ')})`
+              : ''}</option
+          >
         {/each}
         <option value={NewPreset}>+ New preset…</option>
       </select>
@@ -129,7 +135,13 @@
       </button>
       {#if existing}<button class="secondary" onclick={remove}>Delete</button>{/if}
     </div>
-    <p class="muted hint">The preset marked ✓ is sent to the driver whenever this camera connects (also when PHD2 connects it).</p>
+    {#if existing && sharedWith}
+      <p class="muted hint">Shared with {sharedWith}: changes apply there too.</p>
+    {/if}
+    <p class="muted hint">
+      The preset marked ✓ is sent to the driver whenever this camera connects (also when PHD2 connects it). Presets are
+      shared by every camera: pick the same one for a camera on the same telescope.
+    </p>
   {/if}
 </div>
 

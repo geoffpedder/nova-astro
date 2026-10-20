@@ -4,6 +4,13 @@ What changed in each release. The newest is first. A release's section here beco
 
 ## [Unreleased]
 
+### Changed
+
+- **Optics presets are shared by every camera:** another camera on the same telescope just picks the same
+  preset instead of having it typed in again. Each camera still remembers its own choice, the list says which
+  other cameras use a preset, and changing one changes it for all of them. Presets saved per camera are pooled
+  (a name two cameras used for different optics gets the camera's name added).
+
 ## [0.3.15] - 2026-10-20
 
 ### Added

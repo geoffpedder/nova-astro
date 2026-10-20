@@ -543,6 +543,8 @@ export interface OpticsPreset {
   aperture: number
   focalRatio: number
   imageScale: number | null
+  /** The other cameras using this preset (presets are shared by every camera). */
+  usedBy?: string[]
 }
 
 /** Telescope optics for one camera; the top-level values are the active preset's. imageScale is arcsec per unbinned pixel. */

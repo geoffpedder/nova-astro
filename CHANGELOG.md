@@ -4,6 +4,12 @@ What changed in each release. The newest is first. A release's section here beco
 
 ## [Unreleased]
 
+### Added
+- **A terminal on the mini PC** in the Activity tab's Mini PC box: run `nova doctor`, `journalctl`, `sudo apt …` from
+  the browser, with colours, resizing and programs like `htop`. Only once a NOVA password is set, and only for a
+  browser signed in with it. It uses ttyd (setup installs it), started while a terminal is open and listening on a
+  file only NOVA's user can open, never on the network.
+
 ### Fixed
 - **A fresh install couldn't save anything** (settings, sites, optics, equipment, even frames: "Access to the path
   '/opt/nova/nova' is denied"). With no `~/.config` folder yet (a new Ubuntu Server user), .NET gave no settings

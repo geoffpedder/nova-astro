@@ -178,6 +178,13 @@ else
   fi
 fi
 
+section "Terminal (optional: the Activity tab's Mini PC box)"
+if has ttyd; then pass "ttyd $(ttyd --version 2>/dev/null | awk '{print $NF}')"
+else note "ttyd isn't installed: no terminal in the Activity tab" "$setup   (or: sudo apt install ttyd, sudo pacman -S ttyd)"; fi
+# The password file is NOVA's; a password is what lets the terminal open.
+if [ -f "${XDG_CONFIG_HOME:-$HOME/.config}/nova/auth.json" ]; then pass "a NOVA password is set (the terminal needs one)"
+else note "no NOVA password: the terminal stays closed until one is set (⏻ → Set a password…, or: nova password)"; fi
+
 section "Network names (optional: http://<minipc>.local:5000)"
 if systemctl is-active --quiet avahi-daemon 2>/dev/null; then
   pass "avahi-daemon running"

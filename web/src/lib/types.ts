@@ -28,6 +28,14 @@ export interface HotspotSettings {
   retry: boolean
 }
 
+/** The terminal on the mini PC: whether it can be opened, and why not. */
+export interface TerminalStatus {
+  available: boolean
+  problem: string | null
+  running: boolean
+  sessions: number
+}
+
 export interface HotspotStatus {
   state: 'Off' | 'Starting' | 'On' | 'Stopping' | 'Error'
   ssid: string

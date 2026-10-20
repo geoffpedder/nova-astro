@@ -83,6 +83,7 @@ builder.Services.AddSingleton<StorageService>();
 builder.Services.AddSingleton<SystemStatsService>();
 builder.Services.AddSingleton<WebcamService>();
 builder.Services.AddSingleton<HotspotService>();
+builder.Services.AddSingleton<TerminalService>();
 builder.Services.AddHostedService(sp => sp.GetRequiredService<StorageService>());
 builder.Services.AddHostedService(sp => sp.GetRequiredService<NotificationService>());
 builder.Services.AddSingleton<StatusReporter>();
@@ -124,7 +125,8 @@ app.Use(async (context, next) =>
 {
     var path = context.Request.Path;
     var guarded = (path.StartsWithSegments("/api") && !path.StartsWithSegments("/api/auth"))
-                  || path.StartsWithSegments("/hub") || path.StartsWithSegments("/phd2") || path.StartsWithSegments("/websockify");
+                  || path.StartsWithSegments("/hub") || path.StartsWithSegments("/phd2") || path.StartsWithSegments("/websockify")
+                  || path.StartsWithSegments("/terminal");
     if (guarded && !context.RequestServices.GetRequiredService<PasswordService>().IsSignedIn(context.User))
     {
         context.Response.StatusCode = StatusCodes.Status401Unauthorized;
@@ -137,6 +139,7 @@ app.UseStaticFiles();
 app.UsePhd2Screen(); // PHD2's screen through NOVA's port (noVNC files and the VNC relay)
 
 app.MapNovaApi();
+app.MapTerminal(); // the terminal (ttyd) through NOVA's port, behind the password
 app.MapHub<NovaHub>("/hub");
 app.MapFallbackToFile("index.html");
 

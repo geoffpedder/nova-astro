@@ -1,4 +1,4 @@
-import type { HotspotSettings, HotspotStatus, WebcamControls, WebcamSettings, WebcamStatus, SystemStats, GuideLogFile, AltitudeCurve, SkyField, SolvedFrame, TargetInfo, TonightFilters, TonightResult, Annotations, AutofocusSettings, MotionDirection, PolarAlignmentSettings, Sequence, CameraSettingsUpdate, DeviceKind, DeviceProperty, FitsHeaderCard, PreviewMode, StarOverlay, FlatsSettings, SolveInfo, DriverSetup, SetupCheck, NotificationSettings, NotificationSettingsView, FolderListing, NovaGuiderSettings } from './types'
+import type { TerminalStatus, HotspotSettings, HotspotStatus, WebcamControls, WebcamSettings, WebcamStatus, SystemStats, GuideLogFile, AltitudeCurve, SkyField, SolvedFrame, TargetInfo, TonightFilters, TonightResult, Annotations, AutofocusSettings, MotionDirection, PolarAlignmentSettings, Sequence, CameraSettingsUpdate, DeviceKind, DeviceProperty, FitsHeaderCard, PreviewMode, StarOverlay, FlatsSettings, SolveInfo, DriverSetup, SetupCheck, NotificationSettings, NotificationSettingsView, FolderListing, NovaGuiderSettings } from './types'
 
 import { signedOut } from './auth.svelte'
 
@@ -298,6 +298,7 @@ export const api = {
   /** Saves the notification settings; token: undefined keeps the current one, '' removes it. */
   saveNotifications: (settings: NotificationSettings, token?: string) => post('/api/notifications', { settings, token }),
   testNotification: () => post('/api/notifications/test'),
+  terminal: () => get<TerminalStatus>('/api/terminal'),
   hotspot: () => get<{ status: HotspotStatus; settings: HotspotSettings }>('/api/hotspot'),
   saveHotspot: (settings: HotspotSettings) => post('/api/hotspot/settings', settings),
   startHotspot: () => post('/api/hotspot/start'),

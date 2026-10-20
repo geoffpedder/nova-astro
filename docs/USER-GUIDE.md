@@ -546,6 +546,12 @@ the activity log. Your own ntfy server works too: set its address, and an access
   out (see [Network, ports and security](INSTALL.md#network-ports-and-security)).
 - **The header** shows its network (wired, Wi-Fi with signal, or its own hotspot) and address. Click it for the
   **Network** dialog and the Wi-Fi hotspot.
+- **Terminal** (the Mini PC box at the top of the Activity tab): a shell on the mini PC in the browser, for `nova
+  doctor`, `journalctl`, `sudo apt …` and the like, without an SSH client. It runs as NOVA's user (`sudo` asks for
+  your password), with colours, resizing and full-screen programs such as `htop` or `nano`. Drag its bottom edge to
+  resize it; ⤢ makes it taller. Because it's a shell, it's only offered **once a NOVA password is set** (⏻ → Set a
+  password…), and only to a browser signed in with it. It needs `ttyd` (setup installs it), which runs only while a
+  terminal is open, listening on a file only NOVA's user can open, never on the network.
 
 ### Wi-Fi hotspot (no Wi-Fi at the site)
 

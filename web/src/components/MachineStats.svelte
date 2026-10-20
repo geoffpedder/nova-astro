@@ -1,6 +1,6 @@
 <script lang="ts">
   import { api } from '../lib/api'
-  import type { SystemStats } from '../lib/types'
+  import type { SystemStats, TerminalStatus } from '../lib/types'
 
   // The mini PC at a glance (CPU, memory, temperature, disks), read every few seconds while the Activity tab shows.
   let { active }: { active: boolean } = $props()
@@ -35,6 +35,44 @@
     const m = Math.floor((seconds % 3600) / 60)
     return d > 0 ? `${d} d ${h} h` : h > 0 ? `${h} h ${m} min` : `${m} min`
   }
+  // A terminal on the mini PC (ttyd through NOVA), below the stats when opened. Only behind NOVA's password.
+  let terminal = $state<TerminalStatus | null>(null)
+  let terminalOpen = $state(load('nova.terminalOpen') === '1')
+  let terminalTall = $state(false)
+  let terminalHeight = $state(Number(load('nova.terminalHeight')) || 280)
+  $effect(() => {
+    if (!active) return
+    api.terminal().then((t) => (terminal = t)).catch(() => (terminal = null))
+  })
+  function load(key: string): string | null {
+    try {
+      return localStorage.getItem(key)
+    } catch {
+      return null
+    }
+  }
+  function keep(key: string, value: string) {
+    try {
+      localStorage.setItem(key, value)
+    } catch {
+      // just for this visit
+    }
+  }
+  function toggleTerminal() {
+    terminalOpen = !terminalOpen
+    keep('nova.terminalOpen', terminalOpen ? '1' : '0')
+  }
+  // Its height, dragged at the box's bottom edge: remembered per browser.
+  function resized(node: HTMLElement) {
+    const observer = new ResizeObserver(() => {
+      if (!terminalTall && node.offsetHeight > 80) {
+        terminalHeight = node.offsetHeight
+        keep('nova.terminalHeight', String(terminalHeight))
+      }
+    })
+    observer.observe(node)
+    return { destroy: () => observer.disconnect() }
+  }
   const memPercent = $derived(stats?.memoryUsedBytes != null && stats.memoryTotalBytes ? (100 * stats.memoryUsedBytes) / stats.memoryTotalBytes : null)
 </script>
 
@@ -42,7 +80,23 @@
   <div class="head">
     <h2>Mini PC</h2>
     {#if stats}<span class="muted small">{stats.host}{stats.uptimeSeconds != null ? `, up ${uptime(stats.uptimeSeconds)}` : ''}</span>{/if}
+    <span class="gap"></span>
+    {#if terminalOpen && terminal?.available}
+      <button class="secondary small-button" onclick={() => (terminalTall = !terminalTall)} aria-pressed={terminalTall}
+        title={terminalTall ? 'Back to its own size' : 'Taller'}>{terminalTall ? '⤡' : '⤢'}</button>
+    {/if}
+    <button class="secondary small-button" class:on={terminalOpen} aria-pressed={terminalOpen} onclick={toggleTerminal}
+      title="A terminal on the mini PC: run commands (nova doctor, journalctl…) as NOVA's user">Terminal</button>
   </div>
+  {#if terminalOpen}
+    {#if terminal?.available}
+      <div class="terminal" class:tall={terminalTall} style:height={terminalTall ? '70vh' : `${terminalHeight}px`} use:resized>
+        <iframe src="/terminal/" title="Terminal on the mini PC"></iframe>
+      </div>
+    {:else}
+      <p class="muted small">{terminal?.problem ?? 'Checking the terminal…'}</p>
+    {/if}
+  {/if}
   {#if stats}
     <div class="rows mono">
       <span class="label">CPU</span>
@@ -83,6 +137,39 @@
     display: flex;
     align-items: baseline;
     gap: 12px;
+  }
+  .gap {
+    flex: 1;
+  }
+  .small-button {
+    font-size: 12px;
+    padding: 2px 10px;
+  }
+  .small-button.on {
+    color: var(--accent);
+    border-color: var(--accent);
+  }
+  /* The terminal: its height dragged at the bottom edge. */
+  .terminal {
+    resize: vertical;
+    overflow: hidden;
+    min-height: 120px;
+    max-height: 85vh;
+    border: 1px solid var(--panel-border);
+    border-radius: var(--radius);
+    background: #141414;
+  }
+  .terminal.tall {
+    resize: none;
+  }
+  .terminal iframe {
+    display: block;
+    width: 100%;
+    height: 100%;
+    border: 0;
+  }
+  :global(:root[data-theme='night']) .terminal iframe {
+    filter: grayscale(1) sepia(1) saturate(6) hue-rotate(-50deg) brightness(0.8);
   }
   .small {
     font-size: 12px;

@@ -64,6 +64,40 @@
     act(() => api.setDeviceProperty(device, p.name, { [element]: on ? 'On' : 'Off' }))
   }
 
+  // INDI's CCD Simulator: ZWO's cooled cameras' sensors (width × height in pixels, pixel size in µm), so the
+  // simulated frames come out the size the real camera's would.
+  const SimSettings = 'SIMULATOR_SETTINGS'
+  const sensorPresets: { name: string; x: number; y: number; pixel: number }[] = [
+    { name: 'ASI2600MC/MM Pro (APS-C)', x: 6248, y: 4176, pixel: 3.76 },
+    { name: 'ASI2400MC Pro (full frame)', x: 6072, y: 4042, pixel: 5.94 },
+    { name: 'ASI6200MC/MM Pro (full frame)', x: 9576, y: 6388, pixel: 3.76 },
+    { name: 'ASI071MC Pro (APS-C)', x: 4944, y: 3284, pixel: 4.78 },
+    { name: 'ASI294MC Pro (4/3")', x: 4144, y: 2822, pixel: 4.63 },
+    { name: 'ASI1600MM Pro (4/3")', x: 4656, y: 3520, pixel: 3.8 },
+    { name: 'ASI183MC/MM Pro (1")', x: 5496, y: 3672, pixel: 2.4 },
+    { name: 'ASI533MC/MM Pro (1", square)', x: 3008, y: 3008, pixel: 3.76 },
+    { name: 'ASI585MC Pro (1/1.2")', x: 3840, y: 2160, pixel: 2.9 },
+  ]
+  const sizeElements = ['SIM_XRES', 'SIM_YRES', 'SIM_XSIZE', 'SIM_YSIZE']
+  const hasSensorSize = (p: DeviceProperty) =>
+    p.name === SimSettings && sizeElements.every((n) => p.elements.some((e) => e.name === n))
+  const currentPreset = (p: DeviceProperty) => {
+    const value = (n: string) => Number(p.elements.find((e) => e.name === n)?.value)
+    return sensorPresets.findIndex(
+      (s) => value('SIM_XRES') === s.x && value('SIM_YRES') === s.y && Math.abs(value('SIM_XSIZE') - s.pixel) < 0.005,
+    )
+  }
+
+  function applyPreset(p: DeviceProperty, index: number) {
+    const preset = sensorPresets[index]
+    if (!preset) return
+    drafts[key(p, 'SIM_XRES')] = String(preset.x)
+    drafts[key(p, 'SIM_YRES')] = String(preset.y)
+    drafts[key(p, 'SIM_XSIZE')] = String(preset.pixel)
+    drafts[key(p, 'SIM_YSIZE')] = String(preset.pixel)
+    submit(p)
+  }
+
   function onkeydown(event: KeyboardEvent) {
     if (event.key === 'Escape') onclose()
   }
@@ -128,6 +162,25 @@
               {/each}
             </div>
           {:else}
+            {#if hasSensorSize(p) && writable(p)}
+              {@const chosen = currentPreset(p)}
+              <label class="preset">
+                <span class="muted">Sensor like</span>
+                <select
+                  value={chosen}
+                  onchange={(ev) => applyPreset(p, Number((ev.currentTarget as HTMLSelectElement).value))}
+                >
+                  <option value={-1} disabled>{chosen < 0 ? 'Choose a camera…' : ''}</option>
+                  {#each sensorPresets as s, i (s.name)}
+                    <option value={i}>{s.name}: {s.x}×{s.y}, {s.pixel} µm</option>
+                  {/each}
+                </select>
+              </label>
+              <p class="muted small hint">
+                Sets the resolution and pixel size below. To keep it after the driver restarts: Options → Configuration →
+                Save.
+              </p>
+            {/if}
             <div class="fields">
               {#each p.elements as e (e.name)}
                 <span class="muted el" title={e.name}>{e.label}</span>
@@ -265,6 +318,18 @@
     align-items: center;
     gap: 5px;
     font-size: 13px;
+  }
+  .preset {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .preset select {
+    flex: 1;
+    min-width: 0;
+  }
+  .hint {
+    margin: 4px 0 8px;
   }
   .fields {
     display: grid;

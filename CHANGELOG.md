@@ -8,6 +8,8 @@ What changed in each release. The newest is first. A release's section here beco
 
 - `nova doctor` checks the clock: says when the time zone is still UTC (Ubuntu Server's default) and how to
   set yours, and whether the clock is synced from the internet.
+- INDI CCD Simulator: a "Sensor like" list in its driver settings (Simulator Settings) sets the resolution and
+  pixel size of a ZWO cooled camera (ASI2600, ASI2400, ASI6200, ASI071, ASI294, ASI1600, ASI183, ASI533, ASI585).
 
 ## [0.3.14] - 2026-10-20
 

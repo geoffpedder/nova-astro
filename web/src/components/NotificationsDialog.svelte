@@ -39,6 +39,7 @@
         guidingLostMinutes: view.guidingLostMinutes,
         storage: view.storage ?? true,
         meridianFlip: view.meridianFlip ?? true,
+        ready: view.ready ?? true,
       }
     } catch (e) {
       error = e instanceof Error ? e.message : String(e)
@@ -115,6 +116,7 @@
       </label>
       <label class="check"><input type="checkbox" bind:checked={settings.storage} /> frames can't go to the USB drive (pulled out, full)</label>
       <label class="check"><input type="checkbox" bind:checked={settings.meridianFlip} /> a meridian flip is about 5 minutes away</label>
+      <label class="check"><input type="checkbox" bind:checked={settings.ready} /> the mini PC has started and NOVA is ready (after a boot)</label>
     </fieldset>
 
     {#if error}<p class="bad">{error}</p>{:else if note}<p class="ok">{note}</p>{:else if lastError}<p class="muted small">Last problem sending: {lastError}</p>{/if}

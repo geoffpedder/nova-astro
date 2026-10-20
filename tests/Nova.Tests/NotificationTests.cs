@@ -68,6 +68,29 @@ public class NotificationTests : IDisposable
     }
 
     [Fact]
+    public async Task SaysTheMiniPcIsReadyAfterABootOnly()
+    {
+        var ntfy = new FakeNtfy();
+        var service = NewService(ntfy);
+        service.Save(new NotificationSettings(Enabled: true, Topic: "nova-abc123"), null);
+
+        service.Uptime = () => TimeSpan.FromMinutes(2); // just booted
+        await service.AnnounceReadyAsync(TimeSpan.Zero, CancellationToken.None);
+        var post = Assert.Single(ntfy.Posts);
+        Assert.Equal("Mini PC ready", post.Body.GetProperty("title").GetString());
+        Assert.Contains(".local:5000", post.Body.GetProperty("message").GetString());
+
+        service.Uptime = () => TimeSpan.FromHours(3); // NOVA restarted (an update), the mini PC didn't
+        await service.AnnounceReadyAsync(TimeSpan.Zero, CancellationToken.None);
+        Assert.Single(ntfy.Posts);
+
+        service.Uptime = () => TimeSpan.FromMinutes(1);
+        service.Save(service.Settings with { Ready = false }, null);
+        await service.AnnounceReadyAsync(TimeSpan.Zero, CancellationToken.None);
+        Assert.Single(ntfy.Posts);
+    }
+
+    [Fact]
     public async Task KeepsTheTokenOutOfTheViewAndReportsFailures()
     {
         var ntfy = new FakeNtfy(HttpStatusCode.Forbidden);

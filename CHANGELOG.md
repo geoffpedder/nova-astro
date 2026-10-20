@@ -4,6 +4,10 @@ What changed in each release. The newest is first. A release's section here beco
 
 ## [Unreleased]
 
+### Added
+- **"Mini PC ready" notification:** after a boot, once NOVA is up and the network with it, your phone is told,
+  with the address to open (Notifications: *the mini PC has started and NOVA is ready*, on by default).
+
 ## [0.3.13] - 2026-10-20
 
 ### Fixed

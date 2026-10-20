@@ -13,14 +13,15 @@ namespace Nova.Server.Services;
 public sealed record NotificationSettings(
     bool Enabled = false, string Server = "https://ntfy.sh", string Topic = "", string? Token = null,
     bool SequenceDone = true, bool SequenceFailed = true, bool TargetSkipped = true, bool NeedsYou = true,
-    bool GuidingLost = true, double GuidingLostMinutes = 3, bool Storage = true, bool MeridianFlip = true);
+    bool GuidingLost = true, double GuidingLostMinutes = 3, bool Storage = true, bool MeridianFlip = true, bool Ready = true);
 
 /// <summary>What the page sees of the settings: the token itself never goes back to a browser.</summary>
 public sealed record NotificationSettingsView(
     bool Enabled, string Server, string Topic, bool HasToken, bool SequenceDone, bool SequenceFailed, bool TargetSkipped,
-    bool NeedsYou, bool GuidingLost, double GuidingLostMinutes, string? LastError, bool Storage = true, bool MeridianFlip = true);
+    bool NeedsYou, bool GuidingLost, double GuidingLostMinutes, string? LastError, bool Storage = true, bool MeridianFlip = true,
+    bool Ready = true);
 
-public enum NotificationKind { SequenceDone, SequenceFailed, TargetSkipped, NeedsYou, GuidingLost, Test, Storage, MeridianFlip }
+public enum NotificationKind { SequenceDone, SequenceFailed, TargetSkipped, NeedsYou, GuidingLost, Test, Storage, MeridianFlip, Ready }
 
 /// <summary>
 /// Messages to your phone through ntfy (https://ntfy.sh): a free app that shows whatever is posted to a topic you
@@ -60,7 +61,7 @@ public sealed class NotificationService : BackgroundService
         {
             var s = Settings;
             return new(s.Enabled, s.Server, s.Topic, !string.IsNullOrEmpty(s.Token), s.SequenceDone, s.SequenceFailed,
-                s.TargetSkipped, s.NeedsYou, s.GuidingLost, s.GuidingLostMinutes, _lastError, s.Storage, s.MeridianFlip);
+                s.TargetSkipped, s.NeedsYou, s.GuidingLost, s.GuidingLostMinutes, _lastError, s.Storage, s.MeridianFlip, s.Ready);
         }
     }
 
@@ -105,6 +106,7 @@ public sealed class NotificationService : BackgroundService
             NotificationKind.GuidingLost => s.GuidingLost,
             NotificationKind.Storage => s.Storage,
             NotificationKind.MeridianFlip => s.MeridianFlip,
+            NotificationKind.Ready => s.Ready,
             _ => true,
         };
         if ((!s.Enabled && kind != NotificationKind.Test) || !wanted || string.IsNullOrEmpty(s.Topic)) return null;
@@ -116,6 +118,7 @@ public sealed class NotificationService : BackgroundService
             NotificationKind.NeedsYou => (4, new[] { "bell" }),
             NotificationKind.TargetSkipped => (3, new[] { "fast_forward" }),
             NotificationKind.MeridianFlip => (3, new[] { "arrows_counterclockwise" }),
+            NotificationKind.Ready => (3, new[] { "white_check_mark" }),
             NotificationKind.SequenceDone => (3, new[] { "telescope" }),
             _ => (3, new[] { "telescope" }),
         };
@@ -143,8 +146,42 @@ public sealed class NotificationService : BackgroundService
     }
 
     /// <summary>Watches guiding during sequences: PHD2 without its star for a few minutes means clouds, or worse.</summary>
+    /// <summary>NOVA started this soon after the mini PC did: a boot (later, it's NOVA restarting, after an update).</summary>
+    public static readonly TimeSpan BootWindow = TimeSpan.FromMinutes(10);
+
+    /// <summary>How long the mini PC has been up (replaceable in tests).</summary>
+    public Func<TimeSpan> Uptime { get; set; } = () => TimeSpan.FromMilliseconds(Environment.TickCount64);
+
+    /// <summary>
+    /// After a boot: once the network's up, tells the phone the mini PC is ready, with the address to open. Not after
+    /// NOVA alone restarts (an update), nor on the hotspot (no internet to send it through).
+    /// </summary>
+    public async Task AnnounceReadyAsync(TimeSpan settle, CancellationToken ct)
+    {
+        if (Uptime() > BootWindow) return;
+        await Task.Delay(settle, ct); // INDI and the equipment starting, the network coming up
+        var network = _services.GetService<NetworkService>();
+        for (var i = 0; i < 20; i++)
+        {
+            if (!Settings.Enabled || !Settings.Ready) return;
+            var status = network is null ? null : await network.RefreshAsync(ct);
+            if (status is null || HotspotService.Connected(status))
+            {
+                var host = status?.Hostname ?? Environment.MachineName;
+                var address = status?.Primary?.Addresses.FirstOrDefault();
+                var minutes = Math.Max(1, (int)Math.Round(Uptime().TotalMinutes));
+                await SendAsync(NotificationKind.Ready, "Mini PC ready",
+                    $"NOVA is up, {minutes} min after the mini PC started. Open http://{host.ToLowerInvariant()}.local:5000" +
+                    (address is null ? "" : $" (or http://{address}:5000)") + ".", ct);
+                return;
+            }
+            await Task.Delay(TimeSpan.FromSeconds(30), ct); // no network yet (or only the hotspot): look again
+        }
+    }
+
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
+        _ = AnnounceReadyAsync(TimeSpan.FromSeconds(20), stoppingToken);
         DateTime? lostSince = null;
         var told = false;
         using var timer = new PeriodicTimer(TimeSpan.FromSeconds(15));

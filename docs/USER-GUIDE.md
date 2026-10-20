@@ -534,6 +534,8 @@ that topic, then press **Send a test**. It tells you when:
 - NOVA is waiting for you: putting the flat panel on, or turning the camera for the next target;
 - guiding has lost its star for a few minutes during a sequence (and when it's back);
 - a meridian flip is about 5 minutes away;
+- the mini PC has started and NOVA is ready, with the address to open (after a boot, once the network's up; not
+  when NOVA alone restarts after an update, nor on its hotspot, which has no internet to send it through);
 - frames can't go to the chosen USB drive (it's missing, full or was pulled out), so they're going to the mini PC.
 
 Each can be turned off. The mini PC needs internet for messages to arrive; without it they're only noted in

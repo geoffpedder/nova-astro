@@ -933,6 +933,8 @@ export interface NotificationSettings {
   storage: boolean
   /** About 5 minutes before a sequence's meridian flip. */
   meridianFlip: boolean
+  /** The mini PC has started and NOVA is ready (after a boot). */
+  ready: boolean
 }
 export interface NotificationSettingsView extends NotificationSettings {
   hasToken: boolean

@@ -4,6 +4,8 @@ What changed in each release. The newest is first. A release's section here beco
 
 ## [Unreleased]
 
+## [0.3.14] - 2026-10-20
+
 ### Added
 - **"Mini PC ready" notification:** after a boot, once NOVA is up and the network with it, your phone is told,
   with the address to open (Notifications: *the mini PC has started and NOVA is ready*, on by default).
@@ -346,7 +348,8 @@ The first release: ready-made downloads for 64-bit PCs (`linux-x64`) and the Ras
 - **Stellarium:** take its selection, act as its telescope, and turn its Oculars frame to the camera's angle.
 - **The mini PC:** restart and shut down from the page, network status, night mode.
 
-[Unreleased]: https://github.com/geoffpedder/nova-astro/compare/v0.3.13...HEAD
+[Unreleased]: https://github.com/geoffpedder/nova-astro/compare/v0.3.14...HEAD
+[0.3.14]: https://github.com/geoffpedder/nova-astro/releases/tag/v0.3.14
 [0.3.13]: https://github.com/geoffpedder/nova-astro/releases/tag/v0.3.13
 [0.3.12]: https://github.com/geoffpedder/nova-astro/releases/tag/v0.3.12
 [0.3.11]: https://github.com/geoffpedder/nova-astro/releases/tag/v0.3.11

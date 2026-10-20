@@ -4,6 +4,11 @@ What changed in each release. The newest is first. A release's section here beco
 
 ## [Unreleased]
 
+### Fixed
+- **`nova update` from NOVA's own terminal** finishes: the install stops NOVA, which ended the terminal and the
+  install with it, half way. Run from there, the installer now carries on as a job of its own
+  (`journalctl -fu nova-install-…` follows it); NOVA restarts and the page comes back.
+
 ## [0.3.12] - 2026-10-20
 
 ### Added

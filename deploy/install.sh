@@ -16,6 +16,20 @@ if ! command -v indiserver >/dev/null; then
   exit 1
 fi
 
+# Run from NOVA's own terminal (Activity tab), this script is part of nova.service, so stopping NOVA below would stop
+# it too, half way. Then it copies the build somewhere safe and carries on as a job of its own, which survives NOVA
+# and the terminal stopping; the page comes back when NOVA restarts.
+if [ -z "${NOVA_INSTALL_DETACHED:-}" ] && grep -qs 'nova\.service' /proc/self/cgroup; then
+  stage="$(mktemp -d /var/tmp/nova-install.XXXXXX)"
+  cp -r "$SRC" "$stage/app"
+  cp -r "$HERE" "$stage/deploy"
+  unit="nova-install-$(date +%s)"
+  systemd-run --unit "$unit" --collect --quiet --setenv=NOVA_INSTALL_DETACHED=1     bash -c "'$stage/deploy/install.sh' '$stage/app' '$NOVA_USER'; rm -rf '$stage'"
+  echo "Installing in the background (job $unit), because NOVA's terminal stops along with NOVA."
+  echo "NOVA restarts in a minute or so: reload the page then. To follow it: journalctl -fu $unit"
+  exit 0
+fi
+
 # A running executable can't be overwritten ("Text file busy"), so stop it for updates.
 if systemctl is-active --quiet nova.service; then
   systemctl stop nova.service

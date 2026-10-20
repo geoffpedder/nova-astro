@@ -551,7 +551,9 @@ the activity log. Your own ntfy server works too: set its address, and an access
   your password), with colours, resizing and full-screen programs such as `htop` or `nano`. Drag its bottom edge to
   resize it; ⤢ makes it taller. Because it's a shell, it's only offered **once a NOVA password is set** (⏻ → Set a
   password…), and only to a browser signed in with it. It needs `ttyd` (setup installs it), which runs only while a
-  terminal is open, listening on a file only NOVA's user can open, never on the network.
+  terminal is open, listening on a file only NOVA's user can open, never on the network. `nova update` works from it:
+  the install stops NOVA (and so the terminal), so it carries on in the background, and the page comes back a minute
+  later when NOVA restarts.
 
 ### Wi-Fi hotspot (no Wi-Fi at the site)
 

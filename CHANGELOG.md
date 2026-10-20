@@ -8,6 +8,8 @@ What changed in each release. The newest is first. A release's section here beco
 
 - **Camera cooler:** a switch instead of the "Cooler on" / "Cooler off" button, so it's clear at a glance whether
   the cooler is on.
+- **Image tab:** the HFR trend's space under the image is kept from the first frame (and on frames with no stars), so
+  the page no longer jumps when the chart appears.
 
 ### Fixed
 

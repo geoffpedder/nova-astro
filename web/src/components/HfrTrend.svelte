@@ -29,6 +29,11 @@
       <circle class="last" cx={chart.last.x} cy={chart.last.y} r="2.5" />
     </svg>
   </span>
+{:else}
+  <!-- Its space kept from the first frame, so the image above doesn't move when the chart appears. -->
+  <span class="trend" title="The HFR of recent frames, once two have measured stars">
+    <svg width={W} height={H} viewBox="0 0 {W} {H}" aria-hidden="true"></svg>
+  </span>
 {/if}
 
 <style>

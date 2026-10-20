@@ -610,7 +610,10 @@
         </span>
         <span class="fact"><span class="k">FWHM</span>{starInfo.fwhmArcsec != null ? `${starInfo.fwhmArcsec.toFixed(2)}″` : `${starInfo.medianFwhm?.toFixed(2)} px`}</span>
       {:else}
-        <span class="fact"><span class="k">Stars</span>none measured</span>
+        <span class="fact hfr">
+          <span class="k">Stars</span>none measured
+          {#if fromCamera && isLatest}<HfrTrend points={nova.status?.hfrHistory ?? []} />{/if}
+        </span>
       {/if}
       <span class="fact">
         <span class="k">Size</span>{image.width}×{image.height}{#if shownWidth && shownWidth !== image.width}{' '}(preview {shownWidth}×{shownHeight}){/if}

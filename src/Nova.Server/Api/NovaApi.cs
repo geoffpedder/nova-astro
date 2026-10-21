@@ -1112,6 +1112,7 @@ public static class NovaApi
     private static string Describe(CameraSettingsUpdate u) => string.Join(", ", new[]
     {
         u.CoolerOn is { } on ? $"cooler {(on ? "on" : "off")}" : null,
+        u.DewHeater is { } heat ? $"dew heater {(heat ? "on" : "off")}" : null,
         u.TargetTemperature is { } t ? $"target {t:0.#} °C" : null,
         u.Gain is { } g ? $"gain {g:0.##}" : null,
         u.Offset is { } o ? $"offset {o:0.##}" : null,

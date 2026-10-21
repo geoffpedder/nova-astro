@@ -112,6 +112,8 @@ export interface CameraControls {
   offset: NumberSetting | null
   binning: NumberSetting | null
   frameType: FrameType | null
+  /** The anti-dew heater around the window (ZWO Pro cameras); null when the camera has none. */
+  dewHeater: boolean | null
 }
 
 export interface CameraSettingsUpdate {
@@ -121,6 +123,7 @@ export interface CameraSettingsUpdate {
   offset?: number
   binning?: number
   frameType?: FrameType
+  dewHeater?: boolean
 }
 
 export interface CameraStatus {

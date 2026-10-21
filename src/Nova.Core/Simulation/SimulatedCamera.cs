@@ -67,6 +67,7 @@ internal sealed class SimulatedCamera(
     private double _offset = 10;
     private int _binning = 1;
     private FrameType _frameType = FrameType.Light;
+    private bool _dewHeater;
 
     public string Name => name;
     public bool IsConnected { get; private set; }
@@ -91,7 +92,8 @@ internal sealed class SimulatedCamera(
                     new NumberSetting(_gain, 0, 500, 1),
                     new NumberSetting(_offset, 0, 100, 1),
                     new NumberSetting(_binning, 1, MaxBinning, 1),
-                    _frameType);
+                    _frameType,
+                    _dewHeater);
             }
         }
     }
@@ -110,6 +112,7 @@ internal sealed class SimulatedCamera(
             if (update.Offset is { } offset) _offset = offset;
             if (update.Binning is { } binning) _binning = binning;
             if (update.FrameType is { } frameType) _frameType = frameType;
+            if (update.DewHeater is { } heater) _dewHeater = heater;
             if (update.TargetTemperature is { } target)
             {
                 _target = target;

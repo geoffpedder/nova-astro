@@ -164,6 +164,11 @@ public sealed class IndiCamera(IndiClient client, string name) : IndiDevice(clie
     private static readonly (string Property, string Element)[] GainSources = [("CCD_GAIN", "GAIN"), ("CCD_CONTROLS", "Gain")];
     private static readonly (string Property, string Element)[] OffsetSources = [("CCD_OFFSET", "OFFSET"), ("CCD_CONTROLS", "Offset")];
 
+    // ZWO's anti-dew heater: an on/off (0/1) element of CCD_CONTROLS, named as the SDK names it ("AntiDewHeater").
+    private IndiElement? DewHeaterElement =>
+        Client.GetProperty(Name, "CCD_CONTROLS")?.Elements.Values
+            .FirstOrDefault(e => e.Name.Contains("DewHeater", StringComparison.OrdinalIgnoreCase));
+
     // INDI reports the current temperature but not the requested one, so remember what we asked for.
     private double? _targetTemperature;
 
@@ -231,7 +236,8 @@ public sealed class IndiCamera(IndiClient client, string name) : IndiDevice(clie
                 ToSetting(FindElement(GainSources)),
                 ToSetting(FindElement(OffsetSources)),
                 ToSetting(Client.GetProperty(Name, "CCD_BINNING")?["HOR_BIN"]),
-                frameType);
+                frameType,
+                DewHeaterElement?.TryNumber is { } heater ? heater > 0 : null);
         }
     }
 
@@ -259,6 +265,11 @@ public sealed class IndiCamera(IndiClient client, string name) : IndiDevice(clie
             Validate("Target temperature", target, temperature["CCD_TEMPERATURE_VALUE"]);
             await Client.SetNumbersAsync(Name, "CCD_TEMPERATURE", ct, ("CCD_TEMPERATURE_VALUE", target));
             _targetTemperature = target;
+        }
+        if (update.DewHeater is { } heat)
+        {
+            if (DewHeaterElement is not { } heater) throw new ArgumentException($"{Name} has no dew heater");
+            await Client.SetNumbersAsync(Name, "CCD_CONTROLS", ct, (heater.Name, heat ? 1 : 0));
         }
         if (update.CoolerOn is { } on)
         {

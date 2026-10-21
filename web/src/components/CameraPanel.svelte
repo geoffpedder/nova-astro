@@ -179,6 +179,20 @@
           {/if}
         </div>
       {/if}
+
+      {#if controls?.dewHeater != null}
+        <div class="row">
+          <div class="spacer"></div>
+          <label
+            class="switch"
+            title={controls.dewHeater ? 'The dew heater around the window is on: switch it off' : 'Warm the window to keep dew and frost off it'}
+          >
+            <input type="checkbox" role="switch" checked={controls.dewHeater} onchange={(e) => apply({ dewHeater: e.currentTarget.checked })} />
+            <span class="track" aria-hidden="true"><span class="knob"></span></span>
+            Dew heater
+          </label>
+        </div>
+      {/if}
     {:else if !ready}
       <p class="muted">Connect to see camera settings.</p>
     {/if}

@@ -145,6 +145,10 @@ and others) switch to their low-noise mode, at about unity gain. For other value
 and offset you want, then **Make these the default** under them. Sequence rows with a gain or offset filled in still
 use their own. The cooling target starts at -10 °C.
 
+**Dew heater:** a camera with a heater around its window (ZWO's cooled Pro cameras) has a **Dew heater** switch
+under the cooler. Turn it on when cooling on a damp night, so the window doesn't dew up or frost over. It's on or
+off, with no power setting.
+
 **Optics** (in the Camera panel): presets of focal length and aperture, e.g. one for the telescope and one
 with a reducer. The presets are shared by every camera, so a second camera on the same telescope (or one
 swapped in) just picks the same preset; each camera remembers its own choice. Changing a shared preset

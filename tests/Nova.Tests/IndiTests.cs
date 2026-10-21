@@ -245,7 +245,7 @@ public class IndiClientTests
         """<defNumberVector device="ZWO CCD ASI2600MC Pro" name="CCD_TEMPERATURE" group="Main Control" state="Busy" perm="rw"><defNumber name="CCD_TEMPERATURE_VALUE" format="%5.2f" min="-50" max="50" step="0">-4.5</defNumber></defNumberVector>""",
         """<defSwitchVector device="ZWO CCD ASI2600MC Pro" name="CCD_COOLER" state="Ok" perm="wo" rule="OneOfMany"><defSwitch name="COOLER_ON">On</defSwitch><defSwitch name="COOLER_OFF">Off</defSwitch></defSwitchVector>""",
         """<defNumberVector device="ZWO CCD ASI2600MC Pro" name="CCD_COOLER_POWER" state="Ok" perm="ro"><defNumber name="CCD_COOLER_VALUE" format="%+06.2f" min="0" max="100" step="1">42</defNumber></defNumberVector>""",
-        """<defNumberVector device="ZWO CCD ASI2600MC Pro" name="CCD_CONTROLS" group="Controls" state="Ok" perm="rw"><defNumber name="Gain" format="%g" min="0" max="700" step="1">100</defNumber><defNumber name="Offset" format="%g" min="0" max="80" step="1">50</defNumber></defNumberVector>""",
+        """<defNumberVector device="ZWO CCD ASI2600MC Pro" name="CCD_CONTROLS" group="Controls" state="Ok" perm="rw"><defNumber name="Gain" format="%g" min="0" max="700" step="1">100</defNumber><defNumber name="Offset" format="%g" min="0" max="80" step="1">50</defNumber><defNumber name="AntiDewHeater" format="%g" min="0" max="1" step="1">0</defNumber></defNumberVector>""",
         """<defNumberVector device="ZWO CCD ASI2600MC Pro" name="CCD_BINNING" state="Ok" perm="rw"><defNumber name="HOR_BIN" format="%2.0f" min="1" max="4" step="1">1</defNumber><defNumber name="VER_BIN" format="%2.0f" min="1" max="4" step="1">1</defNumber></defNumberVector>""",
         """<defSwitchVector device="ZWO CCD ASI2600MC Pro" name="CCD_FRAME_TYPE" state="Ok" perm="rw" rule="OneOfMany"><defSwitch name="FRAME_LIGHT">Off</defSwitch><defSwitch name="FRAME_BIAS">Off</defSwitch><defSwitch name="FRAME_DARK">On</defSwitch><defSwitch name="FRAME_FLAT">Off</defSwitch></defSwitchVector>""",
         """<defTextVector device="ZWO CCD ASI2600MC Pro" name="ZWO CCD ASI2600MC ProICE_PORT" group="Connection" state="Idle" perm="rw"><defText name="PORT">/dev/ttyUSB0</defText></defTextVector>""",
@@ -269,12 +269,14 @@ public class IndiClientTests
         Assert.Equal(50, controls.Offset?.Value);
         Assert.Equal(4, controls.Binning?.Max);
         Assert.Equal(FrameType.Dark, controls.FrameType);
+        Assert.False(controls.DewHeater);
 
-        await camera.ApplyAsync(new CameraSettingsUpdate(Gain: 120, Binning: 2, TargetTemperature: -10, FrameType: FrameType.Light), cts.Token);
+        await camera.ApplyAsync(new CameraSettingsUpdate(Gain: 120, Binning: 2, TargetTemperature: -10, FrameType: FrameType.Light, DewHeater: true), cts.Token);
         await Assert.ThrowsAsync<ArgumentException>(() => camera.ApplyAsync(new CameraSettingsUpdate(Gain: 9000), cts.Token));
 
-        var sent = await WaitForLinesAsync(server, 5);
+        var sent = await WaitForLinesAsync(server, 6);
         Assert.Contains(sent, l => l.Contains("name=\"CCD_CONTROLS\"") && l.Contains("<oneNumber name=\"Gain\">120</oneNumber>"));
+        Assert.Contains(sent, l => l.Contains("name=\"CCD_CONTROLS\"") && l.Contains("<oneNumber name=\"AntiDewHeater\">1</oneNumber>"));
         Assert.Contains(sent, l => l.Contains("name=\"CCD_BINNING\"") && l.Contains("\"HOR_BIN\">2<") && l.Contains("\"VER_BIN\">2<"));
         Assert.Contains(sent, l => l.Contains("name=\"CCD_TEMPERATURE\"") && l.Contains(">-10<"));
         Assert.Contains(sent, l => l.Contains("name=\"CCD_FRAME_TYPE\"") && l.Contains("\"FRAME_LIGHT\">On<"));

@@ -12,6 +12,9 @@ What changed in each release. The newest is first. A release's section here beco
   ZWO's phone app again. A small helper (`nova-mount-ble.py`) offers the mount's Bluetooth to INDI's
   `indi_lx200am5` driver as a serial port, so the driver works as it does over USB. `nova setup` installs BlueZ and
   Python's Bleak and turns Bluetooth on; `nova doctor` checks them.
+- **Dew heater switch:** cameras with an anti-dew heater around the window (ZWO's cooled Pro cameras, such as the
+  ASI2600MC Pro) get a Dew heater switch in the Camera panel, under the cooler. The INDI driver only offers it as
+  an "AntiDewHeater" number among its controls, which was easy to miss.
 
 ### Changed
 

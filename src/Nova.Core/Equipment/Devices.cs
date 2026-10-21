@@ -95,12 +95,14 @@ public sealed record NumberSetting(double Value, double Min, double Max, double 
 public sealed record CoolerStatus(bool CanCool, bool On, double? Temperature, double? TargetTemperature, double? PowerPercent);
 
 /// <summary>Snapshot of the common camera settings. Null members are not supported by this camera.</summary>
+/// <param name="DewHeater">Whether the camera's anti-dew heater (around the window) is on; null without one.</param>
 public sealed record CameraControls(
     CoolerStatus? Cooler,
     NumberSetting? Gain,
     NumberSetting? Offset,
     NumberSetting? Binning,
-    FrameType? FrameType);
+    FrameType? FrameType,
+    bool? DewHeater = null);
 
 /// <summary>Settings to change; null members are left as they are.</summary>
 public sealed record CameraSettingsUpdate(
@@ -109,7 +111,8 @@ public sealed record CameraSettingsUpdate(
     double? Gain = null,
     double? Offset = null,
     int? Binning = null,
-    FrameType? FrameType = null);
+    FrameType? FrameType = null,
+    bool? DewHeater = null);
 
 /// <summary>Telescope optics in front of a camera, in millimetres.</summary>
 public sealed record Optics(double FocalLength, double Aperture)

@@ -153,44 +153,52 @@
         </div>
       {/if}
 
-      {#if cooler}
+      {#if cooler || controls.dewHeater != null}
         <div class="cooling">
-          <div class="readout mono">
-            <span class="now">{temp(cooler.temperature)}</span>
+          {#if cooler}
+            <div class="readout">
+              <span class="now mono">{temp(cooler.temperature)}</span>
+              {#if cooler.canCool && cooler.on}
+                <span class="muted mono">
+                  {#if cooler.targetTemperature != null}→ {temp(cooler.targetTemperature)}{/if}
+                </span>
+              {/if}
+              <span class="spacer"></span>
+              {#if cooler.canCool && cooler.powerPercent != null}
+                <span class="power" title="Cooler power">
+                  <span class="meter" aria-hidden="true"><span style:width="{Math.min(100, Math.max(0, cooler.powerPercent))}%"></span></span>
+                  <span class="muted mono">{Math.round(cooler.powerPercent)}%</span>
+                </span>
+              {/if}
+            </div>
             {#if cooler.canCool}
-              {#if cooler.on && cooler.targetTemperature != null}<span class="muted">→ {temp(cooler.targetTemperature)}</span>{/if}
-              {#if cooler.powerPercent != null}<span class="muted" title="Cooler power">({Math.round(cooler.powerPercent)}% power)</span>{/if}
+              <div class="target-row">
+                <span class="muted">Target</span>
+                <input class="target" type="number" step="1" bind:value={target} aria-label="Target temperature (°C)" />
+                <span class="muted">°C</span>
+                <button class="secondary" disabled={target === null} onclick={() => apply({ targetTemperature: target! })}>Set</button>
+              </div>
             {/if}
-          </div>
-          {#if cooler.canCool}
-            <div class="row">
-              <input class="target" type="number" step="1" bind:value={target} aria-label="Target temperature (°C)" />
-              <span class="muted">°C</span>
-              <button class="secondary" disabled={target === null} onclick={() => apply({ targetTemperature: target! })}>
-                Set
-              </button>
-              <div class="spacer"></div>
+          {/if}
+          <div class="toggles">
+            {#if cooler?.canCool}
               <label class="switch" title={cooler.on ? 'The cooler is on: switch it off' : 'The cooler is off: switch it on'}>
                 <input type="checkbox" role="switch" checked={cooler.on} onchange={(e) => apply({ coolerOn: e.currentTarget.checked })} />
                 <span class="track" aria-hidden="true"><span class="knob"></span></span>
                 Cooler
               </label>
-            </div>
-          {/if}
-        </div>
-      {/if}
-
-      {#if controls?.dewHeater != null}
-        <div class="row">
-          <div class="spacer"></div>
-          <label
-            class="switch"
-            title={controls.dewHeater ? 'The dew heater around the window is on: switch it off' : 'Warm the window to keep dew and frost off it'}
-          >
-            <input type="checkbox" role="switch" checked={controls.dewHeater} onchange={(e) => apply({ dewHeater: e.currentTarget.checked })} />
-            <span class="track" aria-hidden="true"><span class="knob"></span></span>
-            Dew heater
-          </label>
+            {/if}
+            {#if controls.dewHeater != null}
+              <label
+                class="switch"
+                title={controls.dewHeater ? 'The dew heater around the window is on: switch it off' : 'Warm the window to keep dew and frost off it'}
+              >
+                <input type="checkbox" role="switch" checked={controls.dewHeater} onchange={(e) => apply({ dewHeater: e.currentTarget.checked })} />
+                <span class="track" aria-hidden="true"><span class="knob"></span></span>
+                Dew heater
+              </label>
+            {/if}
+          </div>
         </div>
       {/if}
     {:else if !ready}
@@ -272,8 +280,41 @@
   .now {
     font-size: 18px;
   }
+  .power {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12px;
+  }
+  .meter {
+    width: 48px;
+    height: 4px;
+    border-radius: 2px;
+    background: var(--input);
+    overflow: hidden;
+  }
+  .meter span {
+    display: block;
+    height: 100%;
+    background: var(--accent);
+    transition: width 0.3s;
+  }
+  .target-row {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12px;
+  }
   .target {
     width: 70px;
+  }
+  .toggles {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+  }
+  .toggles:empty {
+    display: none;
   }
   .spacer {
     flex: 1;

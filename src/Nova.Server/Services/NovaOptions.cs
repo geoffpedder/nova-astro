@@ -58,6 +58,14 @@ public sealed class NovaOptions
     public string StellariumGoto { get; set; } = "Center";
     /// <summary>The coordinate system set for the telescope in Stellarium: "J2000" (its default) or "JNow".</summary>
     public string StellariumEquinox { get; set; } = "J2000";
+    /// <summary>
+    /// The serial port NOVA's Bluetooth helper offers for a ZWO mount connected over Bluetooth (a symlink to a
+    /// pseudo-terminal), which the INDI driver opens. /run/nova is nova.service's runtime folder.
+    /// </summary>
+    public string MountBluetoothLink { get; set; } = "/run/nova/mount-bluetooth";
+    /// <summary>Python 3 for the Bluetooth helper; empty for python3 (python on Windows).</summary>
+    public string? Python { get; set; }
+
     /// <summary>Longest side of the browser preview, in pixels.</summary>
     public int PreviewMaxSize { get; set; } = 1600;
 

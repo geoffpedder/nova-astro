@@ -39,6 +39,8 @@ public sealed record StorageCopyRequest(string Night);
 public sealed record CameraDefaultsRequest(string Camera, double? Gain, double? Offset);
 
 public sealed record SimulatorsRequest(bool Enabled);
+/// <summary>Bluetooth on (for the named mount, or the first found) or off (USB).</summary>
+public sealed record MountBluetoothRequest(bool Enabled, string? Mount = null, string? Address = null);
 
 /// <summary>Latitude +N, longitude +E (-180..180), elevation in metres. Set OriginalName to rename.</summary>
 public sealed record SiteRequest(string Name, double Latitude, double Longitude, double Elevation, string? OriginalName = null);
@@ -270,6 +272,36 @@ public static class NovaApi
         {
             await simulators.SetEnabledAsync(request.Enabled, ct);
             return Results.NoContent();
+        });
+
+        // ZWO mounts over Bluetooth (status: mountBluetooth in /status)
+        api.MapPost("/mount/bluetooth", async (MountBluetoothRequest request, MountBluetoothService bluetooth, CancellationToken ct) =>
+        {
+            try
+            {
+                await bluetooth.SetAsync(request.Enabled, request.Mount, request.Address, ct);
+                return Results.NoContent();
+            }
+            catch (ArgumentException ex)
+            {
+                return Results.Problem(ex.Message, statusCode: StatusCodes.Status400BadRequest);
+            }
+            catch (InvalidOperationException ex)
+            {
+                // Saved; only reconnecting the mount the new way failed.
+                return Results.Problem(ex.Message, statusCode: StatusCodes.Status502BadGateway);
+            }
+        });
+        api.MapPost("/mount/bluetooth/scan", async (MountBluetoothService bluetooth, CancellationToken ct) =>
+        {
+            try
+            {
+                return Results.Ok(await bluetooth.ScanAsync(ct));
+            }
+            catch (InvalidOperationException ex)
+            {
+                return Results.Problem(ex.Message, statusCode: StatusCodes.Status409Conflict);
+            }
         });
 
         api.MapPost("/equipment/select", async (SelectDeviceRequest request, EquipmentService equipment,

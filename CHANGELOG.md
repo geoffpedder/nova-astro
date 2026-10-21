@@ -4,6 +4,15 @@ What changed in each release. The newest is first. A release's section here beco
 
 ## [Unreleased]
 
+### Added
+
+- **ZWO mounts over Bluetooth:** an AM3, AM5 or AM7 can connect without its USB cable. In the Mount panel set
+  Connection to Bluetooth and pick the mount from the ones found in range; Connect equipment then connects it over
+  Bluetooth, and NOVA keeps the link up (reconnecting if it drops) until Disconnect, which frees the mount for
+  ZWO's phone app again. A small helper (`nova-mount-ble.py`) offers the mount's Bluetooth to INDI's
+  `indi_lx200am5` driver as a serial port, so the driver works as it does over USB. `nova setup` installs BlueZ and
+  Python's Bleak and turns Bluetooth on; `nova doctor` checks them.
+
 ### Changed
 
 - **Camera cooler:** a switch instead of the "Cooler on" / "Cooler off" button, so it's clear at a glance whether

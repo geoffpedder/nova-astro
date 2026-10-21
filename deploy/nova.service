@@ -9,6 +9,9 @@ User=NOVA_USER
 WorkingDirectory=/opt/nova
 EnvironmentFile=/etc/nova/nova.env
 ExecStart=/opt/nova/Nova.Server
+# /run/nova holds the serial port NOVA's Bluetooth helper offers the mount driver (a ZWO mount over Bluetooth).
+RuntimeDirectory=nova
+RuntimeDirectoryMode=0755
 Restart=on-failure
 RestartSec=3
 

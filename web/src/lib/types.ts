@@ -36,6 +36,27 @@ export interface TerminalStatus {
   sessions: number
 }
 
+/** A ZWO mount found by a Bluetooth search. rssi: signal in dBm (-40 strong, -90 weak). */
+export interface BluetoothMount {
+  name: string
+  address: string
+  rssi: number | null
+}
+
+/** Connecting a ZWO AM mount over Bluetooth instead of its USB cable. */
+export interface MountBluetoothStatus {
+  /** INDI with the ZWO mount driver: the only mounts this works for. */
+  applicable: boolean
+  enabled: boolean
+  /** The chosen mount's Bluetooth name; null for the first ZWO mount found. */
+  mount: string | null
+  address: string | null
+  state: 'Off' | 'Idle' | 'Searching' | 'Connecting' | 'Connected' | 'Error'
+  detail: string | null
+  scanning: boolean
+  found: BluetoothMount[]
+}
+
 export interface HotspotStatus {
   state: 'Off' | 'Starting' | 'On' | 'Stopping' | 'Error'
   ssid: string
@@ -1036,6 +1057,8 @@ export interface StatusSnapshot {
   storage: StorageStatus | null
   /** The Wi-Fi hotspot fallback. */
   hotspot: HotspotStatus | null
+  /** The mount's Bluetooth connection (ZWO AM mounts). */
+  mountBluetooth: MountBluetoothStatus | null
 }
 
 /** A folder or FITS file in the mini PC's image folders (Open… → From the mini PC). */

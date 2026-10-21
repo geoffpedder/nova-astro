@@ -63,6 +63,9 @@ public sealed class EquipmentService : IAsyncDisposable
     public IReadOnlyList<DeviceInfo> VisibleDevices =>
         DeviceFilter is { } keep ? Provider.Devices.Where(keep).ToList() : Provider.Devices;
 
+    /// <summary>Runs just before a device connects (e.g. pointing the mount's driver at its Bluetooth link).</summary>
+    public Func<IDevice, CancellationToken, Task>? BeforeConnect { get; set; }
+
     public void NotifyDevicesChanged() => DevicesChanged?.Invoke(this, EventArgs.Empty);
 
     /// <summary>
@@ -345,6 +348,7 @@ public sealed class EquipmentService : IAsyncDisposable
         }
         try
         {
+            if (BeforeConnect is { } prepare) await prepare(device, ct);
             await device.ConnectAsync(ct);
             _log.Info($"{device.Name} connected");
             DevicesChanged?.Invoke(this, EventArgs.Empty);

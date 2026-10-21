@@ -84,6 +84,7 @@ builder.Services.AddSingleton<SystemStatsService>();
 builder.Services.AddSingleton<WebcamService>();
 builder.Services.AddSingleton<HotspotService>();
 builder.Services.AddSingleton<TerminalService>();
+builder.Services.AddSingleton<MountBluetoothService>();
 builder.Services.AddHostedService(sp => sp.GetRequiredService<StorageService>());
 builder.Services.AddHostedService(sp => sp.GetRequiredService<NotificationService>());
 builder.Services.AddSingleton<StatusReporter>();
@@ -100,6 +101,8 @@ builder.Host.UseSystemd();
 var app = builder.Build();
 // Created now rather than on first use, so it hears about solves from the start.
 app.Services.GetRequiredService<SetupGuideService>();
+// Created now, so a mount set to Bluetooth connects that way from the first Connect.
+app.Services.GetRequiredService<MountBluetoothService>();
 // Messages to your phone (ntfy) from the parts of a night that can need you.
 var notifications = app.Services.GetRequiredService<NotificationService>();
 app.Services.GetRequiredService<SequencerService>().Notifications = notifications;

@@ -3,3 +3,4 @@
 *.service text eol=lf
 *.env text eol=lf
 deploy/nova text eol=lf
+*.py text eol=lf

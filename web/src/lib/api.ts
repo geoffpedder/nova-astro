@@ -90,6 +90,10 @@ export const api = {
   setNickname: (device: string, nickname: string) => post('/api/equipment/nickname', { device, nickname }),
   disconnect: () => post('/api/equipment/disconnect'),
   setSimulators: (enabled: boolean) => post('/api/equipment/simulators', { enabled }),
+  /** The mount over Bluetooth (this mount, by name and address) or over USB (enabled false). */
+  setMountBluetooth: (enabled: boolean, mount?: string, address?: string) => post('/api/mount/bluetooth', { enabled, mount, address }),
+  /** Searches for ZWO mounts for a few seconds; what's found shows in status.mountBluetooth.found. */
+  scanMountBluetooth: () => post('/api/mount/bluetooth/scan'),
 
   /** Adds or updates a site and makes it active; pass originalName to rename. */
   saveSite: (name: string, latitude: number, longitude: number, elevation: number, originalName?: string) =>

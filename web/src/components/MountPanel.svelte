@@ -5,6 +5,7 @@
   import Panel from './Panel.svelte'
   import SiteEditor from './SiteEditor.svelte'
   import ManualMotion from './ManualMotion.svelte'
+  import MountConnection from './MountConnection.svelte'
   import { formatDec, formatRa, fromStellarium, type PlanetariumTarget } from '../lib/stellarium'
   import { saveStellariumSettings, stellariumSettings } from '../lib/stellariumSettings.svelte'
   import { planner, stellariumPick } from '../lib/inbox.svelte'
@@ -88,6 +89,7 @@
   {/snippet}
 
   <DevicePicker kind="Mount" disabled={moving} />
+  <MountConnection disabled={moving} />
 
   {#if !mount}
     <p class="muted">No mount.</p>

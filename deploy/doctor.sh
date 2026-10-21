@@ -178,6 +178,19 @@ else
   fi
 fi
 
+section "Bluetooth (optional: ZWO mounts without their USB cable)"
+if ! has bluetoothctl && [ ! -x /usr/lib/bluetooth/bluetoothd ] && [ ! -x /usr/libexec/bluetooth/bluetoothd ]; then
+  note "BlueZ isn't installed: the mount can only use its USB cable" "$setup   (or: sudo apt install bluez python3-bleak, sudo pacman -S bluez bluez-utils python-bleak)"
+else
+  if systemctl is-active --quiet bluetooth 2>/dev/null; then pass "bluetooth service running"
+  else note "the bluetooth service isn't running" "sudo systemctl enable --now bluetooth"; fi
+  if ls /sys/class/bluetooth/hci* >/dev/null 2>&1; then pass "Bluetooth adapter: $(basename "$(ls -d /sys/class/bluetooth/hci* | head -1)")"
+  else note "no Bluetooth adapter found (a USB Bluetooth dongle works)"; fi
+  if python3 -c 'import bleak' 2>/dev/null; then pass "Python's Bleak library"
+  else note "Python's Bleak library isn't installed: NOVA can't talk to the mount over Bluetooth" "sudo apt install python3-bleak   (or: sudo pacman -S python-bleak)"; fi
+  [ -f /opt/nova/nova-mount-ble.py ] || note "NOVA's Bluetooth helper isn't installed" "$reinstall"
+fi
+
 section "Terminal (optional: the Activity tab's Mini PC box)"
 if has ttyd; then pass "ttyd $(ttyd --version 2>/dev/null | awk '{print $NF}')"
 else note "ttyd isn't installed: no terminal in the Activity tab" "$setup   (or: sudo apt install ttyd, sudo pacman -S ttyd)"; fi

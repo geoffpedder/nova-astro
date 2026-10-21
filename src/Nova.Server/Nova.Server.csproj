@@ -9,6 +9,11 @@
     <PackageReference Include="Microsoft.Extensions.Hosting.Systemd" Version="10.0.12" />
   </ItemGroup>
 
+  <ItemGroup>
+    <!-- NOVA's Bluetooth helper for ZWO mounts, run from next to Nova.Server (/opt/nova). -->
+    <None Include="..\..\deploy\nova-mount-ble.py" Link="nova-mount-ble.py" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
+  </ItemGroup>
+
   <PropertyGroup>
     <TargetFramework>net10.0</TargetFramework>
     <Nullable>enable</Nullable>

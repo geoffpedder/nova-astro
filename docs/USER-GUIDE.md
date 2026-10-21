@@ -101,6 +101,17 @@ past the meridian. **Unpark**, **Park** and **Stop**; the arrow pad moves it by 
 the mount connects; a speed you choose is remembered. Type coordinates or take them from the Targets tab, then **Slew**, or **Slew & center**: slew,
 then expose, plate solve and correct until the target is within 1′.
 
+**Bluetooth (ZWO AM3, AM5 and AM7):** the mount can connect without its USB cable. Under the mount's name,
+set **Connection** to **Bluetooth**: NOVA searches for a few seconds and lists the ZWO mounts in range, with their
+signal. Pick yours (`AM3_68bc8d`, say); NOVA remembers it. From then on **Connect equipment** connects the mount
+over Bluetooth, the same driver as over USB, and the Mount panel shows the link (looking for it, connected). If the
+link drops, NOVA reconnects by itself; the mount doesn't answer until it's back. **Disconnect equipment** lets the
+mount go, so ZWO's phone app can connect to it again; **USB cable** goes back to the cable.
+
+A mount only shows in the search while nothing else is connected to it: close ZWO's app on your phone first. The
+mini PC needs Bluetooth (most have it; a USB Bluetooth dongle works) and `nova setup` installs what NOVA needs for
+it (BlueZ and Python's Bleak). `nova doctor` checks it.
+
 **Site** (at the bottom of the Mount panel): add your observing sites by coordinates or on the offline
 world map. The active site, and the mini PC's clock, are sent to the mount whenever it connects. Sites show by name
 only (in the Site line, the setup guide and the activity log), so a screenshot doesn't give your location away; the

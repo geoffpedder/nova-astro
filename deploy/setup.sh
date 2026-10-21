@@ -197,9 +197,9 @@ echo "About to install:"
 if [ "$family" = arch ]; then
   echo "  INDI, with drivers for:"
   for key in $brands; do echo "    $(grep "^$key|" <<<"$brand_table" | cut -d'|' -f3)"; done
-  echo "  Avahi (so <name>.local works), polkit, udisks2 (saving to USB drives), iw, ffmpeg and v4l-utils (the webcam view), hostapd (the Wi-Fi hotspot), ttyd (the terminal)"
+  echo "  Avahi (so <name>.local works), polkit, udisks2 (saving to USB drives), iw, ffmpeg and v4l-utils (the webcam view), hostapd (the Wi-Fi hotspot), ttyd (the terminal), BlueZ and Bleak (ZWO mounts over Bluetooth)"
 else
-  echo "  INDI with all its drivers, Avahi (so <name>.local works), polkit, udisks2 (saving to USB drives), iw, ffmpeg and v4l-utils (the webcam view), hostapd (the Wi-Fi hotspot), ttyd (the terminal)"
+  echo "  INDI with all its drivers, Avahi (so <name>.local works), polkit, udisks2 (saving to USB drives), iw, ffmpeg and v4l-utils (the webcam view), hostapd (the Wi-Fi hotspot), ttyd (the terminal), BlueZ and Bleak (ZWO mounts over Bluetooth)"
 fi
 [ -z "$astap_found" ] && echo "  ASTAP (plate solving)"
 [ -n "$database" ] && echo "  ASTAP's $database star database"
@@ -242,7 +242,7 @@ setup_arch() {
     aur=yay
   fi
 
-  local packages="libindi avahi nss-mdns polkit udisks2 iw ffmpeg v4l-utils hostapd ttyd curl unzip"
+  local packages="libindi avahi nss-mdns polkit udisks2 iw ffmpeg v4l-utils hostapd ttyd bluez bluez-utils python-bleak curl unzip"
   [ "$phd2" = yes ] && packages="$packages xorg-server-xvfb x11vnc icewm python-build"
   [ "$public" = no ] && packages="$packages github-cli"
   [ "$build" = yes ] && packages="$packages git dotnet-sdk nodejs npm"
@@ -323,7 +323,7 @@ setup_apt() {
   # The self-contained NOVA build still needs the system's ICU (text and number formats).
   local icu
   icu="$(apt-cache pkgnames libicu | grep -E '^libicu[0-9]+$' | sort -V | tail -1)"
-  local packages="indi-bin libindi1 indi-3rdparty-drivers avahi-daemon libnss-mdns polkitd udisks2 iw ffmpeg v4l-utils hostapd tar $icu"
+  local packages="indi-bin libindi1 indi-3rdparty-drivers avahi-daemon libnss-mdns polkitd udisks2 iw ffmpeg v4l-utils hostapd bluez python3-bleak tar $icu"
   [ "$phd2" = yes ] && packages="$packages phd2 xvfb x11vnc icewm novnc websockify"
   [ "$gsc" = yes ] && packages="$packages gsc"
   [ "$public" = no ] && packages="$packages gh"
@@ -346,6 +346,11 @@ if [ "$family" = arch ]; then setup_arch; else setup_apt; fi
 
 say "Network names"
 sudo systemctl enable --now avahi-daemon
+
+# Bluetooth, for ZWO mounts connected without their USB cable (Mount panel: Connection > Bluetooth). Arch leaves
+# BlueZ off after installing it.
+say "Bluetooth"
+sudo systemctl enable --now bluetooth || echo "Bluetooth didn't start (no Bluetooth adapter?): ZWO mounts can still use their USB cable."
 
 # Ubuntu's chrony only trusts its secure (NTS) time servers, which need TCP port 4460 as well as UDP 123: many home
 # routers and networks block one, and then the clock is never set. Add the ordinary public servers as a fallback,

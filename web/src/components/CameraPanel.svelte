@@ -266,9 +266,7 @@
   }
   .cooling {
     border-top: 1px solid var(--panel-border);
-    border-bottom: 1px solid var(--panel-border);
-    padding: 8px 0;
-    margin-bottom: 10px;
+    padding: 8px 0 10px;
     display: grid;
     gap: 6px;
   }

@@ -81,7 +81,7 @@ ideal: cheaper than a Raspberry Pi kit these days. See [Choosing a computer](doc
 
 <br clear="all"><br>
 
-<p align="center"><a href="docs/images/mini-pc-on-rig.webp"><img src="docs/images/mini-pc-on-rig.webp" width="70%" alt="A small mini PC strapped to the top of a refractor, between the guide scope and the focuser, with the cameras and focuser cabled to it and a label giving its address, the optics and the hotspot name"></a><br><em>A mini PC riding on the telescope, with a label of its address, the optics and the hotspot name.</em></p>
+<p align="center"><a href="docs/images/mini-pc-on-rig.webp"><img src="docs/images/mini-pc-on-rig.webp" width="70%" alt="A small mini PC strapped to the top of a refractor, between the guide scope and the focuser, with the cameras and focuser cabled to it and a label giving its address, the optics and the hotspot name"></a><br><em>A mini PC riding on the telescope. Small intel N95 pc's like this run on 12v power directly and are ideal for Nova</em></p>
 
 On a 64-bit Arch, Debian 13, Raspberry Pi OS (trixie) or Ubuntu 26.04 system:
 

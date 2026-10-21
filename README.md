@@ -79,7 +79,7 @@ Captured with NOVA and guided by NOVA's own guider (ZWO AM3, ASI2600MC Pro).
 A used ex-office mini PC (a Lenovo ThinkCentre M710q or similar, like the one on the right) is cheap, fast and
 ideal: cheaper than a Raspberry Pi kit these days. See [Choosing a computer](docs/INSTALL.md#choosing-a-computer).
 
-<br clear="all">
+<br clear="all"><br>
 
 <p align="center"><a href="docs/images/mini-pc-on-rig.webp"><img src="docs/images/mini-pc-on-rig.webp" width="70%" alt="A small mini PC strapped to the top of a refractor, between the guide scope and the focuser, with the cameras and focuser cabled to it and a label giving its address, the optics and the hotspot name"></a><br><em>A mini PC riding on the telescope, with a label of its address, the optics and the hotspot name.</em></p>
 

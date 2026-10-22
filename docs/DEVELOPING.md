@@ -151,6 +151,7 @@ over SignalR at `/hub`. The main endpoints:
 | POST | `/api/setup/hidden` | `{ "hidden": true }`: put the setup guide away (or bring it back) |
 | GET · POST | `/api/drivers` | The INDI drivers (installed, chosen, running) · `{ "drivers": ["indi_lx200am5", …] }` saves the choice and starts/stops them |
 | POST | `/api/equipment/connect` · `/disconnect` | |
+| POST | `/api/equipment/profiles` · `/load` · `/delete` | `{ "name": "Askar 71F", "originalName": null }` — save what's in use now (devices, INDI drivers, Simulators, mount connection) as a profile, replacing or renaming `originalName`; load one (equipment disconnected) or delete it. Status: `equipmentProfiles` |
 | POST | `/api/equipment/select` | `{ "kind": "Camera", "name": "ZWO CCD ASI2600MC Pro" }` — kind is Camera, Mount or Focuser; `null` name = automatic |
 | POST | `/api/camera/settings` | `{ "coolerOn": true, "targetTemperature": -10, "gain": 100, "offset": 50, "binning": 2, "frameType": "Dark" }` (any subset) |
 | POST | `/api/optics` | `{ "camera": "ZWO CCD ASI2600MC Pro", "name": "RedCat + 0.8x", "focalLength": 200, "aperture": 51, "originalName": null }` — add a preset (`originalName` null; a name already used is refused) or change/rename one (presets are shared by every camera, so this changes it for each using it), and make it this camera's |

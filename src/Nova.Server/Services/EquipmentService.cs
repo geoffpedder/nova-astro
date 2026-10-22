@@ -179,6 +179,24 @@ public sealed class EquipmentService : IAsyncDisposable
         DevicesChanged?.Invoke(this, EventArgs.Empty);
     }
 
+    /// <summary>The device in use for each role: the chosen one, or the one "automatic" picked.</summary>
+    public EquipmentSelection InUse => new(
+        Camera?.Name ?? Selection.Camera, Mount?.Name ?? Selection.Mount, Focuser?.Name ?? Selection.Focuser,
+        FilterWheel?.Name ?? Selection.FilterWheel, Rotator?.Name ?? Selection.Rotator, FlatPanel?.Name ?? Selection.FlatPanel);
+
+    /// <summary>
+    /// Puts back a saved choice (an equipment profile). Unlike <see cref="SelectAsync"/> the devices needn't be there
+    /// yet: their drivers may still be starting. Only while equipment is disconnected.
+    /// </summary>
+    public void RestoreSelection(EquipmentSelection selection)
+    {
+        if (EquipmentConnected) throw new InvalidOperationException("Disconnect equipment first");
+        CancelOperations();
+        Selection = selection;
+        SaveSelection();
+        DevicesChanged?.Invoke(this, EventArgs.Empty);
+    }
+
     public bool StartMountOperation(string description, Func<IMount, CancellationToken, Task> operation, out string? error) =>
         StartOperation(DeviceKind.Mount, Mount, description, operation, out error);
 

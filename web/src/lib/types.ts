@@ -561,6 +561,20 @@ export interface EquipmentSelection {
   flatPanel: string | null
 }
 
+/** A saved equipment setup. drivers, simulators and mountConnection are null where they don't apply. */
+export interface EquipmentProfile {
+  name: string
+  devices: EquipmentSelection
+  drivers: string[] | null
+  simulators: boolean | null
+  mountConnection: { bluetooth: boolean; mount: string | null; address: string | null } | null
+}
+
+export interface EquipmentProfilesStatus {
+  active: string | null
+  profiles: EquipmentProfile[]
+}
+
 export interface OpticsPreset {
   name: string
   focalLength: number
@@ -1062,6 +1076,8 @@ export interface StatusSnapshot {
   hotspot: HotspotStatus | null
   /** The mount's Bluetooth connection (ZWO AM mounts). */
   mountBluetooth: MountBluetoothStatus | null
+  /** Saved equipment setups. */
+  equipmentProfiles: EquipmentProfilesStatus | null
 }
 
 /** A folder or FITS file in the mini PC's image folders (Open… → From the mini PC). */

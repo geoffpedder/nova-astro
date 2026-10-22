@@ -1,5 +1,6 @@
 <script lang="ts">
   import DriversDialog from './DriversDialog.svelte'
+  import EquipmentProfiles from './EquipmentProfiles.svelte'
   import { reveal } from '../lib/reveal.svelte'
 
   let showDrivers = $state(false)
@@ -83,6 +84,7 @@
   >
     {connecting ? 'Working…' : connected ? 'Disconnect equipment' : 'Connect equipment'}
   </button>
+  <EquipmentProfiles />
   {#if simulators?.applicable}
     <div class="simulators">
       <label class="switch">

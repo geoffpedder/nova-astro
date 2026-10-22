@@ -84,6 +84,12 @@ in their own panels (automatic picks the first one found), then press **Connect 
 connects PHD2's camera and mount. ✎ gives a device a nickname; ⚙ opens all of its driver's settings
 (for example a mount's serial port). New devices that appear while connected are connected too.
 
+**Profiles** (under Connect equipment), like the site and optics presets, save a whole setup to load later: the
+device for each role (what "automatic" picked is saved as that device), the INDI drivers, the Simulators switch
+and how the mount connects (USB or Bluetooth, and which mount). Type a name and press **Save**; **Save current**
+updates the profile shown with what's in use now. Picking a profile while equipment is disconnected loads it: the
+drivers it needs start, the rest are stopped, and the devices are chosen, ready for **Connect equipment**.
+
 A mount or other serial device that isn't on the port its driver expects (it was plugged in after INDI started,
 say, or came up as `/dev/ttyACM0` rather than `/dev/ttyUSB0`) still connects: when connecting fails, NOVA rescans
 the ports and tries each one, as the driver's *Scan Ports* button does by hand, and the activity log says which

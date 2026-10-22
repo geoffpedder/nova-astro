@@ -90,6 +90,11 @@ export const api = {
   setNickname: (device: string, nickname: string) => post('/api/equipment/nickname', { device, nickname }),
   disconnect: () => post('/api/equipment/disconnect'),
   setSimulators: (enabled: boolean) => post('/api/equipment/simulators', { enabled }),
+  /** Saves what's in use now as an equipment profile (originalName: the one to replace or rename). */
+  saveEquipmentProfile: (name: string, originalName?: string) => post('/api/equipment/profiles', { name, originalName }),
+  /** Puts a profile's devices, drivers and mount connection back (equipment must be disconnected). */
+  loadEquipmentProfile: (name: string) => post('/api/equipment/profiles/load', { name }),
+  deleteEquipmentProfile: (name: string) => post('/api/equipment/profiles/delete', { name }),
   /** The mount over Bluetooth (this mount, by name and address) or over USB (enabled false). */
   setMountBluetooth: (enabled: boolean, mount?: string, address?: string) => post('/api/mount/bluetooth', { enabled, mount, address }),
   /** Searches for ZWO mounts for a few seconds; what's found shows in status.mountBluetooth.found. */

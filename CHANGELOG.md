@@ -4,6 +4,13 @@ What changed in each release. The newest is first. A release's section here beco
 
 ## [Unreleased]
 
+### Added
+
+- **Equipment profiles:** save the equipment in use (the device for each role, the INDI drivers, the Simulators
+  switch and how the mount connects) under a name, and load it later in one go, like the site and optics presets.
+  In the Equipment panel under Connect equipment; loading one (while disconnected) starts its drivers, stops the
+  others and chooses its devices, ready for Connect equipment.
+
 ### Changed
 
 - **Bluetooth mounts are locked to your NOVA:** each NOVA has its own code for the mount, and the first time it

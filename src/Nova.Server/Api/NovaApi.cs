@@ -10,6 +10,8 @@ namespace Nova.Server.Api;
 
 /// <summary>Kind is "Camera" or "Mount"; a null name means automatic (first found).</summary>
 public sealed record SelectDeviceRequest(DeviceKind Kind, string? Name);
+/// <summary>Saves what's in use now as an equipment profile (OriginalName: the profile to replace or rename).</summary>
+public sealed record EquipmentProfileRequest(string Name, string? OriginalName = null);
 
 /// <summary>Element name to new value, e.g. { "values": { "PORT": "/dev/ttyACM0" } }.</summary>
 public sealed record SetPropertyRequest(Dictionary<string, string> Values);
@@ -275,6 +277,46 @@ public static class NovaApi
         });
 
         // ZWO mounts over Bluetooth (status: mountBluetooth in /status)
+        // Equipment profiles (status: equipmentProfiles in /status)
+        api.MapPost("/equipment/profiles", (EquipmentProfileRequest request, EquipmentProfileService profiles) =>
+        {
+            try
+            {
+                return Results.Ok(profiles.Save(request.Name, request.OriginalName));
+            }
+            catch (ArgumentException ex)
+            {
+                return Results.Problem(ex.Message, statusCode: StatusCodes.Status400BadRequest);
+            }
+        });
+        api.MapPost("/equipment/profiles/load", async (EquipmentProfileRequest request, EquipmentProfileService profiles, CancellationToken ct) =>
+        {
+            try
+            {
+                await profiles.LoadAsync(request.Name, ct);
+                return Results.NoContent();
+            }
+            catch (ArgumentException ex)
+            {
+                return Results.Problem(ex.Message, statusCode: StatusCodes.Status400BadRequest);
+            }
+            catch (InvalidOperationException ex)
+            {
+                return Results.Problem(ex.Message, statusCode: StatusCodes.Status409Conflict);
+            }
+        });
+        api.MapPost("/equipment/profiles/delete", (EquipmentProfileRequest request, EquipmentProfileService profiles) =>
+        {
+            try
+            {
+                profiles.Delete(request.Name);
+                return Results.NoContent();
+            }
+            catch (ArgumentException ex)
+            {
+                return Results.Problem(ex.Message, statusCode: StatusCodes.Status400BadRequest);
+            }
+        });
         api.MapPost("/mount/bluetooth", async (MountBluetoothRequest request, MountBluetoothService bluetooth, CancellationToken ct) =>
         {
             try

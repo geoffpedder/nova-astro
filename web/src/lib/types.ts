@@ -48,10 +48,10 @@ export interface MountBluetoothStatus {
   /** INDI with the ZWO mount driver: the only mounts this works for. */
   applicable: boolean
   enabled: boolean
-  /** The chosen mount's Bluetooth name; null for the first ZWO mount found. */
+  /** The chosen mount's Bluetooth name (Bluetooth only ever connects to a chosen mount). */
   mount: string | null
   address: string | null
-  state: 'Off' | 'Idle' | 'Searching' | 'Connecting' | 'Connected' | 'Error'
+  state: 'Off' | 'Choose' | 'Idle' | 'Searching' | 'Connecting' | 'Confirming' | 'Connected' | 'Error'
   detail: string | null
   scanning: boolean
   found: BluetoothMount[]

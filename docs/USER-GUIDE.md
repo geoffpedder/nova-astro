@@ -108,6 +108,13 @@ over Bluetooth, the same driver as over USB, and the Mount panel shows the link 
 link drops, NOVA reconnects by itself; the mount doesn't answer until it's back. **Disconnect equipment** lets the
 mount go, so ZWO's phone app can connect to it again; **USB cable** goes back to the cable.
 
+**The first time, press the mount's BT button.** Each NOVA has its own code for the mount, and a mount that
+doesn't know it yet waits for its **BT** button to be pressed (the Mount panel says so). It then remembers this
+NOVA and connects without asking again. NOVA only ever connects to the mount you picked, never just any mount in
+range, so at a site with several ZWO mounts it can't take over someone else's by mistake, and another NOVA can't
+use yours without someone pressing its button. (ZWO's phone app uses one code for everyone, so a mount that has
+been used with the app still accepts the app.)
+
 A mount only shows in the search while nothing else is connected to it: close ZWO's app on your phone first. The
 mini PC needs Bluetooth (most have it; a USB Bluetooth dongle works) and `nova setup` installs what NOVA needs for
 it (BlueZ and Python's Bleak). `nova doctor` checks it.

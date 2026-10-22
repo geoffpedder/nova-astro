@@ -51,6 +51,10 @@
         return 'looking for it…'
       case 'Connecting':
         return 'connecting…'
+      case 'Confirming':
+        return 'press the BT button on the mount'
+      case 'Choose':
+        return 'choose your mount'
       case 'Connected':
         return 'connected'
       case 'Error':
@@ -59,7 +63,9 @@
         return ''
     }
   })
-  const stateClass = $derived(bt?.state === 'Connected' ? 'ok' : bt?.state === 'Error' ? 'danger' : bt?.state === 'Idle' ? '' : 'warn')
+  const stateClass = $derived(
+    bt?.state === 'Connected' ? 'ok' : bt?.state === 'Error' || bt?.state === 'Choose' ? 'danger' : bt?.state === 'Idle' ? '' : 'warn',
+  )
 </script>
 
 {#if bt?.applicable}
@@ -76,10 +82,16 @@
   {#if bt.enabled && !picking}
     <div class="link">
       <span class="dot {stateClass}" aria-hidden="true"></span>
-      <span class="name">{bt.mount ?? 'First ZWO mount found'}</span>
+      <span class="name">{bt.mount ?? bt.address ?? 'No mount chosen'}</span>
       <span class="muted state" title={bt.detail ?? ''}>{stateText}</span>
       <button class="secondary small" disabled={disabled || busy} onclick={useBluetooth} title="Look for mounts and choose another">Change</button>
     </div>
+    {#if bt.state === 'Confirming'}
+      <p class="confirm small">
+        The first time, the mount asks to be sure: press the <b>BT</b> button on it. It then remembers this NOVA, and
+        another NOVA can't use it without someone pressing that button.
+      </p>
+    {/if}
   {/if}
 
   {#if picking}
@@ -95,6 +107,12 @@
           <span class="name">{mount.name}</span>
         </button>
       {/each}
+      {#if found.length > 1}
+        <p class="muted small">
+          Several mounts are in range: pick yours by its name. The first time, NOVA asks you to press the BT button on
+          it, so it can't use someone else's mount by mistake.
+        </p>
+      {/if}
       {#if searched && !bt.scanning && found.length === 0}
         <p class="muted small">
           No ZWO mount found. Is it switched on and within a few metres? Close ZWO's app on your phone: a mount
@@ -173,6 +191,10 @@
   }
   .dot.danger {
     background: var(--danger);
+  }
+  .confirm {
+    color: var(--warn);
+    margin-top: 4px;
   }
   .picker {
     display: flex;

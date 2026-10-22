@@ -75,6 +75,36 @@ public sealed class MountBluetoothTests : IDisposable
     }
 
     [Fact]
+    public async Task OnlyEverAChosenMount()
+    {
+        // Never "whichever mount is found": at a shared site that could be someone else's.
+        var (bluetooth, _) = Service();
+        await Assert.ThrowsAsync<ArgumentException>(() => bluetooth.SetAsync(true, " ", null, CancellationToken.None));
+        Assert.False(bluetooth.Status.Enabled);
+
+        // Turned on that way by an older NOVA: it waits to be told which mount.
+        Directory.CreateDirectory(_folder);
+        File.WriteAllText(Path.Combine(_folder, "mount-bluetooth.json"), """{"Enabled": true}""");
+        Assert.Equal("Choose", Service().Bluetooth.Status.State);
+    }
+
+    [Fact]
+    public void EachNovaHasItsOwnCode()
+    {
+        var codes = Enumerable.Range(0, 50).Select(_ => MountBluetoothService.NewCode()).ToList();
+        Assert.All(codes, c => Assert.Matches("^[0-9]{8}$", c));
+        Assert.DoesNotContain("12345678", codes); // the code everyone else's software uses
+        Assert.True(codes.Distinct().Count() > 45);
+    }
+
+    [Fact]
+    public void ReadsTheAskToPressTheButton()
+    {
+        var e = MountBluetoothService.ParseEvent("""{"event": "confirm", "name": "AM3_68bc8d", "address": "F4:12:FA:68:BC:8E", "timeout": 30.0}""");
+        Assert.Equal(("confirm", "AM3_68bc8d"), (e!.Event, e.Name));
+    }
+
+    [Fact]
     public void OnlyForTheZwoDriverOnIndi()
     {
         // NOVA's own simulator has no drivers: nothing to connect over Bluetooth.

@@ -10,8 +10,11 @@ public sealed record BluetoothMount(string Name, string Address, int? Rssi);
 
 /// <param name="Applicable">An INDI backend with the ZWO mount driver: the only mounts this works for.</param>
 /// <param name="Enabled">The mount is connected over Bluetooth rather than USB.</param>
-/// <param name="Mount">The chosen mount's Bluetooth name (null: the first ZWO mount found).</param>
-/// <param name="State">Off, Idle (waiting for Connect equipment), Searching, Connecting, Connected or Error.</param>
+/// <param name="Mount">The chosen mount's Bluetooth name.</param>
+/// <param name="State">
+/// Off, Choose (Bluetooth on but no mount chosen), Idle (waiting for Connect equipment), Searching, Connecting,
+/// Confirming (waiting for the mount's BT button to be pressed), Connected or Error.
+/// </param>
 public sealed record MountBluetoothStatus(
     bool Applicable, bool Enabled, string? Mount, string? Address, string State, string? Detail,
     bool Scanning, IReadOnlyList<BluetoothMount> Found);
@@ -21,14 +24,22 @@ public sealed record MountBluetoothStatus(
 /// up and offers it as a serial port at <see cref="NovaOptions.MountBluetoothLink"/>; the INDI driver is pointed at
 /// that port just before the mount connects. The helper runs while equipment is connected and stops on Disconnect,
 /// which frees the mount for ZWO's phone app. Settings in mount-bluetooth.json.
+/// <para>
+/// Each NOVA has its own 8-digit bind code. The first time, the mount refuses it until its BT button is pressed, and
+/// then remembers it: so NOVA only ever uses the one mount chosen, and another NOVA can't use this mount without
+/// someone pressing its button.
+/// </para>
 /// </summary>
 public sealed class MountBluetoothService : IAsyncDisposable
 {
     public const string ZwoMountDriver = "indi_lx200am5";
-    private static readonly TimeSpan ConnectTimeout = TimeSpan.FromSeconds(45);
+    private static readonly TimeSpan ConnectTimeout = TimeSpan.FromSeconds(60);
     private static readonly TimeSpan ScanTime = TimeSpan.FromSeconds(6);
 
-    private sealed record Settings(bool Enabled = false, string? Mount = null, string? Address = null);
+    private sealed record Settings(bool Enabled = false, string? Mount = null, string? Address = null, string? Code = null)
+    {
+        public bool Chosen => Mount is not null || Address is not null;
+    }
 
     private readonly EquipmentService _equipment;
     private readonly ActivityLog _log;
@@ -43,6 +54,7 @@ public sealed class MountBluetoothService : IAsyncDisposable
     private TaskCompletionSource<bool>? _linkUp;
     private readonly List<BluetoothMount> _found = [];
     private bool _scanning;
+    private bool _askedToConfirm;
 
     public MountBluetoothService(EquipmentService equipment, IOptions<NovaOptions> options, ActivityLog log)
     {
@@ -71,7 +83,8 @@ public sealed class MountBluetoothService : IAsyncDisposable
         {
             lock (_sync)
             {
-                var state = !_settings.Enabled ? "Off" : _bridge is null ? (_state == "Error" ? "Error" : "Idle") : _state;
+                var state = !_settings.Enabled ? "Off" : !_settings.Chosen ? "Choose"
+                    : _bridge is null ? (_state == "Error" ? "Error" : "Idle") : _state;
                 return new MountBluetoothStatus(Applicable, _settings.Enabled, _settings.Mount, _settings.Address, state,
                     _settings.Enabled ? _detail : null, _scanning, _found.ToList());
             }
@@ -89,20 +102,24 @@ public sealed class MountBluetoothService : IAsyncDisposable
         }
     }
 
-    /// <summary>Turns Bluetooth on (for one mount, or the first found when both are empty) or off (USB again).</summary>
+    /// <summary>
+    /// Turns Bluetooth on for one mount (never "whichever is found": at a shared site that could be someone else's) or
+    /// off (USB again).
+    /// </summary>
     public async Task SetAsync(bool enabled, string? mount, string? address, CancellationToken ct)
     {
         if (mount is { Length: > 64 } || address is { Length: > 64 }) throw new ArgumentException("That's not a Bluetooth mount name");
+        if (enabled && Blank(mount) is null && Blank(address) is null) throw new ArgumentException("Choose which mount to connect to");
         Settings before;
         lock (_sync)
         {
             before = _settings;
-            _settings = enabled ? new Settings(true, Blank(mount), Blank(address)) : before with { Enabled = false };
+            _settings = enabled ? before with { Enabled = true, Mount = Blank(mount), Address = Blank(address) } : before with { Enabled = false };
             _detail = null;
             if (_state == "Error") _state = "Idle";
         }
         Save();
-        _log.Info(enabled ? $"Mount connection: Bluetooth, {_settings.Mount ?? "the first ZWO mount found"}" : "Mount connection: USB");
+        _log.Info(enabled ? $"Mount connection: Bluetooth, {_settings.Mount ?? _settings.Address}" : "Mount connection: USB");
         if (before == _settings) return;
         // Off, or another mount: let go of the old one.
         if (!enabled || before.Mount != _settings.Mount || before.Address != _settings.Address) StopBridge();
@@ -117,6 +134,15 @@ public sealed class MountBluetoothService : IAsyncDisposable
     }
 
     private static string? Blank(string? s) => string.IsNullOrWhiteSpace(s) ? null : s.Trim();
+
+    /// <summary>This NOVA's bind code: 8 random digits, never the code everyone else's software uses.</summary>
+    public static string NewCode()
+    {
+        string code;
+        do code = System.Security.Cryptography.RandomNumberGenerator.GetInt32(100_000_000).ToString("D8");
+        while (code == "12345678");
+        return code;
+    }
 
     /// <summary>Looks for ZWO mounts in range for a few seconds. A mount that's connected (to NOVA or a phone) doesn't show.</summary>
     public async Task<IReadOnlyList<BluetoothMount>> ScanAsync(CancellationToken ct)
@@ -161,6 +187,8 @@ public sealed class MountBluetoothService : IAsyncDisposable
     private async Task PrepareAsync(IDevice device, CancellationToken ct)
     {
         if (device is not IMount || !_settings.Enabled || !Applicable) return;
+        if (!_settings.Chosen)
+            throw new InvalidOperationException("Choose your mount first: Mount panel, Connection: Bluetooth, then pick it from the list");
         await EnsureLinkAsync(ct);
         if (_equipment.Provider.Settings is not { } settings) return;
         var properties = settings.GetProperties(device.Name);
@@ -181,17 +209,24 @@ public sealed class MountBluetoothService : IAsyncDisposable
         var finished = await Task.WhenAny(up, Task.Delay(ConnectTimeout, ct));
         ct.ThrowIfCancellationRequested();
         if (finished != up)
-            throw new InvalidOperationException(
-                $"No Bluetooth link to {_settings.Mount ?? "a ZWO mount"} after {ConnectTimeout.TotalSeconds:0} s. Is it on and in range, and is ZWO's phone app closed? (Still trying.)");
+            throw new InvalidOperationException(_state == "Confirming"
+                ? $"{_settings.Mount ?? "The mount"} is waiting for its BT button to be pressed, to let this NOVA use it (only needed once). (Still asking.)"
+                : $"No Bluetooth link to {_settings.Mount ?? "the mount"} after {ConnectTimeout.TotalSeconds:0} s. Is it on and in range, and is ZWO's phone app closed? (Still trying.)");
         if (!await up) throw new InvalidOperationException(_detail ?? "The Bluetooth helper stopped");
     }
 
     // Called with _sync held.
     private void StartBridge()
     {
-        var args = new List<string> { "bridge", "--link", LinkPath };
+        if (_settings.Code is null)
+        {
+            _settings = _settings with { Code = NewCode() };
+            Save();
+        }
+        var args = new List<string> { "bridge", "--link", LinkPath, "--code", _settings.Code! };
         if (_settings.Address is { } address) args.AddRange(["--address", address]);
         else if (_settings.Mount is { } mount) args.AddRange(["--name", mount]);
+        _askedToConfirm = false;
         _linkUp = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
         _state = "Searching";
         _detail = null;
@@ -244,6 +279,16 @@ public sealed class MountBluetoothService : IAsyncDisposable
             {
                 case "searching": _state = "Searching"; break;
                 case "connecting": _state = "Connecting"; _detail = e.Name; break;
+                case "confirm":
+                    _state = "Confirming";
+                    _detail = e.Name;
+                    if (!_askedToConfirm)
+                    {
+                        _askedToConfirm = true;
+                        message = $"Bluetooth: press the BT button on {e.Name ?? "the mount"} to let this NOVA use it (only needed once)";
+                        warn = true;
+                    }
+                    break;
                 case "connected":
                     _state = "Connected";
                     _detail = e.Name;

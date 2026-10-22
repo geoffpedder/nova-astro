@@ -4,6 +4,14 @@ What changed in each release. The newest is first. A release's section here beco
 
 ## [Unreleased]
 
+### Changed
+
+- **Bluetooth mounts are locked to your NOVA:** each NOVA has its own code for the mount, and the first time it
+  connects the Mount panel asks you to press the mount's **BT** button; after that the mount remembers it. NOVA
+  only connects to the mount you picked (no more "the first ZWO mount found"), so at a site with several ZWO
+  mounts it can't take over someone else's, and another NOVA can't use yours without someone pressing its button.
+  When the search finds several mounts, the panel says to pick yours by name.
+
 ## [0.3.17] - 2026-10-22
 
 ### Added

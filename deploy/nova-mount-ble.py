@@ -3,13 +3,17 @@
 driver works over Bluetooth unchanged. NOVA starts and stops this itself (Mount panel: Connection > Bluetooth).
 
 The mount (an ESP32) has one GATT characteristic for everything: commands are written to it as text and replies come
-back as notifications on it. After connecting, the mount must be sent the bind command ":BS12345678#" (it answers
-"OK#"); without it the mount drops the link after about 10 seconds. After that it takes the same LX200-style
-commands as on its USB port.
+back as notifications on it. After connecting, the mount must be sent a bind command with an 8-digit code,
+":BS<code>#"; without it the mount drops the link after about 10 seconds. A code the mount already knows gets "OK#".
+A new one gets "NO#", and then "OK#" once someone presses the BT button on the mount, after which the mount
+remembers it (alongside the others it knows). NOVA gives each install its own code, so another NOVA can't use
+your mount without someone pressing its button. After the bind it takes the same LX200-style commands as on its
+USB port.
 
   nova-mount-ble.py scan [--timeout S]               lists the mounts in range, one JSON line each
-  nova-mount-ble.py bridge --link PATH [--name N]    connects to mount N (or the first found) and keeps a serial
-                                                     port at PATH (a symlink to a pseudo-terminal) until stopped
+  nova-mount-ble.py bridge --link PATH --address A --code C
+                                                     connects to the mount at address A (or --name N) and keeps a
+                                                     serial port at PATH (a symlink to a pseudo-terminal) until stopped
 
 Everything it has to say is a JSON line on stdout ({"event": ...}), which NOVA reads. It stops on SIGTERM or when
 its stdin closes (NOVA gone).
@@ -23,9 +27,11 @@ import sys
 
 SERVICE_UUID = "414d0001-6ecf-49f1-a13f-f5c2d9174f9f"
 CHAR_UUID = "414d0002-6ecf-49f1-a13f-f5c2d9174f9f"
-BIND_COMMAND = b":BS12345678#"
 BIND_REPLY = b"OK#"
+BIND_REFUSED = b"NO#"
 BIND_TIMEOUT = 5.0
+# After NO#: how long to wait for someone to press the mount's BT button (the mount's own app allows 15 s).
+CONFIRM_TIMEOUT = 30.0
 SEARCH_TIMEOUT = 10.0
 # A command the driver started but didn't end with '#' (a lone ACK byte) is sent after this long.
 PARTIAL_FLUSH = 0.1
@@ -109,8 +115,9 @@ class PseudoSerial:
 
 
 class Bridge:
-    def __init__(self, port, name=None, address=None):
+    def __init__(self, port, code, name=None, address=None):
         self.port = port
+        self.code = code
         self.name = name
         self.address = address
         self.commands = asyncio.Queue()
@@ -156,9 +163,7 @@ class Bridge:
             return False
         if self.address:
             return device.address.lower() == self.address.lower()
-        if self.name:
-            return mount_name(device, adv).lower() == self.name.lower()
-        return True
+        return bool(self.name) and mount_name(device, adv).lower() == self.name.lower()
 
     async def run(self):
         delay = 1.0
@@ -182,14 +187,22 @@ class Bridge:
 
     async def session(self, device):
         lost = asyncio.Event()
+        reply = None
         async with BleakClient(device, disconnected_callback=lambda _client: lost.set()) as client:
             loop = asyncio.get_running_loop()
             self._bind_reply = loop.create_future()
             await client.start_notify(CHAR_UUID, self.on_notify)
-            await client.write_gatt_char(CHAR_UUID, BIND_COMMAND, response=True)
+            await client.write_gatt_char(CHAR_UUID, f":BS{self.code}#".encode(), response=True)
             try:
                 reply = await asyncio.wait_for(self._bind_reply, BIND_TIMEOUT)
+                if reply == BIND_REFUSED:
+                    # This NOVA's code is new to the mount: it waits for its BT button to be pressed.
+                    emit("confirm", name=device.name or self.name, address=device.address, timeout=CONFIRM_TIMEOUT)
+                    self._bind_reply = loop.create_future()
+                    reply = await asyncio.wait_for(self._bind_reply, CONFIRM_TIMEOUT)
             except asyncio.TimeoutError:
+                if reply == BIND_REFUSED:
+                    raise RuntimeError("The mount's BT button wasn't pressed: asking again") from None
                 raise RuntimeError("The mount didn't answer the Bluetooth bind") from None
             finally:
                 self._bind_reply = None
@@ -214,10 +227,10 @@ class Bridge:
                 lost_wait.cancel()
 
 
-async def run_bridge(link, name, address):
+async def run_bridge(link, code, name, address):
     port = PseudoSerial(link)
     emit("link", path=link, tty=port.path)
-    bridge = Bridge(port, name, address)
+    bridge = Bridge(port, code, name, address)
     loop = asyncio.get_running_loop()
     loop.add_reader(port.master, bridge.on_serial_readable)
     try:
@@ -228,7 +241,7 @@ async def run_bridge(link, name, address):
 
 
 async def main_async(args):
-    task = asyncio.ensure_future(scan(args.timeout) if args.command == "scan" else run_bridge(args.link, args.name, args.address))
+    task = asyncio.ensure_future(scan(args.timeout) if args.command == "scan" else run_bridge(args.link, args.code, args.name, args.address))
     loop = asyncio.get_running_loop()
     for sig in (signal.SIGTERM, signal.SIGINT):
         try:
@@ -260,9 +273,15 @@ def main():
     find.add_argument("--timeout", type=float, default=6.0)
     bridge = commands.add_parser("bridge", help="serve a mount as a serial port")
     bridge.add_argument("--link", required=True, help="where to put the serial port (a symlink)")
-    bridge.add_argument("--name", help="the mount's Bluetooth name, e.g. AM3_68bc8d (default: the first found)")
+    bridge.add_argument("--name", help="the mount's Bluetooth name, e.g. AM3_68bc8d")
     bridge.add_argument("--address", help="the mount's Bluetooth address (instead of its name)")
+    bridge.add_argument("--code", required=True, help="the 8-digit bind code (confirmed once with the mount's BT button)")
     args = parser.parse_args()
+    if args.command == "bridge":
+        if not (args.name or args.address):
+            parser.error("say which mount: --address or --name")
+        if not (len(args.code) == 8 and args.code.isdigit()):
+            parser.error("--code must be 8 digits")
 
     if BleakClient is None:
         emit("error", message="Python's Bleak library isn't installed (python3-bleak)", fatal=True)

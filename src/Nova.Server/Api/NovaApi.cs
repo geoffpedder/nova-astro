@@ -39,7 +39,7 @@ public sealed record StorageCopyRequest(string Night);
 public sealed record CameraDefaultsRequest(string Camera, double? Gain, double? Offset);
 
 public sealed record SimulatorsRequest(bool Enabled);
-/// <summary>Bluetooth on (for the named mount, or the first found) or off (USB).</summary>
+/// <summary>Bluetooth on for one mount (by name and/or address; one is required) or off (USB).</summary>
 public sealed record MountBluetoothRequest(bool Enabled, string? Mount = null, string? Address = null);
 
 /// <summary>Latitude +N, longitude +E (-180..180), elevation in metres. Set OriginalName to rename.</summary>

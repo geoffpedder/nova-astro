@@ -6,11 +6,11 @@ What changed in each release. The newest is first. A release's section here beco
 
 ### Fixed
 
-- **Turning RA at the pole could keep going:** NOVA drives the RA axis until the RA the mount reports has changed
-  by the amount wanted, but at the pole (a mount at home reports Dec 90°) that RA hardly changes, so polar
-  alignment on the pole started from home turned the mount far past 90°. At the pole the turn is now timed from
-  the mount's speed, and everywhere else that time (with a margin) is a limit: a mount whose RA doesn't follow is
-  stopped after seconds, not minutes.
+- **Turning RA at the pole could keep going:** NOVA turns the RA axis until the RA the mount reports has changed
+  by the amount wanted, but right at the pole (a mount at home reports Dec 90°) that RA hardly changes, so polar
+  alignment on the pole started from home turned the mount far past 90°. It now first steps just off the pole in
+  Dec alone (slowly, to Dec 89.7°, watching the reported Dec), then turns RA watching the reported RA, and won't
+  turn RA at all right at the pole. Both moves stop the mount at once if the reading stops changing for 2 s.
 
 ## [0.3.19] - 2026-10-23
 

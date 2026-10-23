@@ -552,30 +552,29 @@ public class RaAxisTurnTests
         """<defSwitchVector device="ZWO AM5" name="CONNECTION" state="Ok" perm="rw" rule="OneOfMany"><defSwitch name="CONNECT">On</defSwitch><defSwitch name="DISCONNECT">Off</defSwitch></defSwitchVector>""",
         $"""<defNumberVector device="ZWO AM5" name="EQUATORIAL_EOD_COORD" state="Ok" perm="rw"><defNumber name="RA" format="%010.6m" min="0" max="24" step="0">6.1</defNumber><defNumber name="DEC" format="%010.6m" min="-90" max="90" step="0">{dec.ToString(System.Globalization.CultureInfo.InvariantCulture)}</defNumber></defNumberVector>""",
         """<defSwitchVector device="ZWO AM5" name="TELESCOPE_MOTION_WE" state="Idle" perm="rw" rule="AtMostOne"><defSwitch name="MOTION_WEST">Off</defSwitch><defSwitch name="MOTION_EAST">Off</defSwitch></defSwitchVector>""",
+        """<defSwitchVector device="ZWO AM5" name="TELESCOPE_MOTION_NS" state="Idle" perm="rw" rule="AtMostOne"><defSwitch name="MOTION_NORTH">Off</defSwitch><defSwitch name="MOTION_SOUTH">Off</defSwitch></defSwitchVector>""",
         """<defSwitchVector device="ZWO AM5" name="TELESCOPE_SLEW_RATE" state="Ok" perm="rw" rule="OneOfMany"><defSwitch name="7" label="60x">Off</defSwitch><defSwitch name="8" label="720x">Off</defSwitch><defSwitch name="9" label="1440x">On</defSwitch></defSwitchVector>""",
     ];
 
     [Fact]
-    public async Task AtThePoleTheTurnIsTimedFromTheSpeed()
+    public async Task WontTurnRaAtThePole()
     {
+        // At the pole the reported RA can't measure the turn: refuse before anything moves.
         using var server = new ScriptedServer(Mount(90), _ => [], skipFirstLine: true);
         using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(20));
         await using var provider = new IndiEquipmentProvider("127.0.0.1", server.Port);
         await provider.ConnectAsync(cts.Token);
         var mount = provider.GetMount("ZWO AM5")!;
 
-        // 3° at 720x (3°/s) is about a second, even though the reported RA never changes.
-        var clock = System.Diagnostics.Stopwatch.StartNew();
-        await mount.MoveRaAxisAsync(3, cts.Token);
-        Assert.InRange(clock.Elapsed.TotalSeconds, 0.9, 4);
-        Assert.Contains(server.Received, l => l.Contains("MOTION_WEST") && l.Contains("On"));
-        Assert.Contains(server.Received, l => l.Contains("TELESCOPE_MOTION_WE") && l.Contains("Off"));
+        await Assert.ThrowsAsync<InvalidOperationException>(() => mount.MoveRaAxisAsync(90, cts.Token));
+        await Task.Delay(300);
+        Assert.DoesNotContain(server.Received, l => l.Contains("MOTION_WEST") && l.Contains("On"));
     }
 
     [Fact]
-    public async Task AMountThatKeepsGoingIsStopped()
+    public async Task AMountWhoseRaDoesntFollowIsStoppedAtOnce()
     {
-        // Off the pole, the reported RA ends the turn; if it never changes, the speed's time limit stops the mount.
+        // The driver's motion runs until stopped: if the reported RA doesn't change, stop within seconds.
         using var server = new ScriptedServer(Mount(60), _ => [], skipFirstLine: true);
         using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(20));
         await using var provider = new IndiEquipmentProvider("127.0.0.1", server.Port);
@@ -583,9 +582,28 @@ public class RaAxisTurnTests
         var mount = provider.GetMount("ZWO AM5")!;
 
         var clock = System.Diagnostics.Stopwatch.StartNew();
-        await Assert.ThrowsAsync<TimeoutException>(() => mount.MoveRaAxisAsync(3, cts.Token));
-        Assert.InRange(clock.Elapsed.TotalSeconds, 5, 9); // 1 s expected, ×1.5 + 5 s
+        await Assert.ThrowsAsync<InvalidOperationException>(() => mount.MoveRaAxisAsync(90, cts.Token));
+        Assert.InRange(clock.Elapsed.TotalSeconds, 1.5, 4);
         await Task.Delay(300);
         Assert.Contains(server.Received, l => l.Contains("TELESCOPE_MOTION_WE") && l.Contains("Off"));
+    }
+
+    [Fact]
+    public async Task SteppingOffThePoleStopsIfDecDoesntChange()
+    {
+        using var server = new ScriptedServer(Mount(90), _ => [], skipFirstLine: true);
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(20));
+        await using var provider = new IndiEquipmentProvider("127.0.0.1", server.Port);
+        await provider.ConnectAsync(cts.Token);
+        var mount = provider.GetMount("ZWO AM5")!;
+
+        var clock = System.Diagnostics.Stopwatch.StartNew();
+        await Assert.ThrowsAsync<InvalidOperationException>(() =>
+            Nova.Server.Services.PolarAlignmentService.StepOffThePoleAsync(mount, new GeoLocation(51.5, -0.1, 0), cts.Token));
+        Assert.InRange(clock.Elapsed.TotalSeconds, 1.5, 4);
+        await Task.Delay(300);
+        Assert.Contains(server.Received, l => l.Contains("MOTION_SOUTH") && l.Contains("On"));
+        Assert.Contains(server.Received, l => l.Contains("TELESCOPE_MOTION_NS") && l.Contains("Off"));
+        Assert.Contains(server.Received, l => l.Contains("TELESCOPE_SLEW_RATE") && l.Contains("name=\"7\""));  // 60x
     }
 }

@@ -252,8 +252,14 @@ public sealed class PolarAlignmentService
                 {
                     // Already there (at home, say): start here. A GoTo to the pole start would first swing RA round to
                     // Polaris's side, up to half a turn, before the 90° turn between the frames: with both, the scope
-                    // can end up low, near the tripod.
+                    // can end up low, near the tripod. Right at the pole, though, the reported RA can't measure the
+                    // turn, so first a nudge off it in Dec alone (no RA swing).
                     _log.Info("Polar alignment: already at the pole, starting here");
+                    if (!settings.Manual && mount.CanMoveRaAxis)
+                    {
+                        Report("Stepping just off the pole (Dec only)", 1);
+                        await StepOffThePoleAsync(mount, site, ct);
+                    }
                 }
                 else
                 {
@@ -438,6 +444,56 @@ public sealed class PolarAlignmentService
         var azimuth = ((north ? 0 : 180) + settings.AzimuthOffset + 360) % 360;
         return Horizon.FromVector(Horizon.FromAltAz(altitude, azimuth), utc, site);
     }
+
+    /// <summary>Where the RA turn starts on the pole method: off the pole by this much, so the reported RA means something.</summary>
+    public const double PoleStepDec = 89.7;
+
+    /// <summary>
+    /// Moves Dec away from the pole until the mount reports <see cref="PoleStepDec"/>, at a slow speed, watching the
+    /// reported Dec (which, unlike RA, is meaningful at the pole) and stopping at once if it doesn't change.
+    /// </summary>
+    public static async Task StepOffThePoleAsync(IMount mount, GeoLocation site, CancellationToken ct)
+    {
+        double FromPole() => 90 - (site.Latitude >= 0 ? mount.Coordinates.DecDegrees : -mount.Coordinates.DecDegrees);
+        if (FromPole() >= 90 - PoleStepDec) return;
+        var previous = mount.CurrentSlewRate;
+        // Slow: the speed nearest 60x (a quarter of a degree a second) the mount lists.
+        if (mount.SlewRates.Select(r => (r, x: SiderealMultiple(r.Label))).Where(t => t.x is not null)
+                .OrderBy(t => Math.Abs(Math.Log(t.x!.Value / 60))).Select(t => t.r).FirstOrDefault() is { } slow)
+            await mount.SetSlewRateAsync(slow.Name, ct);
+        var direction = site.Latitude >= 0 ? MotionDirection.South : MotionDirection.North;
+        var clock = System.Diagnostics.Stopwatch.StartNew();
+        var (best, progress) = (FromPole(), TimeSpan.Zero);
+        await mount.StartMotionAsync(direction, ct);
+        try
+        {
+            while (FromPole() is var away && away < 90 - PoleStepDec)
+            {
+                await Task.Delay(50, ct);
+                if (away > best + 0.005) (best, progress) = (away, clock.Elapsed);
+                if (clock.Elapsed - progress > TimeSpan.FromSeconds(2))
+                    throw new InvalidOperationException($"{mount.Name}'s Dec didn't change when moved off the pole: stopped it");
+                if (clock.Elapsed > TimeSpan.FromSeconds(30))
+                    throw new TimeoutException($"{mount.Name} took too long to move {90 - PoleStepDec:0.#}° off the pole: stopped it");
+            }
+        }
+        finally
+        {
+            await mount.StopMotionAsync(direction, CancellationToken.None);
+            if (previous is not null)
+            {
+                try { await mount.SetSlewRateAsync(previous, CancellationToken.None); }
+                catch (Exception) { /* the speed is only a convenience */ }
+            }
+        }
+        await Task.Delay(TimeSpan.FromSeconds(1), ct); // let it settle
+    }
+
+    /// <summary>"720x" → 720.</summary>
+    private static double? SiderealMultiple(string label) =>
+        label.Trim() is var t && t.EndsWith('x') &&
+        double.TryParse(t[..^1], System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out var x) && x > 0
+            ? x : null;
 
     /// <summary>The mount points within 2° of the visible pole (e.g. at its home position).</summary>
     public static bool AtThePole(EquatorialCoordinates jnow, GeoLocation site) =>

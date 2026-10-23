@@ -606,4 +606,120 @@ public class RaAxisTurnTests
         Assert.Contains(server.Received, l => l.Contains("TELESCOPE_MOTION_NS") && l.Contains("Off"));
         Assert.Contains(server.Received, l => l.Contains("TELESCOPE_SLEW_RATE") && l.Contains("name=\"7\""));  // 60x
     }
+
+    /// <summary>
+    /// A ZWO mount that moves: while MOTION_WEST is on it reports RA falling at <paramref name="degreesPerSecond"/>,
+    /// a reading every <paramref name="pollMs"/> (as drivers poll), after <paramref name="glitchAfter"/> seconds it
+    /// can report one wrong reading (<paramref name="glitchDegrees"/> off), and it really stops when told.
+    /// </summary>
+    private sealed class MovingMount : IDisposable
+    {
+        private readonly TcpListener _listener = new(IPAddress.Loopback, 0);
+        private readonly CancellationTokenSource _cts = new(TimeSpan.FromSeconds(30));
+        private double _ra = 6.0;
+        private volatile bool _moving;
+        public double TurnedDegrees => Math.Abs(6.0 - _ra) * 15;
+
+        public MovingMount(double degreesPerSecond, int pollMs, double glitchAfter = -1, double glitchDegrees = 0)
+        {
+            _listener.Start();
+            _ = Task.Run(async () =>
+            {
+                using var socket = await _listener.AcceptTcpClientAsync(_cts.Token);
+                var stream = socket.GetStream();
+                var reader = new StreamReader(stream);
+                var gate = new SemaphoreSlim(1, 1);
+                async Task Send(string line)
+                {
+                    await gate.WaitAsync(_cts.Token);
+                    try { await stream.WriteAsync(Encoding.UTF8.GetBytes(line + "\r\n"), _cts.Token); }
+                    finally { gate.Release(); }
+                }
+                string Coords(double ra) => $"""<setNumberVector device="ZWO AM5" name="EQUATORIAL_EOD_COORD" state="Ok"><oneNumber name="RA">{ra.ToString(System.Globalization.CultureInfo.InvariantCulture)}</oneNumber><oneNumber name="DEC">60</oneNumber></setNumberVector>""";
+                await reader.ReadLineAsync(_cts.Token);
+                foreach (var line in Mount(60)) await Send(line);
+                _ = Task.Run(async () =>
+                {
+                    var clock = System.Diagnostics.Stopwatch.StartNew();
+                    var last = clock.Elapsed;
+                    var glitched = false;
+                    TimeSpan? movingSince = null;
+                    var bucket = 0L;
+                    while (!_cts.IsCancellationRequested)
+                    {
+                        await Task.Delay(20, _cts.Token);
+                        var now = clock.Elapsed;
+                        if (_moving) _ra -= degreesPerSecond / 15 * (now - last).TotalSeconds;
+                        if (_moving) movingSince ??= now;
+                        last = now;
+                        if ((long)(now.TotalMilliseconds / pollMs) is var b && b != bucket)
+                        {
+                            bucket = b;
+                            var reported = _ra;
+                            if (glitchAfter >= 0 && !glitched && movingSince is { } since && (now - since).TotalSeconds > glitchAfter) { reported -= glitchDegrees / 15; glitched = true; }
+                            await Send(Coords(reported));
+                        }
+                    }
+                });
+                while (await reader.ReadLineAsync(_cts.Token) is { } line)
+                {
+                    if (line.Contains("MOTION_WEST") && line.Contains(">On")) _moving = true;
+                    if (line.Contains("TELESCOPE_MOTION_WE") && line.Contains("Off")) _moving = false;
+                    if (line.Contains("oneSwitch") && line.Contains("MOTION_WEST") && line.Contains("Off")) _moving = false;
+                }
+            });
+        }
+
+        public int Port => ((IPEndPoint)_listener.LocalEndpoint).Port;
+
+        public void Dispose()
+        {
+            _cts.Cancel();
+            _listener.Stop();
+        }
+    }
+
+    private static async Task<(IMount Mount, IndiEquipmentProvider Provider)> ConnectAsync(MovingMount fake)
+    {
+        var provider = new IndiEquipmentProvider("127.0.0.1", fake.Port);
+        await provider.ConnectAsync(CancellationToken.None);
+        for (var i = 0; i < 100 && provider.GetMount("ZWO AM5")?.Coordinates.RaHours is not > 0; i++) await Task.Delay(20);
+        return (provider.GetMount("ZWO AM5")!, provider);
+    }
+
+    [Fact]
+    public async Task StopsOnTheAngleDespiteTheReadingLagging()
+    {
+        // 4°/s with a reading only every second: watching the reading alone would overshoot by up to 4°.
+        using var fake = new MovingMount(degreesPerSecond: 4, pollMs: 1000);
+        var (mount, provider) = await ConnectAsync(fake);
+        await using var _ = provider;
+        await mount.MoveRaAxisAsync(20, CancellationToken.None);
+        await Task.Delay(300);
+        Assert.InRange(fake.TurnedDegrees, 18.5, 21.5);
+    }
+
+    [Fact]
+    public async Task AReadingThatJumpsStopsTheMount()
+    {
+        using var fake = new MovingMount(degreesPerSecond: 2, pollMs: 250, glitchAfter: 2, glitchDegrees: 40);
+        var (mount, provider) = await ConnectAsync(fake);
+        await using var _ = provider;
+        var error = await Assert.ThrowsAsync<InvalidOperationException>(() => mount.MoveRaAxisAsync(90, CancellationToken.None));
+        Assert.Contains("jumped", error.Message);
+        await Task.Delay(300);
+        Assert.InRange(fake.TurnedDegrees, 3, 7); // stopped about 2 s in, not at 90°
+    }
+
+    [Fact]
+    public async Task AReadingThatGoesBackwardsStopsTheMount()
+    {
+        using var fake = new MovingMount(degreesPerSecond: 2, pollMs: 250, glitchAfter: 2, glitchDegrees: -3);
+        var (mount, provider) = await ConnectAsync(fake);
+        await using var _ = provider;
+        var error = await Assert.ThrowsAsync<InvalidOperationException>(() => mount.MoveRaAxisAsync(90, CancellationToken.None));
+        Assert.True(error.Message.Contains("backwards"), error.Message);
+        await Task.Delay(300);
+        Assert.InRange(fake.TurnedDegrees, 3, 7);
+    }
 }

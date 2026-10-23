@@ -683,6 +683,12 @@ public sealed class IndiMount(IndiClient client, string name) : IndiDevice(clien
     /// <summary>A move whose reading hasn't changed for this long is stopped.</summary>
     private static readonly TimeSpan StallTime = TimeSpan.FromSeconds(2);
 
+    /// <summary>Faster than any mount slews (degrees a second): a reading that jumps more is wrong.</summary>
+    private const double MaxPlausibleSpeed = 10;
+
+    /// <summary>Roughly how long a mount takes to stop once told to (seconds): stopping is started that early.</summary>
+    private const double StopSeconds = 0.3;
+
     public async Task MoveRaAxisAsync(double degrees, CancellationToken ct)
     {
         EnsureConnected();
@@ -702,24 +708,53 @@ public sealed class IndiMount(IndiClient client, string name) : IndiDevice(clien
         if (Math.Abs(Coordinates.DecDegrees) > MaxDecForRaTurn)
             throw new InvalidOperationException($"{Name} points at the pole, where its RA can't measure a turn: move it a little off the pole first");
 
-        // Watchdogs, as the driver's motion runs until it's stopped: if the reported RA stops following, stop at once.
+        // The driver's motion runs until it's stopped, and the reported RA lags the mount (drivers poll it about once a
+        // second), so the turn is watched closely:
+        //  - the reading must start changing, keep going one way and never jump further than any mount moves;
+        //  - the real speed is measured from the readings, and the mount is stopped early by however far it will have
+        //    moved since the last reading, plus the time it takes to stop, so it lands on the angle, not past it;
+        //  - if the reading stops changing, stop at once.
+        var target = Math.Abs(degrees);
         var start = Coordinates.RaHours;
-        double Turned() => Math.Abs(((Coordinates.RaHours - start) % 24 + 36) % 24 - 12) * 15;
+        double Signed() => (((Coordinates.RaHours - start) % 24 + 36) % 24 - 12) * 15;
         var clock = System.Diagnostics.Stopwatch.StartNew();
-        var (lastTurned, lastProgress) = (0.0, TimeSpan.Zero);
+        var last = (Turned: 0.0, At: TimeSpan.Zero);  // the latest reading that changed
+        double? speed = null;                           // degrees per second, measured
+        var sign = 0;
         await Client.SetSwitchesAsync(Name, "TELESCOPE_MOTION_WE", ct, (degrees > 0 ? "MOTION_WEST" : "MOTION_EAST", true));
         try
         {
-            while (Turned() is var turned && turned < Math.Abs(degrees))
+            while (true)
             {
-                await Task.Delay(100, ct);
-                if (turned > lastTurned + 0.1) (lastTurned, lastProgress) = (turned, clock.Elapsed);
-                if (clock.Elapsed - lastProgress > StallTime)
-                    throw new InvalidOperationException(lastTurned < 0.2
+                await Task.Delay(50, ct);
+                var now = clock.Elapsed;
+                var signed = Signed();
+                var turned = Math.Abs(signed);
+                if (Math.Abs(turned - last.Turned) > 0.01)
+                {
+                    // A new reading: check it's plausible, then update the measured speed.
+                    if (sign == 0 && turned > 0.2) sign = Math.Sign(signed);
+                    if (sign != 0 && Math.Sign(signed) != sign && turned > 0.5)
+                        throw new InvalidOperationException($"{Name}'s RA went back the other way while turning: stopped it");
+                    if (turned < last.Turned - 0.5)
+                        throw new InvalidOperationException($"{Name}'s RA went backwards ({last.Turned:0.#}° to {turned:0.#}°) while turning: stopped it");
+                    var step = (turned - last.Turned) / Math.Max((now - last.At).TotalSeconds, 0.05);
+                    if (turned - last.Turned > 1 && step > MaxPlausibleSpeed)
+                        throw new InvalidOperationException($"{Name}'s RA jumped {turned - last.Turned:0.#}° in {(now - last.At).TotalSeconds:0.0} s, faster than any mount turns: stopped it");
+                    if (last.Turned > 0) speed = speed is { } v ? 0.5 * v + 0.5 * step : step;
+                    last = (turned, now);
+                }
+
+                // Where it is now: the last reading plus the time since, at the measured speed.
+                var predicted = last.Turned + (speed ?? 0) * (now - last.At).TotalSeconds;
+                if (predicted + (speed ?? 0) * StopSeconds >= target || turned >= target) break;
+
+                if (now - last.At > StallTime)
+                    throw new InvalidOperationException(last.Turned < 0.2
                         ? $"{Name} didn't move when driven in RA (or its RA didn't change): stopped it"
-                        : $"{Name}'s RA stopped changing after {lastTurned:0.#}° of {Math.Abs(degrees):0}°: stopped it");
-                if (clock.Elapsed > TimeSpan.FromSeconds(30 + Math.Abs(degrees) * 10))
-                    throw new TimeoutException($"{Name} only turned {Turned():0.0}° of {Math.Abs(degrees):0}° in RA: stopped it");
+                        : $"{Name}'s RA stopped changing after {last.Turned:0.#}° of {target:0}°: stopped it");
+                if (now > TimeSpan.FromSeconds(30 + target * 10))
+                    throw new TimeoutException($"{Name} only turned {turned:0.0}° of {target:0}° in RA: stopped it");
             }
         }
         finally

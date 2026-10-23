@@ -11,6 +11,10 @@ What changed in each release. The newest is first. A release's section here beco
   alignment on the pole started from home turned the mount far past 90°. It now first steps just off the pole in
   Dec alone (slowly, to Dec 89.7°, watching the reported Dec), then turns RA watching the reported RA, and won't
   turn RA at all right at the pole. Both moves stop the mount at once if the reading stops changing for 2 s.
+- **Turning RA lands on the angle:** the RA a driver reports lags the mount (it's read about once a second), so a
+  turn watched only by its reading overshot. NOVA now measures the real speed from the readings and stops early by
+  how far the mount will have moved since the last one. It also stops the mount if the reading jumps further than
+  any mount moves, reverses, or goes backwards.
 
 ## [0.3.19] - 2026-10-23
 

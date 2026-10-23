@@ -542,3 +542,50 @@ public class HeavyDutyModeTests
     }
 }
 
+
+public class RaAxisTurnTests
+{
+    // A ZWO mount whose reported position never changes: at home it says Dec 90° and an RA that doesn't follow the axis.
+    private static string[] Mount(double dec) =>
+    [
+        """<defTextVector device="ZWO AM5" name="DRIVER_INFO" state="Idle" perm="ro"><defText name="DRIVER_INTERFACE">5</defText></defTextVector>""",
+        """<defSwitchVector device="ZWO AM5" name="CONNECTION" state="Ok" perm="rw" rule="OneOfMany"><defSwitch name="CONNECT">On</defSwitch><defSwitch name="DISCONNECT">Off</defSwitch></defSwitchVector>""",
+        $"""<defNumberVector device="ZWO AM5" name="EQUATORIAL_EOD_COORD" state="Ok" perm="rw"><defNumber name="RA" format="%010.6m" min="0" max="24" step="0">6.1</defNumber><defNumber name="DEC" format="%010.6m" min="-90" max="90" step="0">{dec.ToString(System.Globalization.CultureInfo.InvariantCulture)}</defNumber></defNumberVector>""",
+        """<defSwitchVector device="ZWO AM5" name="TELESCOPE_MOTION_WE" state="Idle" perm="rw" rule="AtMostOne"><defSwitch name="MOTION_WEST">Off</defSwitch><defSwitch name="MOTION_EAST">Off</defSwitch></defSwitchVector>""",
+        """<defSwitchVector device="ZWO AM5" name="TELESCOPE_SLEW_RATE" state="Ok" perm="rw" rule="OneOfMany"><defSwitch name="7" label="60x">Off</defSwitch><defSwitch name="8" label="720x">Off</defSwitch><defSwitch name="9" label="1440x">On</defSwitch></defSwitchVector>""",
+    ];
+
+    [Fact]
+    public async Task AtThePoleTheTurnIsTimedFromTheSpeed()
+    {
+        using var server = new ScriptedServer(Mount(90), _ => [], skipFirstLine: true);
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(20));
+        await using var provider = new IndiEquipmentProvider("127.0.0.1", server.Port);
+        await provider.ConnectAsync(cts.Token);
+        var mount = provider.GetMount("ZWO AM5")!;
+
+        // 3° at 720x (3°/s) is about a second, even though the reported RA never changes.
+        var clock = System.Diagnostics.Stopwatch.StartNew();
+        await mount.MoveRaAxisAsync(3, cts.Token);
+        Assert.InRange(clock.Elapsed.TotalSeconds, 0.9, 4);
+        Assert.Contains(server.Received, l => l.Contains("MOTION_WEST") && l.Contains("On"));
+        Assert.Contains(server.Received, l => l.Contains("TELESCOPE_MOTION_WE") && l.Contains("Off"));
+    }
+
+    [Fact]
+    public async Task AMountThatKeepsGoingIsStopped()
+    {
+        // Off the pole, the reported RA ends the turn; if it never changes, the speed's time limit stops the mount.
+        using var server = new ScriptedServer(Mount(60), _ => [], skipFirstLine: true);
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(20));
+        await using var provider = new IndiEquipmentProvider("127.0.0.1", server.Port);
+        await provider.ConnectAsync(cts.Token);
+        var mount = provider.GetMount("ZWO AM5")!;
+
+        var clock = System.Diagnostics.Stopwatch.StartNew();
+        await Assert.ThrowsAsync<TimeoutException>(() => mount.MoveRaAxisAsync(3, cts.Token));
+        Assert.InRange(clock.Elapsed.TotalSeconds, 5, 9); // 1 s expected, ×1.5 + 5 s
+        await Task.Delay(300);
+        Assert.Contains(server.Received, l => l.Contains("TELESCOPE_MOTION_WE") && l.Contains("Off"));
+    }
+}

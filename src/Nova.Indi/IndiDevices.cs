@@ -685,11 +685,22 @@ public sealed class IndiMount(IndiClient client, string name) : IndiDevice(clien
 
         // Brisk but safe: the second-fastest rate the driver lists (rates are names like "720x", not °/s). The fastest
         // can be one the mount doesn't do — ZWO's driver lists the AM5's 1440x, which an AM3 ignores.
+        double? multiple = null;
         if (Client.GetProperty(Name, "TELESCOPE_SLEW_RATE") is { Elements.Count: > 0 } rates)
         {
-            var names = rates.Elements.Keys.ToList();
-            await Client.SetSwitchesAsync(Name, "TELESCOPE_SLEW_RATE", ct, (names[Math.Max(0, names.Count - 2)], true));
+            var chosen = rates.Elements.Values.ToList()[Math.Max(0, rates.Elements.Count - 2)];
+            multiple = Multiple(string.IsNullOrWhiteSpace(chosen.Label) ? chosen.Name : chosen.Label) ?? Multiple(chosen.Name);
+            await Client.SetSwitchesAsync(Name, "TELESCOPE_SLEW_RATE", ct, (chosen.Name, true));
         }
+
+        // How long the turn should take at that rate (sidereal is 15″/s). Right at the pole the reported RA says little
+        // (a mount at home reports Dec 90° and an RA that hardly follows the axis), so there the turn is timed; elsewhere
+        // the reported RA ends it, and the time is a limit: a mount that keeps going is stopped, never left running.
+        var expected = multiple is > 0 and var x ? TimeSpan.FromSeconds(Math.Abs(degrees) / (x * 15 / 3600.0)) : (TimeSpan?)null;
+        var atPole = Math.Abs(Coordinates.DecDegrees) > 89.5;
+        if (atPole && expected is null)
+            throw new InvalidOperationException($"{Name} is at the pole, where its RA can't measure the turn, and its speeds aren't named in x sidereal: move it a little off the pole first");
+        var limit = expected is { } e ? e * 1.5 + TimeSpan.FromSeconds(5) : TimeSpan.FromSeconds(30 + Math.Abs(degrees) * 10);
 
         var start = Coordinates.RaHours;
         double Turned() => Math.Abs(((Coordinates.RaHours - start) % 24 + 36) % 24 - 12) * 15;
@@ -697,13 +708,14 @@ public sealed class IndiMount(IndiClient client, string name) : IndiDevice(clien
         await Client.SetSwitchesAsync(Name, "TELESCOPE_MOTION_WE", ct, (degrees > 0 ? "MOTION_WEST" : "MOTION_EAST", true));
         try
         {
-            while (Turned() < Math.Abs(degrees))
+            while (atPole ? clock.Elapsed < expected : Turned() < Math.Abs(degrees))
             {
                 await Task.Delay(100, ct);
+                if (atPole) continue;
                 if (clock.Elapsed > TimeSpan.FromSeconds(10) && Turned() < 0.2)
                     throw new InvalidOperationException($"{Name} didn't move when driven in RA");
-                if (clock.Elapsed > TimeSpan.FromSeconds(30 + Math.Abs(degrees) * 10))
-                    throw new TimeoutException($"{Name} only turned {Turned():0.0}° of {Math.Abs(degrees):0}° in RA");
+                if (clock.Elapsed > limit)
+                    throw new TimeoutException($"{Name} only turned {Turned():0.0}° of {Math.Abs(degrees):0}° in RA in {clock.Elapsed.TotalSeconds:0} s: stopped it");
             }
         }
         finally

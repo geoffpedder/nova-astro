@@ -356,8 +356,8 @@ public sealed class PolarAlignmentService
             // The mount turned, but the view didn't turn with it.
             throw new InvalidOperationException(
                 $"The mount turned RA {Math.Abs(((b - a) % 24 + 36) % 24 - 12) * 15:0}°, but the stars in the frame only turned {alignment.TurnDegrees:0.#}°: " +
-                "the camera's view isn't turning with the mount. INDI's CCD Simulator can't simulate this method (it keeps its image " +
-                "square to the sky; use three-point with it). On real equipment, check the camera is fixed to the telescope.");
+                "the camera's view isn't turning with the mount. Check the camera is fixed to the telescope; with INDI's CCD Simulator, " +
+                "check its Snoop devices (Options tab) name this mount as the Telescope, or use three-point.");
         }
         _log.Info($"Polar error {Dms(initial.TotalArcmin)} (RA turned {alignment.TurnDegrees:0}°): altitude {Describe(initial, site).Altitude}, azimuth {Describe(initial, site).Azimuth}");
         record(initial, true, Overlay(second, alignment.Marks));

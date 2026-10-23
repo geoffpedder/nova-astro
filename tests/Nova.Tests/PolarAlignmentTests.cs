@@ -131,11 +131,13 @@ public class PolarAlignmentServiceTests : IDisposable
         if (Directory.Exists(_config)) Directory.Delete(_config, recursive: true);
     }
 
+    private ActivityLog? _log;
+
     private async Task<(EquipmentService, PolarAlignmentService)> SetUpAsync(bool manual)
     {
         var options = Opts.Create(new NovaOptions { Backend = "Simulator", ConfigDirectory = _config });
         var hub = new NullHubContext();
-        var log = new ActivityLog(hub, NullLogger<ActivityLog>.Instance);
+        var log = _log = new ActivityLog(hub, NullLogger<ActivityLog>.Instance);
         var equipment = new EquipmentService(options, log);
         var optics = new OpticsService(equipment, options, log);
         var imaging = new ImagingService(equipment, optics, log, hub, options);
@@ -311,6 +313,36 @@ public class PolarAlignmentServiceTests : IDisposable
         var error = new PolarError(5, 3, 5.8, 0, 0);
         Assert.Equal(("0° 05′ 00″ too high", "0° 03′ 00″ too far east"), PolarAlignmentService.Describe(error, north));
         Assert.Equal(("0° 05′ 00″ too high", "0° 03′ 00″ too far west"), PolarAlignmentService.Describe(error, south));
+    }
+
+    [Fact]
+    public async Task OnThePoleFromHomeStartsWhereItIs()
+    {
+        // At home the mount already points at the pole: no GoTo first (it could swing RA up to half a turn round to
+        // Polaris's side, and then the 90° turn on top could take the scope down by the tripod). Frame, turn, frame.
+        var (equipment, polar) = await SetUpAsync(manual: false);
+        var mount = equipment.Mount!;
+        await mount.ParkAsync(CancellationToken.None);
+        polar.UpdateSettings(new PolarAlignmentSettings(Method: "Pole", ExposureSeconds: 0));
+
+        Assert.True(polar.Start(out var error), error);
+        await WaitFor(() => polar.Status?.Phase is "Adjusting" or "Failed", "the two frames", seconds: 90);
+        Assert.True(polar.Status!.Phase == "Adjusting", polar.Status.Message);
+        Assert.Contains(_log!.Recent, e => e.Message.Contains("already at the pole"));
+        Assert.DoesNotContain(_log.Recent, e => e.Message.StartsWith("Polar alignment: starting at"));
+        polar.Stop();
+        await WaitFor(() => !polar.Running, "stopping");
+    }
+
+    [Fact]
+    public void KnowsWhenTheMountIsAtThePole()
+    {
+        var north = new GeoLocation(51.5, -0.1, 0);
+        var south = new GeoLocation(-33.9, 151.2, 0);
+        Assert.True(PolarAlignmentService.AtThePole(new EquatorialCoordinates(3, 89.5), north));
+        Assert.False(PolarAlignmentService.AtThePole(new EquatorialCoordinates(3, 85), north));
+        Assert.True(PolarAlignmentService.AtThePole(new EquatorialCoordinates(3, -89.5), south));
+        Assert.False(PolarAlignmentService.AtThePole(new EquatorialCoordinates(3, 89.5), south));
     }
 
     [Fact]

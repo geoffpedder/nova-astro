@@ -253,7 +253,9 @@ and 5′), while you turn the mount's altitude and azimuth knobs. Press **Done**
   solves again, and from the way the stars turned finds the exact pixel the mount turns about: its axis. The
   live frame then shows the axis with rings at 5′, 1′ and 30″, the pole and Polaris: turn the knobs until the
   pole sits in the rings. Markers off the frame get an arrow at its edge. Needs a field of at least about a
-  degree, and a mount whose RA axis NOVA can drive (or turn it by hand).
+  degree, and a mount whose RA axis NOVA can drive (or turn it by hand). Started from the mount's home position
+  (or anywhere within 2° of the pole), NOVA takes the first frame right there, so RA only turns once, by 90°;
+  from elsewhere it first goes to the pole.
 
 For mounts without GoTo, tick *Turn RA by hand*: you turn RA yourself, and NOVA carries on once it has turned far
 enough (or press **Continue**). The settings also choose which way RA turns, the exposure, and whether to aim at

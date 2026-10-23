@@ -248,14 +248,24 @@ public sealed class PolarAlignmentService
                     Report("Unparking", 1);
                     await mount.UnparkAsync(ct);
                 }
-                var start = settings.Pole ? PoleStart(DateTime.UtcNow, site) : StartPosition(site, settings, DateTime.UtcNow);
-                var (altitude, azimuth) = Horizon.AltAz(Horizon.ToVector(start, DateTime.UtcNow, site));
-                if (altitude < MinimumAltitude)
-                    throw new InvalidOperationException($"The start position would be only {altitude:0}° up: change the start offsets");
-                _sites.EnsureAwayFromSun(Precession.JNowToJ2000(start, DateTime.UtcNow), "The polar alignment start position");
-                Report(settings.Pole ? "Slewing to the pole" : $"Slewing to the start, {altitude:0}° up in the {Compass(azimuth)}", 1);
-                _log.Info($"Polar alignment: starting at {start} (JNow), {altitude:0}° up in the {Compass(azimuth)}");
-                await _sites.SlewSafelyAsync(mount, start, ct); // and settles
+                if (settings.Pole && AtThePole(mount.Coordinates, site))
+                {
+                    // Already there (at home, say): start here. A GoTo to the pole start would first swing RA round to
+                    // Polaris's side, up to half a turn, before the 90° turn between the frames: with both, the scope
+                    // can end up low, near the tripod.
+                    _log.Info("Polar alignment: already at the pole, starting here");
+                }
+                else
+                {
+                    var start = settings.Pole ? PoleStart(DateTime.UtcNow, site) : StartPosition(site, settings, DateTime.UtcNow);
+                    var (altitude, azimuth) = Horizon.AltAz(Horizon.ToVector(start, DateTime.UtcNow, site));
+                    if (altitude < MinimumAltitude)
+                        throw new InvalidOperationException($"The start position would be only {altitude:0}° up: change the start offsets");
+                    _sites.EnsureAwayFromSun(Precession.JNowToJ2000(start, DateTime.UtcNow), "The polar alignment start position");
+                    Report(settings.Pole ? "Slewing to the pole" : $"Slewing to the start, {altitude:0}° up in the {Compass(azimuth)}", 1);
+                    _log.Info($"Polar alignment: starting at {start} (JNow), {altitude:0}° up in the {Compass(azimuth)}");
+                    await _sites.SlewSafelyAsync(mount, start, ct); // and settles
+                }
             }
 
             var useAxis = mount.CanMoveRaAxis;
@@ -428,6 +438,10 @@ public sealed class PolarAlignmentService
         var azimuth = ((north ? 0 : 180) + settings.AzimuthOffset + 360) % 360;
         return Horizon.FromVector(Horizon.FromAltAz(altitude, azimuth), utc, site);
     }
+
+    /// <summary>The mount points within 2° of the visible pole (e.g. at its home position).</summary>
+    public static bool AtThePole(EquatorialCoordinates jnow, GeoLocation site) =>
+        (site.Latitude >= 0 ? jnow.DecDegrees : -jnow.DecDegrees) >= 88;
 
     /// <summary>
     /// On the pole (JNow): a hair from it towards Polaris (a GoTo to exactly 90° has no RA), so the pole, and the axis

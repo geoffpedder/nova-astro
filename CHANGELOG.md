@@ -4,6 +4,13 @@ What changed in each release. The newest is first. A release's section here beco
 
 ## [Unreleased]
 
+### Fixed
+
+- **Polar alignment on the pole, from home:** with the mount already at the pole (its home position), NOVA now
+  takes the first frame there and turns RA once, by 90°. Before, it first made a GoTo to a point beside the pole,
+  which could swing RA up to half a turn round to Polaris's side, and the 90° turn on top could take the scope
+  down near the tripod.
+
 ## [0.3.18] - 2026-10-22
 
 ### Added

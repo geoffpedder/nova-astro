@@ -45,7 +45,10 @@
   type WebkitDocument = Document & { webkitFullscreenEnabled?: boolean; webkitFullscreenElement?: Element | null; webkitExitFullscreen?: () => Promise<void> }
   type WebkitElement = HTMLElement & { webkitRequestFullscreen?: () => Promise<void> }
   const doc = document as WebkitDocument
-  const canFullscreen = !!(doc.fullscreenEnabled || doc.webkitFullscreenEnabled)
+  // Opened from the Home Screen it's already its own full-screen app: no button needed.
+  const standalone =
+    matchMedia('(display-mode: standalone)').matches || (navigator as Navigator & { standalone?: boolean }).standalone === true
+  const canFullscreen = !standalone && !!(doc.fullscreenEnabled || doc.webkitFullscreenEnabled)
   let fullscreen = $state(false)
   const syncFullscreen = () => (fullscreen = !!(doc.fullscreenElement ?? doc.webkitFullscreenElement))
   async function toggleFullscreen() {

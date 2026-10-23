@@ -61,6 +61,10 @@ The checklist goes away once the steps are done. **Setup** in the header brings 
 Everything runs on the mini PC: closing the browser, or a laptop going to sleep, doesn't stop an exposure or
 a sequence. Open NOVA from as many browsers as you like; they all show the same thing.
 
+**On an iPad or phone, add NOVA to the Home Screen** (Safari: Share, then *Add to Home Screen*). It then opens
+as its own app, filling the screen without Safari's bars. That's steadier than Safari's **Full screen**, which a
+swipe down (easy to make by accident while using NOVA) closes.
+
 **On a tablet:** **◂ Hide panels** (top of the panel column) folds the column away to a strip down the left edge;
 click the strip to bring it back. Each browser remembers its own layout. Pinch with two fingers to zoom the image and the
 Targets tab's sky chart. To open NOVA like an app, add it to the home screen (Safari: Share → Add to Home Screen); it

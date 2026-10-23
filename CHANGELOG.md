@@ -10,6 +10,9 @@ What changed in each release. The newest is first. A release's section here beco
   switch and how the mount connects) under a name, and load it later in one go, like the site and optics presets.
   In the Equipment panel under Connect equipment; loading one (while disconnected) starts its drivers, stops the
   others and chooses its devices, ready for Connect equipment.
+- **NOVA on the Home Screen:** added to an iPad's or phone's Home Screen (Safari: Share, Add to Home Screen),
+  NOVA opens as its own full-screen app, without Safari's bars or its swipe-down that leaves full screen by
+  accident. The Full screen button hides there, as it's not needed.
 
 ### Changed
 

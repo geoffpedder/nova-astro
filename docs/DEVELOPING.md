@@ -136,8 +136,10 @@ good to a few arcminutes for 1800–2050), with magnitudes from Mallama & Hilton
 
 ## API
 
-Everything the page does goes through plain REST, so it can be scripted with `curl` too. State is pushed
-over SignalR at `/hub`. The main endpoints:
+Everything the page does goes through plain REST, so it can be scripted with `curl` too, or used by your own
+devices and programs (the README shows a small touchscreen that polls `/api/status`). State is pushed over
+SignalR at `/hub`; a simple client can poll `GET /api/status` once a second instead. While a password is set,
+sign in first with `POST /api/auth/login` and send the `nova.session` cookie it sets. The main endpoints:
 
 | Method | Path | Body |
 |---|---|---|

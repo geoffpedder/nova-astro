@@ -95,6 +95,16 @@ deploy/setup.sh
 open `http://<name>.local:5000`, where a **Getting started** checklist takes you through the rest. Later,
 `nova update` installs new releases and `nova doctor` checks everything.
 
+## Build on NOVA
+
+Everything NOVA's page does goes through a plain HTTP API on the mini PC, so it's easy to make your own
+things that work with it: a status screen, a button box, a script that runs at dusk, a dashboard in another
+app. This little touchscreen (an ESP32 "Cheap Yellow Display" in a printed case) sits on the telescope and shows
+the mount, camera, sequence and guiding by reading NOVA's status over Wi-Fi, with no changes to NOVA at all.
+The [API](docs/DEVELOPING.md#api) lists the endpoints.
+
+<p align="center"><a href="docs/images/status-monitor.webp"><img src="docs/images/status-monitor.webp" width="70%" alt="A small red touchscreen on the telescope next to the mini PC, showing NOVA's mount parked, the camera exposing 6 of 60 s, the sequence not running and guiding stopped"></a><br><em>A home-made status monitor on the telescope, reading NOVA's API.</em></p>
+
 ## Documentation
 
 - [Installing NOVA](docs/INSTALL.md): systems, setup options, updating, troubleshooting, installing by hand

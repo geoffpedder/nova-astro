@@ -263,6 +263,30 @@ export const api = {
   // new image must never be given an old one the browser still has.
   previewUrl: (image: { id: number; capturedUtc: string }, mode: PreviewMode, stretch: boolean, size: number) =>
     `/api/images/latest/preview.png?id=${image.id}&t=${Date.parse(image.capturedUtc)}&mode=${mode}&stretch=${stretch}&size=${size}`,
+  /** Live stacking: Expose and Loop frames stacked while on. */
+  setLiveStack: (enabled: boolean) => post('/api/livestack', { enabled }),
+  liveStackUrl: (stack: { key: string; version: number }, size: number) =>
+    `/api/livestack/preview.png?key=${encodeURIComponent(stack.key)}&v=${stack.version}&size=${size || 8192}`,
+  resetLiveStack: (key?: string) => post('/api/livestack/reset', { key }),
+  /** Saves the stack (FITS and PNG) beside the frames; returns the FITS's path. */
+  saveLiveStack: async (key?: string): Promise<string> => {
+    const response = await fetch('/api/livestack/save', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ key }),
+    })
+    if (!response.ok) {
+      let message = `${response.status} ${response.statusText}`
+      try {
+        const problem = await response.json()
+        message = problem.detail ?? problem.title ?? message
+      } catch {
+        // keep the status text
+      }
+      throw new Error(message)
+    }
+    return (await response.json()).path
+  },
   thumbnailUrl: (image: { id: number; capturedUtc: string }) => `/api/images/${image.id}/thumbnail.png?t=${Date.parse(image.capturedUtc)}`,
   annotations: async (count = 40, id?: number): Promise<Annotations> => {
     const response = await fetch(`/api/images/latest/annotations?count=${count}${id != null ? `&id=${id}` : ''}`)

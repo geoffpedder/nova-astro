@@ -138,6 +138,46 @@ public static class Fits
         return output;
     }
 
+    /// <summary>
+    /// Writes 32-bit floating-point data (BITPIX -32): one plane as a 2-D image, three (R, G, B) as a 3-D cube
+    /// (NAXIS3 = 3), as stacking programs write colour.
+    /// </summary>
+    public static byte[] WriteFloat32(int width, int height, IReadOnlyList<float[]> planes, IEnumerable<FitsCard>? extraCards = null)
+    {
+        if (planes.Count is not (1 or 3)) throw new ArgumentException("One plane (mono) or three (R, G, B)");
+        if (planes.Any(p => p.Length != width * height)) throw new ArgumentException("Pixel count does not match dimensions");
+
+        var cards = new List<FitsCard>
+        {
+            new("SIMPLE", true, "conforms to FITS standard"),
+            new("BITPIX", -32, "32-bit floating point"),
+            new("NAXIS", planes.Count == 1 ? 2 : 3, "number of array dimensions"),
+            new("NAXIS1", width),
+            new("NAXIS2", height),
+        };
+        if (planes.Count == 3) cards.Add(new FitsCard("NAXIS3", 3, "R, G, B"));
+        if (extraCards is not null) cards.AddRange(extraCards);
+
+        var header = new StringBuilder();
+        foreach (var card in cards) header.Append(FormatCard(card));
+        header.Append("END".PadRight(CardSize));
+        var headerBytes = RoundUpToBlock(header.Length);
+        var dataBytes = RoundUpToBlock(planes.Count * width * height * 4);
+
+        var output = new byte[headerBytes + dataBytes];
+        output.AsSpan(0, headerBytes).Fill((byte)' ');
+        Encoding.ASCII.GetBytes(header.ToString(), output);
+        var dst = output.AsSpan(headerBytes);
+        var at = 0;
+        foreach (var plane in planes)
+            foreach (var v in plane)
+            {
+                BinaryPrimitives.WriteSingleBigEndian(dst[at..], v);
+                at += 4;
+            }
+        return output;
+    }
+
     internal static string FormatCard(FitsCard card)
     {
         var key = card.Key.ToUpperInvariant();

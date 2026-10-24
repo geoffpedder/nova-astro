@@ -26,6 +26,10 @@ public sealed record SunAvoidanceRequest(double? Degrees = null, bool? Enabled =
 /// <summary>Seconds the mount is left to settle after every GoTo (0 for none).</summary>
 public sealed record SettleRequest(double Seconds);
 
+/// <summary>The Image tab's Live stack switch: stack Expose and Loop frames.</summary>
+public sealed record LiveStackRequest(bool Enabled);
+public sealed record LiveStackKeyRequest(string? Key = null);
+
 public sealed record OpticsPresetRequest(string Camera, string Name);
 
 /// <summary>Save frames to "local" (the mini PC) or "usb"; Device picks which drive when there's more than one.</summary>
@@ -519,6 +523,22 @@ public static class NovaApi
                 return Results.Problem(ex.Message, statusCode: StatusCodes.Status400BadRequest);
             }
         });
+        // Live stacking (status: liveStack in /status). key: a stack's key (the current one when left out).
+        api.MapPost("/livestack", (LiveStackRequest request, LiveStackService stacks) =>
+        {
+            stacks.SetEnabled(request.Enabled);
+            return Results.NoContent();
+        });
+        api.MapGet("/livestack/preview.png", (string? key, int? size, LiveStackService stacks) =>
+            stacks.Preview(key, Math.Clamp(size ?? 1600, 200, 8192)) is { } preview ? Results.File(preview.Png, "image/png") : Results.NotFound());
+        api.MapPost("/livestack/reset", (LiveStackKeyRequest request, LiveStackService stacks) =>
+        {
+            stacks.Reset(request.Key);
+            return Results.NoContent();
+        });
+        api.MapPost("/livestack/save", async (LiveStackKeyRequest request, LiveStackService stacks) =>
+            await stacks.SaveAsync(request.Key) is { } path ? Results.Ok(new { path }) : Results.Problem("There's no stack to save yet", statusCode: StatusCodes.Status409Conflict));
+
         // Open a FITS file as the latest image: the raw file is the request body (up to 1 GB), name in ?name=.
         api.MapPost("/images/open", async (HttpContext http, string? name, ImagingService imaging, CancellationToken ct) =>
         {

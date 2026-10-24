@@ -12,7 +12,8 @@
   import { setOcularsRotation } from '../lib/stellarium'
   import { ocularsAngle, stellariumSettings } from '../lib/stellariumSettings.svelte'
   import { framing, mainView } from '../lib/inbox.svelte'
-  import { imageFloat } from '../lib/floats.svelte'
+  import { imageFloat, imageView, setStackView } from '../lib/floats.svelte'
+  import { ask } from '../lib/confirm.svelte'
 
   // The history: which image is on screen (null follows the latest), and comparing two.
   const history = $derived(nova.status?.imageHistory ?? null)
@@ -61,6 +62,41 @@
   let panY = $state(0)
   let zoomCentre = $state<{ u: number; v: number } | null>(null)
   const stats = $derived(image?.statistics)
+
+  // Live stacking: the switch stacks Expose and Loop frames; Frame | Stack picks what's shown (the pop-out follows).
+  const live = $derived(nova.status?.liveStack ?? null)
+  const stack = $derived(live?.current ?? null)
+  const showingStack = $derived(imageView.stack && !!stack && stack.frames > 0)
+  let stackNote = $state<string | null>(null)
+  let savingStack = $state(false)
+  async function setLiveStack(on: boolean) {
+    // The stack is shown as soon as it has a frame.
+    if ((await act(() => api.setLiveStack(on))) && on) setStackView(true)
+  }
+  async function saveStack() {
+    if (!stack) return
+    savingStack = true
+    try {
+      await act(async () => (stackNote = `Saved ${await api.saveLiveStack(stack.key)}`))
+    } finally {
+      savingStack = false
+    }
+  }
+  async function resetStack() {
+    if (!stack) return
+    const ok = await ask(`Start ${stack.label} again?`, {
+      message: `The ${stack.frames} frames stacked so far are dropped from the stack (the frames themselves stay saved). Save it first to keep it.`,
+      confirm: 'Start again',
+      danger: true,
+    })
+    if (ok && (await act(() => api.resetLiveStack(stack.key)))) stackNote = null
+  }
+  const span = (seconds: number) => {
+    const s = Math.round(seconds)
+    if (s >= 3600) return `${Math.floor(s / 3600)} h ${Math.floor((s % 3600) / 60)} min`
+    if (s >= 60) return `${Math.floor(s / 60)} min ${s % 60} s`
+    return `${s} s`
+  }
   let actualSize = $state(false)
   let magnification = $state(1)
   // The viewer on screen (the single image, the blinking one, or the left of a pair) for the zoom buttons.
@@ -419,6 +455,20 @@
       <input type="checkbox" checked={stretch} onchange={(e) => setStretch(e.currentTarget.checked)} />
       Stretch
     </label>
+    <label
+      class="switch live"
+      title="Stack Expose and Loop frames as they come: each lined up on its stars and averaged in, so the picture builds up. The frames are saved as usual. A sequence target has its own Live stack tick."
+    >
+      <input type="checkbox" role="switch" checked={live?.enabled ?? false} disabled={!live} onchange={(e) => setLiveStack(e.currentTarget.checked)} />
+      <span class="track" aria-hidden="true"><span class="knob"></span></span>
+      Live stack
+    </label>
+    {#if stack && stack.frames > 0}
+      <span class="segmented" role="group" aria-label="Show">
+        <button class="secondary small" class:on={!showingStack} aria-pressed={!showingStack} onclick={() => setStackView(false)} title="The latest frame">Frame</button>
+        <button class="secondary small" class:on={showingStack} aria-pressed={showingStack} onclick={() => setStackView(true)} title="The live stack: {stack.label}">Stack</button>
+      </span>
+    {/if}
     <div class="spacer"></div>
     <input
       bind:this={fileInput}
@@ -450,7 +500,7 @@
     {#if browsing}<FileBrowserDialog onclose={() => (browsing = false)} />{/if}
     <button
       class="secondary small"
-      disabled={!image || !solver?.available || solver?.solving}
+      disabled={!image || showingStack || !solver?.available || solver?.solving}
       title={solver?.available ? `Plate solve this image with ${solver.name}` : (solver?.problem ?? 'No plate solver')}
       onclick={() => act(() => api.solve(image?.id))}
     >
@@ -458,7 +508,7 @@
     </button>
     <button
       class="secondary small"
-      disabled={!image || !solver?.available || solver?.solving || matching}
+      disabled={!image || showingStack || !solver?.available || solver?.solving || matching}
       title="Frame exactly what this image shows in the Targets tab: its centre and rotation (plate solves it first if needed), to slew, centre, match the camera's rotation or add to a sequence"
       onclick={matchFraming}
     >
@@ -467,7 +517,7 @@
     <button
       class="secondary small"
       class:on={showStars}
-      disabled={!image}
+      disabled={!image || showingStack}
       onclick={toggleStars}
       title="Circle the detected stars"
       aria-pressed={showStars}>★</button
@@ -475,12 +525,12 @@
     <button
       class="secondary small"
       class:on={showNames && !!solve?.solved}
-      disabled={!solve?.solved}
+      disabled={!solve?.solved || showingStack}
       onclick={toggleNames}
       title={solve?.solved ? 'Label catalog stars by name (from the plate solve)' : 'Plate solve the image to name its stars'}
       aria-pressed={showNames}>Names</button
     >
-    <button class="secondary small" disabled={!image} onclick={() => (showHeader = true)} title="Show the FITS header">
+    <button class="secondary small" disabled={!image || showingStack} onclick={() => (showHeader = true)} title="Show the FITS header">
       Header
     </button>
     <button
@@ -488,19 +538,19 @@
       class:on={imageFloat.layout.popped}
       aria-pressed={imageFloat.layout.popped}
       onclick={() => ((imageFloat.layout.popped = !imageFloat.layout.popped), imageFloat.save())}
-      title="A small floating view of the latest image that stays on screen over the other tabs"
+      title="A small floating view of the latest image (or the live stack) that stays on screen over the other tabs"
     >
       Pop out
     </button>
-    <button class="secondary small" disabled={!image} onclick={() => (actualSize = !actualSize)} title={actualSize ? 'Fit the whole image' : 'One image pixel per screen pixel'}>
+    <button class="secondary small" disabled={!image && !showingStack} onclick={() => (actualSize = !actualSize)} title={actualSize ? 'Fit the whole image' : 'One image pixel per screen pixel'}>
       {actualSize ? 'Fit' : '1:1'}
     </button>
     <span class="zoom-buttons">
-      <button class="secondary small" disabled={!image || !actualSize} onclick={() => zoomer?.zoomAt(0.5)} title="Zoom out (or scroll down)" aria-label="Zoom out">−</button>
+      <button class="secondary small" disabled={(!image && !showingStack) || !actualSize} onclick={() => zoomer?.zoomAt(0.5)} title="Zoom out (or scroll down)" aria-label="Zoom out">−</button>
       <span class="zoom-level mono" title="Zoom (the scroll wheel, or a pinch, zooms around that spot)">{actualSize ? (magnification === 1 ? '1:1' : `${Math.round(magnification * 10) / 10}×`) : 'fit'}</span>
-      <button class="secondary small" disabled={!image || magnification >= 16} onclick={() => zoomer?.zoomAt(2)} title="Zoom in (or scroll up)" aria-label="Zoom in">+</button>
+      <button class="secondary small" disabled={(!image && !showingStack) || magnification >= 16} onclick={() => zoomer?.zoomAt(2)} title="Zoom in (or scroll up)" aria-label="Zoom in">+</button>
     </span>
-    {#if image}
+    {#if image && !showingStack}
       <a class="small" href={api.fitsUrl(image.id)} download>FITS ↓</a>
     {/if}
     <div class="menu-wrap">
@@ -571,6 +621,38 @@
         {/each}
       </tbody>
     </table>
+  {:else if showingStack && stack}
+    <div class="frame-wrap">
+      <ZoomableImage src={api.liveStackUrl(stack, size)} alt="The live stack" bind:zoomed={actualSize} bind:magnification bind:this={zoomer} />
+    </div>
+    <div class="stats mono">
+      <span class="fact"><span class="k">Stack</span>{stack.label}</span>
+      <span class="fact"><span class="k">Frames</span>{stack.frames}{#if live?.busy}{' '}<span class="muted">(stacking the next)</span>{/if}</span>
+      <span class="fact"><span class="k">Total</span>{span(stack.integrationSeconds)}</span>
+      <span
+        class="fact"
+        class:warn={stack.rejected > 0}
+        title={stack.lastRejected ? `Last left out: ${stack.lastRejected}` : 'Frames with too few stars lined up, trailed or out of focus are left out'}
+      >
+        <span class="k">Left out</span>{stack.rejected}
+      </span>
+      <span class="fact"><span class="k">Size</span>{stack.width}×{stack.height}</span>
+      <span class="fact"><span class="k">Updated</span>{time(stack.updatedUtc)}</span>
+      <span class="fact stack-actions">
+        <button class="secondary small" disabled={savingStack} onclick={saveStack} title="Save the stack as it is now (FITS and PNG) in the night's Stacked folder">
+          {savingStack ? 'Saving…' : 'Save'}
+        </button>
+        <button class="secondary small" onclick={resetStack} title="Start this stack again from the next frame">Reset</button>
+      </span>
+      <!-- Always its own line, so the image above doesn't jump as frames come. -->
+      <div class="solve-line">
+        {#if stack.lastRejected && stack.rejected > 0}<span class="muted">Last left out: {stack.lastRejected}</span>{/if}
+      </div>
+      {#if stackNote ?? stack.savedPath}
+        {@const note = stackNote ?? `Saved ${stack.savedPath}`}
+        <span class="muted path" title={note}>{note}</span>
+      {/if}
+    </div>
   {:else}
   <div class="frame-wrap">
     {#if image && src}
@@ -970,6 +1052,29 @@
   }
   .spacer {
     flex: 1;
+  }
+  .live {
+    font-size: 12px;
+    color: var(--muted);
+  }
+  .segmented {
+    display: inline-flex;
+  }
+  .segmented button {
+    border-radius: 0;
+  }
+  .segmented button:first-child {
+    border-radius: var(--radius) 0 0 var(--radius);
+  }
+  .segmented button:last-child {
+    border-radius: 0 var(--radius) var(--radius) 0;
+    margin-left: -1px;
+  }
+  .warn {
+    color: var(--warn);
+  }
+  .stack-actions {
+    gap: 6px;
   }
   .empty {
     padding: 40px;

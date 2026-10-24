@@ -241,6 +241,8 @@ export interface SequenceTargetPlan {
   stopAt: string | null
   /** Degrees: wait until this high, move on when lower. Null = the horizon. */
   minAltitude: number | null
+  /** Stack its frames as they come (saved in its Stacked folder when the target ends). */
+  liveStack?: boolean
 }
 
 /** A night's imaging plan (J2000). Older single-target plans use target/rows/order instead of targets. */
@@ -1048,6 +1050,8 @@ export interface StatusSnapshot {
   plateSolve: SolverStatus
   autofocus: AutofocusInfo
   polarAlignment: PolarAlignmentInfo
+  /** Live stacking: the Image tab's switch, and the stacks building. */
+  liveStack: LiveStackStatus | null
   sequencer: SequencerInfo
   /** Restart / shut down the mini PC: whether allowed, why not, and whether it's under way. */
   power: { available: boolean; problem: string | null; pending: string | null }
@@ -1257,4 +1261,37 @@ export interface TonightFilters {
   minHours: number
   minMoonDistance: number | null
   sort: 'best' | 'size' | 'brightness' | 'transit' | 'altitude'
+}
+
+/** A stack building up: one per target, filter and exposure. */
+export interface LiveStackInfo {
+  key: string
+  /** e.g. "M 31, L 120 s" or "Live stack, 30 s". */
+  label: string
+  target: string | null
+  filter: string | null
+  exposureSeconds: number
+  frames: number
+  /** Frames left out (too few stars lined up, trailed or out of focus). */
+  rejected: number
+  integrationSeconds: number
+  /** Why the last frame left out was. */
+  lastRejected: string | null
+  updatedUtc: string
+  /** Goes up with each frame: the preview's cache key. */
+  version: number
+  color: boolean
+  width: number
+  height: number
+  savedPath: string | null
+}
+
+export interface LiveStackStatus {
+  /** Stacking Expose and Loop frames. */
+  enabled: boolean
+  /** A frame is being stacked. */
+  busy: boolean
+  /** The stack last added to. */
+  current: LiveStackInfo | null
+  stacks: LiveStackInfo[]
 }

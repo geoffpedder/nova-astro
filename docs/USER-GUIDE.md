@@ -13,6 +13,7 @@
 - [Sequences](#sequences)
 - [Flats](#flats)
 - [Image history](#image-history)
+- [Live stacking](#live-stacking)
 - [Stellarium](#stellarium)
 - [Webcam](#webcam)
 - [Notifications](#notifications)
@@ -486,6 +487,9 @@ The **Sequence** tab runs a night's imaging unattended, for one target or severa
    and stops after three tries.
 5. **End:** stop guiding, optionally take flats, warm the camera gradually, park.
 
+**Live stack** on a target's *Frames* line stacks its light frames as they come, to watch it build up in the Image
+tab, and saves the stack in its `Stacked` folder when the target ends (see [Live stacking](#live-stacking)).
+
 **The night ends** at astronomical dawn unless you choose otherwise (At the end → *Stop the night at*: nautical
 dawn, sunrise, a set time, or never). From then no frame is started that wouldn't finish in time, targets still to
 come are skipped, and the end steps run. The Sequence tab shows when that will be. A sequence started after
@@ -536,6 +540,35 @@ column so the image gets the room.
 
 **Open ▾** loads a FITS file *from this computer* (the one you're browsing from) or *from the mini PC* (its image
 folders, or a mounted USB drive), to solve it, look at its stars or match framing to it.
+
+## Live stacking
+
+Optional: frames stacked as they come, so a faint target builds up on screen through the night instead of each
+frame showing only its own noise. It's a look at how the target is coming along (and something to share on the
+night), not a replacement for stacking properly afterwards: every frame is still saved as usual.
+
+- **In the Image tab:** the **Live stack** switch stacks the frames from **Expose** and **Loop**. **Frame** |
+  **Stack** picks which the viewer shows (and **Pop out** shows the same).
+- **In a sequence:** tick **Live stack** on a target (on its *Frames* line). Its light frames are stacked while it
+  runs, and when the target ends the stack is saved and started afresh for the next one.
+
+How it works:
+
+- Each frame is lined up on the first frame's stars (so dithers, drift, a little field rotation and a meridian
+  flip don't matter), its background matched, and averaged in. After five frames, anything far brighter or darker
+  than a pixel's usual (a satellite or plane trail, a cosmic ray) is left out. Hot pixels are removed.
+- One stack per target, filter and exposure: an LRGB sequence builds one stack for each filter.
+- A frame is left out of the stack (but still saved) when too few of its stars line up (clouds, or a different
+  field), or its stars are much fatter than the stack's usual (wind, focus). **Left out** counts them, and the
+  line under it says why the last one was.
+- Only light frames. Autofocus, plate solving, polar alignment and flats frames never are.
+- Stacked at half the camera's resolution (a colour camera's four pixels make one colour pixel, a mono camera's
+  frames are binned 2×2), which keeps it quick and is plenty for watching it build up.
+- It works in the background, one frame at a time, so the next exposure is never held up.
+
+**Save** writes the stack as it is now, as a 32-bit FITS file (with the number of frames and total exposure in its
+header) and a stretched PNG, in the night's `Stacked` folder (`<night>/<target>/Stacked/` for a sequence target).
+**Reset** starts it again from the next frame. A sequence target's stack is saved by itself when the target ends.
 
 ## Stellarium
 

@@ -43,6 +43,9 @@ public sealed class SequencerService
     /// <summary>Tells your phone when a sequence ends, fails or skips a target (set at startup).</summary>
     public NotificationService? Notifications { get; set; }
 
+    /// <summary>Live stacking, for targets that ask for it.</summary>
+    public LiveStackService? LiveStack { get; set; }
+
     /// <summary>Where frames go: warned at the start if they won't fit on a USB drive (set at startup).</summary>
     public StorageService? Storage { get; set; }
 
@@ -460,6 +463,7 @@ public sealed class SequencerService
                 }
                 if (targetState[current] == "Running") targetState[current] = "Done";
                 state.Current = null;
+                if (part.LiveStack && LiveStack is { } stacks) await stacks.FinishTargetAsync(part.StackName);
 
                 if (sequence.FlatsSettings.Enabled && state.Done.Sum() > 0)
                 {
@@ -670,7 +674,7 @@ public sealed class SequencerService
         {
             // Numbered through the target's frames (each target has its own folder): …_0024.fits is its 24th.
             var image = await _imaging.CaptureAsync(row.ExposureSeconds, save: true, ct, sequence.Target?.Name,
-                frameNumber: state.Done.Sum() + 1);
+                frameNumber: state.Done.Sum() + 1, stackAs: sequence.LiveStack ? sequence.StackName : null);
             state.ConsecutiveFailures = 0;
             state.Done[rowIndex]++;
             state.FramesSinceDither++;

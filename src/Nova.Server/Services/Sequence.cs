@@ -116,9 +116,10 @@ public enum SequenceOrder
 /// <param name="StopAt">Local time ("01:15"): move on to the next target then (a frame that would run past it isn't started).</param>
 /// <param name="MinAltitude">Degrees: wait until the target is this high, and move on once it sinks below. Without it,
 /// the horizon.</param>
+/// <param name="LiveStack">Live stack its light frames (a stack per filter), saved when the target ends.</param>
 public sealed record SequenceTargetPlan(
     SequenceTarget? Target, List<SequenceRow> Rows, SequenceOrder Order = SequenceOrder.ByRow,
-    string? StartAfter = null, string? StopAt = null, double? MinAltitude = null)
+    string? StartAfter = null, string? StopAt = null, double? MinAltitude = null, bool LiveStack = false)
 {
     /// <summary>"22:30" or "1:15" as a time of day.</summary>
     public static bool TryParseClock(string? text, out TimeSpan time)
@@ -152,15 +153,18 @@ public sealed record Sequence(
     string Name, SequenceTarget? Target, SequenceStart Start, List<SequenceRow> Rows,
     SequenceOrder Order = SequenceOrder.ByRow, SequenceDither? Dither = null, SequenceAutofocus? Autofocus = null,
     SequenceEnd? End = null, SequenceMeridianFlip? MeridianFlip = null, List<SequenceTargetPlan>? Targets = null,
-    SequenceFlats? Flats = null)
+    SequenceFlats? Flats = null, bool LiveStack = false)
 {
     /// <summary>The targets, in order (a single-target plan is one).</summary>
     public IReadOnlyList<SequenceTargetPlan> Plans =>
-        Targets is { Count: > 0 } targets ? targets : [new SequenceTargetPlan(Target, Rows, Order)];
+        Targets is { Count: > 0 } targets ? targets : [new SequenceTargetPlan(Target, Rows, Order, LiveStack: LiveStack)];
 
     /// <summary>This plan narrowed to one of its targets (its shared settings, that target's frames).</summary>
     public Sequence For(SequenceTargetPlan plan) =>
-        this with { Target = plan.Target, Rows = plan.Rows, Order = plan.Order, Targets = null };
+        this with { Target = plan.Target, Rows = plan.Rows, Order = plan.Order, Targets = null, LiveStack = plan.LiveStack };
+
+    /// <summary>What this target's frames are live stacked as: its name.</summary>
+    public string StackName => Target?.Name ?? Name;
 
     public static readonly JsonSerializerOptions Json = new(JsonSerializerDefaults.Web)
     {

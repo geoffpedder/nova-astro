@@ -43,3 +43,23 @@ export const imageFloat = createFloatLayout('nova.imageFloat', { right: 312, bot
 
 /** The guiding graph popped out; it starts above the webcam's. */
 export const guideFloat = createFloatLayout('nova.guideFloat', { right: 16, bottom: 300, width: 360 })
+
+/** The Image tab (and its pop-out) shows the live stack rather than the latest frame; remembered per browser. */
+export const imageView = $state<{ stack: boolean }>({ stack: loadStackView() })
+
+function loadStackView(): boolean {
+  try {
+    return localStorage.getItem('nova.imageView') === 'stack'
+  } catch {
+    return false
+  }
+}
+
+export function setStackView(stack: boolean): void {
+  imageView.stack = stack
+  try {
+    localStorage.setItem('nova.imageView', stack ? 'stack' : 'frame')
+  } catch {
+    // just for this visit
+  }
+}

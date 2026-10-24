@@ -10,8 +10,8 @@ network, with nothing to install there. It's inspired by [N.I.N.A.](https://nigh
 ## What it does
 
 - **Imaging:** exposures with cooling, gain, offset and binning; stretched colour previews; stars, HFR and
-  FWHM for every frame; image history with side-by-side and blink comparison. FITS files are saved on the mini
-  PC or straight to a USB drive plugged into it.
+  FWHM for every frame; image history with side-by-side and blink comparison; optional live stacking, to watch a
+  target build up. FITS files are saved on the mini PC or straight to a USB drive plugged into it.
 - **Plate solving** with ASTAP: sync, slew and centre on a target to within an arcminute; named stars on
   solved frames.
 - **Targets:** offline deep-sky and star catalogues, tonight's best targets for your site, a Stellarium-style

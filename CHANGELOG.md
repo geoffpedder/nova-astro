@@ -6,6 +6,13 @@ What changed in each release. The newest is first. A release's section here beco
 
 ### Added
 
+- **Live stacking** (optional): frames stacked as they come, so the target builds up on screen. The Image tab's
+  **Live stack** switch stacks Expose and Loop frames, and **Frame** | **Stack** picks which is shown (the pop-out
+  follows); a sequence target with **Live stack** ticked has its frames stacked and the stack saved (FITS and PNG,
+  in its `Stacked` folder) when it ends. Frames are lined up on their stars, so dithers and meridian flips don't
+  matter; satellite trails are left out, as are frames with too few stars lining up (clouds) or fat stars (wind,
+  focus). The frames themselves are saved as always.
+
 - **Back up and restore settings** (⏻ menu): all of NOVA's settings in one zip (sites, optics, equipment profiles,
   sequences, the guider with its calibration and darks, notifications, the password, the driver list and the
   hotspot), to keep or to move to another mini PC. Restoring replaces every setting with the backup's and restarts

@@ -275,7 +275,7 @@ public sealed class ImagingService(
         }
 
         error = null;
-        _ = Task.Run(() => RunAsync(camera, durationSeconds, save, cts));
+        _ = Task.Run(() => RunAsync(camera, durationSeconds, save, cts, stackAs: LiveStackService.Manual));
         return true;
     }
 
@@ -374,8 +374,9 @@ public sealed class ImagingService(
     /// <param name="frameNumber">The frame's number in its sequence, which ends the file name (…_0024.fits).</param>
     /// <param name="subfolder">A folder inside the target's (or the night's) folder, e.g. "Flats".</param>
     /// <param name="keep">Keep it in the image history (not for autofocus, polar alignment or flats' test frames).</param>
+    /// <param name="stackAs">Offer it to the live stack, as this target's (a sequence's light frames, when asked).</param>
     public async Task<ImageInfo> CaptureAsync(double durationSeconds, bool save, CancellationToken ct, string? target = null,
-        int? frameNumber = null, string? subfolder = null, bool keep = true)
+        int? frameNumber = null, string? subfolder = null, bool keep = true, string? stackAs = null)
     {
         var camera = equipment.Camera;
         if (camera is null || !camera.IsConnected) throw new InvalidOperationException("No camera connected");
@@ -386,11 +387,15 @@ public sealed class ImagingService(
             if (_exposure is not null) throw new InvalidOperationException("An exposure is already running");
             _exposure = cts = CancellationTokenSource.CreateLinkedTokenSource(ct);
         }
-        return (await RunAsync(camera, durationSeconds, save, cts, rethrow: true, target, frameNumber, subfolder, keep))!;
+        return (await RunAsync(camera, durationSeconds, save, cts, rethrow: true, target, frameNumber, subfolder, keep, stackAs))!;
     }
 
+    /// <summary>Where frames are offered for live stacking (set by <see cref="LiveStackService"/>).</summary>
+    public Action<TakenFrame>? FrameTaken { get; set; }
+
     private async Task<ImageInfo?> RunAsync(ICamera camera, double duration, bool save, CancellationTokenSource cts,
-        bool rethrow = false, string? target = null, int? frameNumber = null, string? subfolder = null, bool keep = true)
+        bool rethrow = false, string? target = null, int? frameNumber = null, string? subfolder = null, bool keep = true,
+        string? stackAs = null)
     {
         log.Info($"Exposing {duration.ToString("0.###", CultureInfo.InvariantCulture)}s on {camera.Name}");
         try
@@ -412,6 +417,9 @@ public sealed class ImagingService(
             var info = await PublishAsync(captured.Image, captured.FitsBytes, captured.StartedUtc, duration,
                 camera.Name, path, openedFile: null, sequence, keep: keep);
             log.Info((path is null ? $"Image {info.Id} ready" : $"Image {info.Id} saved to {path}") + Describe(info.Stars));
+            if (stackAs is not null)
+                FrameTaken?.Invoke(new TakenFrame(captured.Image, info, stackAs, frameType, filter, duration,
+                    (int)(camera.Controls.Binning?.Value ?? 1)));
             return info;
         }
         catch (OperationCanceledException)
@@ -675,6 +683,25 @@ public sealed class ImagingService(
         Directory.CreateDirectory(folder);
         var path = FileNaming.UniquePath(folder, name);
         await File.WriteAllBytesAsync(path, captured.FitsBytes);
+        return path;
+    }
+
+    /// <summary>
+    /// Saves a file NOVA made (a live stack, say) beside the night's frames: in the night's folder, the target's
+    /// within it, and a folder inside that; on the USB drive when frames go there.
+    /// </summary>
+    public async Task<string> SaveExtraAsync(DateTime utc, string? target, string? subfolder, string fileName, byte[] data)
+    {
+        var night = utc.ToLocalTime().AddHours(-12).ToString("yyyy-MM-dd", CultureInfo.InvariantCulture);
+        var relative = night;
+        if (FolderName(target) is { } targetFolder) relative = Path.Combine(relative, targetFolder);
+        if (FolderName(subfolder) is { } inner) relative = Path.Combine(relative, inner);
+        if (Storage is { } storage)
+            return await storage.WriteAsync(root => FileNaming.UniquePath(Path.Combine(root, relative), fileName), data);
+        var folder = Path.Combine(options.Value.ResolveImageDirectory(), relative);
+        Directory.CreateDirectory(folder);
+        var path = FileNaming.UniquePath(folder, fileName);
+        await File.WriteAllBytesAsync(path, data);
         return path;
     }
 

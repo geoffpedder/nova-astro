@@ -89,6 +89,7 @@ builder.Services.AddSingleton<MountBluetoothService>();
 builder.Services.AddSingleton<EquipmentProfileService>();
 builder.Services.AddSingleton<DiagnosticsService>();
 builder.Services.AddSingleton<BackupService>();
+builder.Services.AddSingleton<LiveStackService>();
 builder.Services.AddHostedService<UsbHealthService>();
 builder.Services.AddHostedService(sp => sp.GetRequiredService<StorageService>());
 builder.Services.AddHostedService(sp => sp.GetRequiredService<NotificationService>());
@@ -114,6 +115,8 @@ app.Services.GetRequiredService<MountBluetoothService>();
 // Messages to your phone (ntfy) from the parts of a night that can need you.
 var notifications = app.Services.GetRequiredService<NotificationService>();
 app.Services.GetRequiredService<SequencerService>().Notifications = notifications;
+// Live stacking: created now so it hears every frame, and sequences can ask for it.
+app.Services.GetRequiredService<SequencerService>().LiveStack = app.Services.GetRequiredService<LiveStackService>();
 app.Services.GetRequiredService<FlatsService>().Notifications = notifications;
 app.Services.GetRequiredService<PlateSolveService>().Notifications = notifications;
 app.Services.GetRequiredService<SequencerService>().FocusOffsets = app.Services.GetRequiredService<FocusOffsetService>();

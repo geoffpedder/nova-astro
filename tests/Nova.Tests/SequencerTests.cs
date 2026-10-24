@@ -251,6 +251,31 @@ public class SequencerTests : IDisposable
         rig.Sequencer.Delete("M42 / LRGB");
         Assert.Empty(rig.Sequencer.SavedNames());
     }
+
+    [Fact]
+    public async Task OnlyTargetsTickedForLiveStackingAreStackedAndTheirStackIsSaved()
+    {
+        var rig = await SetUpAsync();
+        var stacks = new LiveStackService(rig.Imaging, new ActivityLog(new NullHubContext(), NullLogger<ActivityLog>.Instance));
+        rig.Sequencer.LiveStack = stacks;
+        var rows = new List<SequenceRow> { new("L", 0.5, 3) };
+        var plan = Plan(SequenceOrder.ByRow, rows[0]) with
+        {
+            Targets =
+            [
+                new SequenceTargetPlan(new SequenceTarget("M 42", "05:35:17", "-05:23:28"), rows, LiveStack: true),
+                new SequenceTargetPlan(new SequenceTarget("M 43", "05:35:31", "-05:16:03"), rows),
+            ],
+        };
+        Assert.True(rig.Sequencer.Start(plan, out var error), error);
+        await WaitForEnd(rig.Sequencer);
+
+        var saved = Directory.GetFiles(rig.Images, "Stack_*.fits", SearchOption.AllDirectories);
+        var only = Assert.Single(saved);
+        Assert.Contains(Path.Combine("M 42", "Stacked"), only);
+        Assert.Contains("_3x_", Path.GetFileName(only));
+        Assert.Empty(stacks.Status.Stacks); // saved and cleared when the target ended
+    }
 }
 
 public class LiveCountTests : IDisposable

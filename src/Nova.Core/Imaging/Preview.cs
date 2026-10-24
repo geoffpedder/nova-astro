@@ -74,6 +74,37 @@ public static class Preview
     }
 
     /// <summary>
+    /// A stacked image's planes (one for mono, R, G and B for colour) as a stretched PNG, each colour stretched on its
+    /// own, which also neutralises the sky's colour cast. <see cref="PreviewImage.Binning"/> is relative to the planes.
+    /// </summary>
+    public static PreviewImage RenderPlanes(IReadOnlyList<float[]> planes, int width, int height, int maxSize = 1600)
+    {
+        var binning = BinningFor(width, height, maxSize);
+        (byte[] Bytes, int W, int H) Stretch(float[] plane)
+        {
+            var (small, w, h) = Downsample(plane, width, height, binning);
+            return (AutoStretch(small, ComputeStatistics(small)), w, h);
+        }
+        var stats = ComputeStatistics(planes[planes.Count == 3 ? 1 : 0]);
+        if (planes.Count == 1)
+        {
+            var (gray, gw, gh) = Stretch(planes[0]);
+            return new PreviewImage(Png.EncodeGray8(gw, gh, gray), gw, gh, binning, stats);
+        }
+        var stretched = new (byte[] Bytes, int W, int H)[3];
+        Parallel.For(0, 3, c => stretched[c] = Stretch(planes[c]));
+        var (pw, ph) = (stretched[0].W, stretched[0].H);
+        var rgb = new byte[pw * ph * 3];
+        for (var i = 0; i < pw * ph; i++)
+        {
+            rgb[i * 3] = stretched[0].Bytes[i];
+            rgb[i * 3 + 1] = stretched[1].Bytes[i];
+            rgb[i * 3 + 2] = stretched[2].Bytes[i];
+        }
+        return new PreviewImage(Png.EncodeRgb8(pw, ph, rgb), pw, ph, binning, stats);
+    }
+
+    /// <summary>
     /// The range that maps to black..white without stretching: 0 to the sensor's full scale for integer
     /// data (65535 for 16-bit), so a half-full flat looks mid-grey. Float data uses its own min..max.
     /// </summary>

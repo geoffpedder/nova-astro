@@ -166,6 +166,9 @@ sign in first with `POST /api/auth/login` and send the `nova.session` cookie it 
 | GET | `/api/images/latest/stars` | Detected stars of the latest frame `{ imageId, width, height, stars: [{ x, y, hfr }] }` |
 | GET | `/api/images/latest/header` | FITS header cards `[{ key, value, comment }]` in file order |
 | POST | `/api/images/open?name=old.fits` | Body: the raw FITS file (`.fits.gz` too, up to 1 GB). Becomes the latest image: preview, stars and plate solving (hinted by its own header) work on it; not added to the HFR trend |
+| POST | `/api/livestack` | `{ "enabled": true }` — stack Expose and Loop frames (the Image tab's switch). Status (stacks, frames, left out and why) under `liveStack` |
+| GET | `/api/livestack/preview.png?key=…&size=1600` | The stack (`key` from the status; the current one when left out), stretched; 404 before its first frame |
+| POST | `/api/livestack/reset` · `/save` | `{ "key": "…" }` (or `{}` for the current stack) — start it again, or save it (32-bit FITS and PNG in the night's `Stacked` folder): answers `{ path }` |
 | GET · POST | `/api/files?root=local&path=2026-10-09` · `/api/images/open-file` `{ "root": "local", "path": "2026-10-09/M 31/a.fits" }` | Browse the mini PC's image folders (`root` `local`, or `usb` for a mounted drive) and open a FITS file from them; nothing outside them is listed or read |
 | GET · POST | `/api/storage` · `/api/storage/target` `{ "target": "usb", "device": null }` · `/eject` · `/copy` `{ "night": "2026-10-09" }` · `/copy/cancel` | Where frames are saved (the mini PC or a USB drive), ejecting the drive, and copying a night to it; status also under `storage` |
 | GET | `/api/log` | The recent activity log `[{ timeUtc, level, message }]` |

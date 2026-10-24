@@ -89,6 +89,11 @@
     if (m) plan.target = { name: plan.target?.name || 'Here', ra: formatRa(m.raHours), dec: formatDec(m.decDegrees), rotation: plan.target?.rotation ?? null }
   }
 
+  // This target's live stack while it builds (it's saved and cleared when the target ends).
+  const stack = $derived(
+    plan.liveStack && progress?.state === 'Running' ? (nova.status?.liveStack?.stacks.find((s) => s.target === progress.name) ?? null) : null,
+  )
+
   const stateClass = (s: string | undefined) =>
     s === 'Running' ? 'warn' : s === 'Done' ? 'ok' : s === 'Skipped' || s === 'Stopped' ? 'danger' : 'muted'
 </script>
@@ -178,6 +183,15 @@
   <h4>
     Frames
     <span class="muted totals">{totals.frames} frames, {duration(totals.seconds)} of exposure</span>
+    <span class="spacer"></span>
+    {#if stack}<span class="muted totals" title={stack.lastRejected ? `Last left out: ${stack.lastRejected}` : ''}>{stack.frames} stacked{stack.rejected ? `, ${stack.rejected} left out` : ''}</span>{/if}
+    <label
+      class="stack-tick"
+      title="Stack this target's light frames as they come, to watch it build up in the Image tab (Stack). Saved as FITS and PNG in its Stacked folder when the target ends; the frames are saved as usual."
+    >
+      <input type="checkbox" checked={plan.liveStack ?? false} disabled={running} onchange={(e) => (plan.liveStack = e.currentTarget.checked)} />
+      Live stack
+    </label>
   </h4>
   <div class="table-wrap">
   <table>
@@ -368,6 +382,7 @@
     letter-spacing: 0.06em;
     color: var(--muted);
     margin: 4px 0 0;
+    align-items: center;
     display: flex;
     gap: 10px;
     font-weight: normal;
@@ -375,6 +390,14 @@
   .totals {
     text-transform: none;
     letter-spacing: 0;
+  }
+  .stack-tick {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    text-transform: none;
+    letter-spacing: 0;
+    cursor: pointer;
   }
   .buttons {
     display: flex;

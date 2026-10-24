@@ -26,13 +26,15 @@ public class NovaGuiderTests : IDisposable
         }
     }
 
+    private ActivityLog? _log;
+
     private async Task<Rig> SetUpAsync()
     {
         var options = Opts.Create(new NovaOptions
         {
             Backend = "Simulator", ConfigDirectory = _config, ImageDirectory = Path.Combine(_config, "images"), Phd2AutoConnect = false,
         });
-        var log = new ActivityLog(new NullHubContext(), NullLogger<ActivityLog>.Instance);
+        var log = _log = new ActivityLog(new NullHubContext(), NullLogger<ActivityLog>.Instance);
         var equipment = new EquipmentService(options, log);
         var optics = new OpticsService(equipment, options, log);
         var nova = new NovaGuider(equipment, optics, options, log);
@@ -145,6 +147,25 @@ public class NovaGuiderTests : IDisposable
         again.Nova.UpdateSettings(again.Nova.Settings with { Binning = 1 });
         again.Nova.ClearCalibration();
         Assert.Null(again.Nova.Status.Calibration);
+    }
+
+    [Fact]
+    public async Task AGuideCameraThatDropsOutIsWaitedForAndGuidingCarriesOn()
+    {
+        // As when an ASI120 drops off USB: frames stop. Say so, reconnect it when it's back, and carry on.
+        await using var rig = await SetUpAsync();
+        using var timeout = new CancellationTokenSource(TimeSpan.FromMinutes(1));
+        await rig.Nova.LoopAsync(timeout.Token);
+        while (rig.Nova.Status.Stars.Count < 1) await Task.Delay(100, timeout.Token);
+
+        var camera = rig.Equipment.Provider.GetCamera("Simulated Guide Camera")!;
+        await camera.DisconnectAsync(CancellationToken.None);
+        while (!_log!.Recent.Any(e => e.Message.Contains("is back"))) await Task.Delay(100, timeout.Token);
+
+        Assert.Contains(_log.Recent, e => e.Message.Contains("Simulated Guide Camera stopped sending frames") && e.Message.Contains("dropped off USB"));
+        Assert.True(camera.IsConnected);
+        Assert.Equal(GuiderState.Looping, rig.Nova.State); // still going, not "Guiding stopped"
+        Assert.DoesNotContain(_log.Recent, e => e.Message.StartsWith("Guiding stopped"));
     }
 
     [Fact]

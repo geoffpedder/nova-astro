@@ -73,7 +73,9 @@ public interface IGuideOutput : IDevice
 
 public enum CameraState { Idle, Exposing, Downloading, Error }
 
-public sealed record ExposureRequest(double DurationSeconds);
+/// <param name="ArrivalTimeout">How long after the exposure the image may take to arrive (null: the camera's own, generous
+/// default). Guiding asks for a short one, so a camera that stopped sending is noticed in seconds.</param>
+public sealed record ExposureRequest(double DurationSeconds, TimeSpan? ArrivalTimeout = null);
 
 public sealed record ExposureProgress(double ElapsedSeconds, double TotalSeconds, CameraState State);
 

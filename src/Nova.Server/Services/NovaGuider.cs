@@ -815,6 +815,12 @@ public sealed class NovaGuider : IAsyncDisposable
         }
     }
 
+    /// <summary>How long guiding waits for a guide camera that stopped sending frames (dropped off USB, say).</summary>
+    public static TimeSpan CameraReturnTimeout { get; set; } = TimeSpan.FromMinutes(5);
+
+    /// <summary>A guide frame later than this after its exposure means the camera has stopped sending.</summary>
+    private static readonly TimeSpan GuideFrameTimeout = TimeSpan.FromSeconds(15);
+
     private async Task RunAsync(ICamera camera, CancellationToken ct)
     {
         try
@@ -822,8 +828,17 @@ public sealed class NovaGuider : IAsyncDisposable
             while (!ct.IsCancellationRequested)
             {
                 var exposure = Settings.ExposureSeconds;
-                await ApplyGainAsync(camera, ct); // a changed setting takes effect from the next frame
-                var frame = await camera.ExposeAsync(new ExposureRequest(exposure), null, ct);
+                CapturedImage frame;
+                try
+                {
+                    await ApplyGainAsync(camera, ct); // a changed setting takes effect from the next frame
+                    frame = await camera.ExposeAsync(new ExposureRequest(exposure, GuideFrameTimeout), null, ct);
+                }
+                catch (Exception ex) when (ex is not OperationCanceledException || !ct.IsCancellationRequested)
+                {
+                    camera = await WaitForCameraAsync(camera, ex, ct);
+                    continue;
+                }
                 var image = WithoutDark(camera, frame.Image, exposure);
                 var stars = StarDetector.Analyze(image, new StarDetectionOptions(MinSnr: 6, MaxStars: 60)).Stars;
                 var pulses = Process(camera, image, stars, DateTime.UtcNow);
@@ -851,6 +866,45 @@ public sealed class NovaGuider : IAsyncDisposable
                 _loopCts = null;
             }
         }
+    }
+
+    /// <summary>
+    /// The guide camera stopped sending frames: say so plainly, then wait for it (by name: a camera that drops off USB
+    /// comes back as a new device), reconnect it and carry on, with the same calibration and lock position. Gives up
+    /// after <see cref="CameraReturnTimeout"/>.
+    /// </summary>
+    private async Task<ICamera> WaitForCameraAsync(ICamera camera, Exception problem, CancellationToken ct)
+    {
+        var name = camera.Name;
+        var previous = _activity;
+        _log.Warn($"{name} stopped sending frames ({problem.Message}): it may have dropped off USB (check its cable, and " +
+                  "that it isn't sharing a hub with the main camera). Guiding pauses and carries on when it's back.");
+        _guideLog.Info($"Guide camera stopped sending frames: {problem.Message}");
+        _activity = $"Waiting for {name}";
+        var clock = System.Diagnostics.Stopwatch.StartNew();
+        while (clock.Elapsed < CameraReturnTimeout)
+        {
+            await Task.Delay(TimeSpan.FromSeconds(2), ct);
+            if (!_equipment.VisibleDevices.Any(d => d.Name == name) || _equipment.Provider.GetCamera(name) is not { } back) continue;
+            try
+            {
+                if (!back.IsConnected)
+                {
+                    await back.ConnectAsync(ct);
+                    _equipment.NotifyDevicesChanged();
+                }
+                await back.ExposeAsync(new ExposureRequest(Math.Min(Settings.ExposureSeconds, 1), GuideFrameTimeout), null, ct); // a frame comes through
+            }
+            catch (Exception ex) when (ex is not OperationCanceledException)
+            {
+                continue;
+            }
+            _log.Info($"{name} is back after {clock.Elapsed.TotalSeconds:0} s: guiding carries on");
+            _guideLog.Info("Guide camera back");
+            _activity = previous;
+            return back;
+        }
+        throw new InvalidOperationException($"{name} didn't come back within {CameraReturnTimeout.TotalMinutes:0} minutes (first: {problem.Message})");
     }
 
     /// <summary>One frame: find the stars, then calibrate or guide. Returns the pulses to send.</summary>

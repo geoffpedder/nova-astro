@@ -4,6 +4,14 @@ What changed in each release. The newest is first. A release's section here beco
 
 ## [Unreleased]
 
+### Fixed
+
+- **A guide camera that drops out:** when the guide camera stops sending frames (an ASI120 sharing the ASI2600's
+  USB hub kept being reset), NOVA's guider used to stop with "Guiding stopped", or wait up to two minutes for a lost
+  frame first. Now a guide frame more than 15 s late counts as lost, NOVA says plainly that the camera stopped
+  sending (and to check its cable and hub), waits for it to come back, reconnects it and carries on guiding with the
+  same calibration and lock position. It gives up after 5 minutes.
+
 ## [0.3.21] - 2026-10-23
 
 ### Removed

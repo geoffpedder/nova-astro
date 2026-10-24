@@ -379,7 +379,11 @@ public sealed class IndiCamera(IndiClient client, string name) : IndiDevice(clie
             (byte[] Data, string Format) received;
             try
             {
-                received = await image.Task.WaitAsync(TimeSpan.FromSeconds(duration + 120), ct);
+                received = await image.Task.WaitAsync(TimeSpan.FromSeconds(duration) + (request.ArrivalTimeout ?? TimeSpan.FromSeconds(120)), ct);
+            }
+            catch (TimeoutException) when (request.ArrivalTimeout is not null)
+            {
+                throw new TimeoutException($"no image from {Name} within {request.ArrivalTimeout.Value.TotalSeconds:0} s of the exposure ending");
             }
             catch (TimeoutException)
             {

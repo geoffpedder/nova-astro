@@ -85,6 +85,8 @@ builder.Services.AddSingleton<HotspotService>();
 builder.Services.AddSingleton<TerminalService>();
 builder.Services.AddSingleton<MountBluetoothService>();
 builder.Services.AddSingleton<EquipmentProfileService>();
+builder.Services.AddSingleton<DiagnosticsService>();
+builder.Services.AddHostedService<UsbHealthService>();
 builder.Services.AddHostedService(sp => sp.GetRequiredService<StorageService>());
 builder.Services.AddHostedService(sp => sp.GetRequiredService<NotificationService>());
 builder.Services.AddSingleton<StatusReporter>();

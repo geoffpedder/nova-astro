@@ -4,6 +4,15 @@ What changed in each release. The newest is first. A release's section here beco
 
 ## [Unreleased]
 
+### Added
+
+- **Diagnostics zip** (Activity tab, Mini PC box): one download with what's needed to look into a problem or attach
+  to a bug report: NOVA's activity and service logs, the INDI drivers' log, the kernel's USB messages, `nova doctor`,
+  the system and NOVA's settings, with passwords, tokens, the Bluetooth code and the sites' coordinates blanked.
+- **Failing USB devices named:** when the kernel resets or drops a USB device 5 or more times in a minute (a guide
+  camera on a bad cable or a shared hub, say), the activity log names it and suggests checking its cable and hub.
+  The install adds NOVA's user to `systemd-journal` so it can read the kernel log; `nova doctor` checks it.
+
 ## [0.3.22] - 2026-10-24
 
 ### Changed

@@ -74,8 +74,9 @@ for unit in indiserver nova nova-display nova-wm phd2 nova-screen nova-hotspot n
 done
 
 # Serial mounts and focusers need the serial group (uucp on Arch, dialout on Debian/Ubuntu); a webcam (the Webcam
-# view) needs video; a ZWO mount over Bluetooth, bluetooth (where BlueZ keeps itself to that group).
-for group in uucp dialout video bluetooth; do
+# view) needs video; a ZWO mount over Bluetooth, bluetooth (where BlueZ keeps itself to that group); reading the
+# kernel and service logs (spotting failing USB devices, the diagnostics zip), systemd-journal.
+for group in uucp dialout video bluetooth systemd-journal; do
   if getent group "$group" >/dev/null; then
     usermod -aG "$group" "$NOVA_USER"
   fi

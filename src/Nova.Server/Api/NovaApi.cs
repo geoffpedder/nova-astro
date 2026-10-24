@@ -269,6 +269,14 @@ public static class NovaApi
         api.MapPost("/site/delete", (SiteNameRequest r, SiteService sites, CancellationToken ct) =>
             BadRequestOnArgument(() => sites.DeleteAsync(r.Name, ct)));
 
+        // Everything needed to find out what went wrong, in one zip (secrets and the sites' coordinates blanked).
+        api.MapGet("/diagnostics", async (DiagnosticsService diagnostics, CancellationToken ct) =>
+        {
+            using var buffer = new MemoryStream();
+            await diagnostics.WriteAsync(buffer, ct);
+            return Results.File(buffer.ToArray(), "application/zip", diagnostics.FileName);
+        });
+
         // Equipment profiles (status: equipmentProfiles in /status)
         api.MapPost("/equipment/profiles", (EquipmentProfileRequest request, EquipmentProfileService profiles) =>
         {

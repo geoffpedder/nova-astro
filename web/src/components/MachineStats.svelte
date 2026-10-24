@@ -58,6 +58,29 @@
       // just for this visit
     }
   }
+  // Everything needed to look into a problem, in one zip to download (or send on): logs, nova doctor, the settings.
+  let preparing = $state(false)
+  let diagnosticsError = $state<string | null>(null)
+  async function saveDiagnostics() {
+    preparing = true
+    diagnosticsError = null
+    try {
+      const response = await fetch('/api/diagnostics')
+      if (!response.ok) throw new Error(`${response.status} ${response.statusText}`)
+      const name = /filename="?([^";]+)"?/.exec(response.headers.get('content-disposition') ?? '')?.[1] ?? 'nova-diagnostics.zip'
+      const url = URL.createObjectURL(await response.blob())
+      const a = document.createElement('a')
+      a.href = url
+      a.download = name
+      a.click()
+      setTimeout(() => URL.revokeObjectURL(url), 10_000)
+    } catch (e) {
+      diagnosticsError = `Couldn't prepare the diagnostics: ${e instanceof Error ? e.message : e}`
+    } finally {
+      preparing = false
+    }
+  }
+
   function toggleTerminal() {
     terminalOpen = !terminalOpen
     keep('nova.terminalOpen', terminalOpen ? '1' : '0')
@@ -85,9 +108,14 @@
       <button class="secondary small-button" onclick={() => (terminalTall = !terminalTall)} aria-pressed={terminalTall}
         title={terminalTall ? 'Back to its own size' : 'Taller'}>{terminalTall ? '⤡' : '⤢'}</button>
     {/if}
+    <button class="secondary small-button" disabled={preparing} onclick={saveDiagnostics}
+      title="One zip to look into a problem, or to send with a bug report: the logs (NOVA's, the drivers', the USB messages), nova doctor, the system and NOVA's settings. Passwords, tokens and your sites' coordinates are left out."
+      >{preparing ? 'Preparing…' : 'Diagnostics'}</button
+    >
     <button class="secondary small-button" class:on={terminalOpen} aria-pressed={terminalOpen} onclick={toggleTerminal}
       title="A terminal on the mini PC: run commands (nova doctor, journalctl…) as NOVA's user">Terminal</button>
   </div>
+  {#if diagnosticsError}<p class="small bad">{diagnosticsError}</p>{/if}
   {#if terminalOpen}
     {#if terminal?.available}
       <div class="terminal" class:tall={terminalTall} style:height={terminalTall ? '70vh' : `${terminalHeight}px`} use:resized>
@@ -144,6 +172,10 @@
   .small-button {
     font-size: 12px;
     padding: 2px 10px;
+  }
+  .bad {
+    color: var(--danger);
+    margin: 4px 0 0;
   }
   .small-button.on {
     color: var(--accent);

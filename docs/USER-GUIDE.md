@@ -615,6 +615,13 @@ the activity log. Your own ntfy server works too: set its address, and an access
   terminal is open, listening on a file only NOVA's user can open, never on the network. `nova update` works from it:
   the install stops NOVA (and so the terminal), so it carries on in the background, and the page comes back a minute
   later when NOVA restarts.
+- **Diagnostics** (beside Terminal) downloads one zip for looking into a problem, or to attach to a bug report:
+  NOVA's activity log and its own log, the INDI drivers' log and the kernel's USB messages (the last 36 hours), `nova
+  doctor`, the system (OS, disks, memory, USB devices) and NOVA's settings. Passwords, tokens, the Bluetooth code and
+  your sites' coordinates are blanked, and the password file is left out.
+- **Failing USB devices:** NOVA watches the kernel's messages, and when a device is reset or drops out 5 or more times
+  in a minute (a guide camera with a bad cable, say), the activity log names it and suggests checking its cable and
+  hub, at most every 10 minutes per device.
 
 ### Wi-Fi hotspot (no Wi-Fi at the site)
 

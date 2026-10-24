@@ -270,6 +270,11 @@ nova_home=$(getent passwd "${nova_user:-$(id -un)}" | cut -d: -f6)
 if [ -f "${Nova__ConfigDirectory:-${nova_home:-$HOME}/.config/nova}/auth.json" ]; then pass "set: browsers sign in to use NOVA"
 else note "no password: anyone on your network can use NOVA and move the telescope" "nova password   (or ⏻ → Set a password… in NOVA)"; fi
 
+section "Logs (spotting failing USB devices, the diagnostics zip)"
+if [ -n "${nova_user:-}" ] && id -nG "$nova_user" 2>/dev/null | grep -qwE "systemd-journal|adm|wheel"; then
+  pass "NOVA can read the kernel and service logs"
+else note "NOVA can't read the kernel log: it won't spot USB devices being reset, and the diagnostics zip has no logs" "$reinstall"; fi
+
 section "Services"
 units="indiserver nova"
 [ "$phd2" = yes ] && units="$units nova-display nova-wm phd2 nova-screen"

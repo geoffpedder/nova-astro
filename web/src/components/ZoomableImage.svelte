@@ -16,6 +16,7 @@
     zoomCentre = $bindable(null),
     magnification = $bindable(1),
     onloaded,
+    onfailed,
     dimmed = false,
     overlay,
   }: {
@@ -34,6 +35,8 @@
     magnification?: number
     /** Natural size of each image once loaded. */
     onloaded?: (width: number, height: number) => void
+    /** The image couldn't be loaded. */
+    onfailed?: () => void
     dimmed?: boolean
     /** Drawn over the image, sized and moved with it (fill 100% × 100%, e.g. an SVG). */
     overlay?: Snippet
@@ -324,6 +327,7 @@
     style:transform="translate({x}px, {y}px)"
     style:visibility={nw ? 'visible' : 'hidden'}
     {onload}
+    onerror={() => onfailed?.()}
   />
   {#if overlay && nw}
     <div

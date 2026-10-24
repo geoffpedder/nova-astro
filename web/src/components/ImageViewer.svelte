@@ -290,6 +290,14 @@
     shownWidth = width
     shownHeight = height
     rendering = false
+    loadFailed = false
+  }
+
+  // Say what's happening while a frame loads (slow on a weak Wi-Fi link), and if it couldn't.
+  let loadFailed = $state(false)
+  function onImageFailed() {
+    rendering = false
+    loadFailed = true
   }
 
   function closeMenuOnOutsideClick(event: MouseEvent) {
@@ -335,7 +343,10 @@
 
   const src = $derived(image ? api.previewUrl(image, mode, stretch, size) : null)
   $effect(() => {
-    if (src) rendering = true
+    if (src) {
+      rendering = true
+      loadFailed = false
+    }
   })
 
   // What's actually on screen, for the caption.
@@ -563,7 +574,7 @@
   {:else}
   <div class="frame-wrap">
     {#if image && src}
-      <ZoomableImage {src} alt="Latest frame" bind:zoomed={actualSize} bind:magnification bind:this={zoomer} onloaded={onImageLoad} dimmed={rendering}>
+      <ZoomableImage {src} alt="Latest frame" bind:zoomed={actualSize} bind:magnification bind:this={zoomer} onloaded={onImageLoad} onfailed={onImageFailed} dimmed={rendering}>
         {#snippet overlay()}
           {#if showNames && namesForImage}
             <div class="names">
@@ -589,6 +600,11 @@
           {/if}
         {/snippet}
       </ZoomableImage>
+      {#if rendering}
+        <div class="loading" role="status">Loading image…</div>
+      {:else if loadFailed}
+        <div class="loading failed" role="status">Couldn't load the image: is the connection to the mini PC weak? The next frame tries again.</div>
+      {/if}
     {:else}
       <p class="muted empty">No image yet. Take an exposure, or Open a FITS file.</p>
     {/if}
@@ -800,6 +816,32 @@
   }
   .compare .worse {
     color: var(--danger);
+  }
+  .loading {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    padding: 6px 12px;
+    border-radius: var(--radius);
+    background: rgb(0 0 0 / 0.65);
+    color: var(--text);
+    font-size: 13px;
+    pointer-events: none;
+    /* Only when it takes a moment: a quick load doesn't flash it. */
+    animation: appear 0.15s ease-out 0.35s both;
+  }
+  .loading.failed {
+    color: var(--warn);
+    animation: none;
+  }
+  @keyframes appear {
+    from {
+      opacity: 0;
+    }
+    to {
+      opacity: 1;
+    }
   }
   .frame-wrap {
     position: relative;

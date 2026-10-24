@@ -4,6 +4,12 @@ What changed in each release. The newest is first. A release's section here beco
 
 ## [Unreleased]
 
+### Changed
+
+- **Image tab, loading:** while a frame is still on its way (slow on a weak Wi-Fi link: the history thumbnail
+  arrives first) the viewer says **Loading image…**, and if it couldn't load, says so, instead of showing the
+  previous frame dimmed with no explanation.
+
 ### Fixed
 
 - **A guide camera that drops out:** when the guide camera stops sending frames (an ASI120 sharing the ASI2600's

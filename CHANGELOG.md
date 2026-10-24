@@ -20,6 +20,10 @@ What changed in each release. The newest is first. A release's section here beco
   frame first. Now a guide frame more than 15 s late counts as lost, NOVA says plainly that the camera stopped
   sending (and to check its cable and hub), waits for it to come back, reconnects it and carries on guiding with the
   same calibration and lock position. It gives up after 5 minutes.
+- **Sequences that can't guide say so:** when guiding couldn't start at a sequence's start (with NOVA's guider:
+  no guide camera), the only sign was "Guiding skipped: PHD2 isn't connected", even with PHD2 not in use. Now the
+  warning gives the real reason, a running sequence says once that its frames are unguided, and it still starts
+  guiding before the next frame as soon as it can.
 
 ## [0.3.21] - 2026-10-23
 

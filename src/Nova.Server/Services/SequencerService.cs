@@ -279,6 +279,7 @@ public sealed class SequencerService
         public double? AutofocusTemperature;
         public int FramesSinceAutofocus;
         public int FramesSinceDither;
+        public bool WarnedUnguided;       // said once that guiding can't start, so frames are unguided
         public int Autofocuses, Dithers, Failures, ConsecutiveFailures;
         public double OverheadSeconds = 3; // per-frame time beyond the exposure, learned as frames come in
         // Meridian flip: for mounts that don't report their pier side, "seen east of the meridian, not yet flipped".
@@ -639,6 +640,13 @@ public sealed class SequencerService
             _log.Warn("Guiding isn't running: restarting it");
             await StartGuidingAsync(sequence, report, ct);
         }
+        else if (sequence.Start.StartGuiding && !_guider.IsConnected && !state.WarnedUnguided)
+        {
+            // Can't guide (no guide camera, say): say so once, rather than every frame or not at all. As soon as the
+            // guider is ready again, the check above starts it before the next frame.
+            state.WarnedUnguided = true;
+            _log.Warn($"Frames are unguided: guiding can't start ({_guider.NotReady}). It starts again by itself as soon as it can");
+        }
 
         var dither = sequence.DitherSettings;
         if (dither.EveryFrames > 0 && state.FramesSinceDither >= dither.EveryFrames && _guider.IsGuiding)
@@ -896,7 +904,7 @@ public sealed class SequencerService
     {
         if (!_guider.IsConnected)
         {
-            _log.Warn("Guiding skipped: PHD2 isn't connected");
+            _log.Warn($"Guiding skipped: {_guider.NotReady}");
             return;
         }
         report("Guiding", "Starting guiding");

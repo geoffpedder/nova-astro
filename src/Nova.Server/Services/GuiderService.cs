@@ -241,7 +241,8 @@ public sealed class GuiderService : IAsyncDisposable
             ct => IsNova ? _nova!.DitherAsync(pixels, raOnly, settle, ct) : _phd2.DitherAsync(pixels, raOnly, settle, ct),
             "Dither settled", out error);
 
-    private string NotReady => IsNova ? "No guide camera: choose one in the Guider panel" : "Not connected to PHD2";
+    /// <summary>Why guiding can't start now (no guide camera, PHD2 not connected).</summary>
+    public string NotReady => IsNova ? "No guide camera: choose one in the Guider panel" : "Not connected to PHD2";
 
     public async Task StopAsync(CancellationToken ct)
     {

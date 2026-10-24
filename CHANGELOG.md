@@ -6,6 +6,10 @@ What changed in each release. The newest is first. A release's section here beco
 
 ### Added
 
+- **Back up and restore settings** (⏻ menu): all of NOVA's settings in one zip (sites, optics, equipment profiles,
+  sequences, the guider with its calibration and darks, notifications, the password, the driver list and the
+  hotspot), to keep or to move to another mini PC. Restoring replaces every setting with the backup's and restarts
+  NOVA to finish.
 - **Diagnostics zip** (Activity tab, Mini PC box): one download with what's needed to look into a problem or attach
   to a bug report: NOVA's activity and service logs, the INDI drivers' log, the kernel's USB messages, `nova doctor`,
   the system and NOVA's settings, with passwords, tokens, the Bluetooth code and the sites' coordinates blanked.

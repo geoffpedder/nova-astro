@@ -2,6 +2,8 @@
   import { api } from '../lib/api'
   import { act, nova, stopHub } from '../lib/state.svelte'
   import { auth, checkAuth } from '../lib/auth.svelte'
+  import { ask as confirmAsk } from '../lib/confirm.svelte'
+  import { download } from '../lib/download'
   import PasswordDialog from './PasswordDialog.svelte'
   import NotificationsDialog from './NotificationsDialog.svelte'
 
@@ -57,6 +59,44 @@
     if (ok) done = kind
   }
 
+  // Backing up all of NOVA's settings, and restoring a backup (NOVA restarts to swap them in).
+  let backupNote = $state<string | null>(null)
+  let restoreInput = $state<HTMLInputElement | null>(null)
+  async function backUp() {
+    open = false
+    try {
+      await download('/api/backup', 'nova-backup.zip')
+    } catch (e) {
+      backupNote = `Couldn't make the backup: ${e instanceof Error ? e.message : e}`
+    }
+  }
+  async function restore(event: Event) {
+    const input = event.currentTarget as HTMLInputElement
+    const file = input.files?.[0]
+    input.value = ''
+    if (!file) return
+    const sure = await confirmAsk(`Restore NOVA's settings from ${file.name}?`, {
+      message:
+        "This replaces all of NOVA's settings with the backup's: sites, optics, equipment profiles, sequences, the guider and its darks, notifications, the password, the drivers and the hotspot. NOVA restarts to finish, stopping anything it's doing.",
+      confirm: 'Restore',
+      danger: true,
+    })
+    if (!sure) return
+    try {
+      const response = await fetch('/api/backup/restore', { method: 'POST', headers: { 'Content-Type': 'application/zip' }, body: file })
+      const result = await response.json().catch(() => null)
+      if (!response.ok) throw new Error(result?.detail ?? `${response.status} ${response.statusText}`)
+      if (result?.restarting) {
+        backupNote = "Restoring: NOVA is restarting with the backup's settings. This page reloads in a moment."
+        setTimeout(() => location.reload(), 15_000)
+      } else {
+        backupNote = 'The backup is ready: restart NOVA to finish restoring it.'
+      }
+    } catch (e) {
+      backupNote = `Couldn't restore: ${e instanceof Error ? e.message : e}`
+    }
+  }
+
   function closeOnOutsideClick(event: MouseEvent) {
     if (open && !(event.target as Element).closest('.power-wrap')) open = false
   }
@@ -87,9 +127,26 @@
       {#if auth.passwordSet}
         <button role="menuitem" class="item" onclick={signOut}>Sign out of this browser</button>
       {/if}
+      <hr />
+      <button role="menuitem" class="item" onclick={backUp}
+        title="All of NOVA's settings in one file, to keep or to move to another mini PC. It holds your password, notification token, hotspot password and sites: keep it private"
+        >Back up settings</button
+      >
+      <button role="menuitem" class="item" onclick={() => ((open = false), restoreInput?.click())}
+        title="Put back the settings from a backup (this mini PC's or another's); NOVA restarts to finish">Restore settings…</button
+      >
     </div>
   {/if}
 </div>
+
+<input type="file" accept=".zip,application/zip" hidden bind:this={restoreInput} onchange={restore} />
+{#if backupNote}
+  <div class="backdrop" role="presentation" onclick={() => (backupNote = null)}></div>
+  <div class="panel dialog" role="dialog" aria-modal="true" aria-label="Backup">
+    <p>{backupNote}</p>
+    <div class="actions"><button class="secondary" onclick={() => (backupNote = null)}>Close</button></div>
+  </div>
+{/if}
 
 {#if passwordOpen}<PasswordDialog onclose={() => (passwordOpen = false)} />{/if}
 {#if notificationsOpen}<NotificationsDialog onclose={() => (notificationsOpen = false)} />{/if}

@@ -1,5 +1,6 @@
 <script lang="ts">
   import { api } from '../lib/api'
+  import { download } from '../lib/download'
   import type { SystemStats, TerminalStatus } from '../lib/types'
 
   // The mini PC at a glance (CPU, memory, temperature, disks), read every few seconds while the Activity tab shows.
@@ -65,15 +66,7 @@
     preparing = true
     diagnosticsError = null
     try {
-      const response = await fetch('/api/diagnostics')
-      if (!response.ok) throw new Error(`${response.status} ${response.statusText}`)
-      const name = /filename="?([^";]+)"?/.exec(response.headers.get('content-disposition') ?? '')?.[1] ?? 'nova-diagnostics.zip'
-      const url = URL.createObjectURL(await response.blob())
-      const a = document.createElement('a')
-      a.href = url
-      a.download = name
-      a.click()
-      setTimeout(() => URL.revokeObjectURL(url), 10_000)
+      await download('/api/diagnostics', 'nova-diagnostics.zip')
     } catch (e) {
       diagnosticsError = `Couldn't prepare the diagnostics: ${e instanceof Error ? e.message : e}`
     } finally {

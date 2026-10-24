@@ -38,6 +38,8 @@ builder.Services.Configure<GzipCompressionProviderOptions>(o => o.Level = Compre
 var configDirectory = (builder.Configuration.GetSection("Nova").Get<NovaOptions>() ?? new NovaOptions()).ResolveConfigDirectory();
 // Made here, at the start, so every setting can be saved from the first one (a fresh user has no ~/.config yet).
 Directory.CreateDirectory(configDirectory);
+// A backup being restored: its settings go in now, before any service has read (or could save over) its own.
+var restoringBackup = BackupService.ApplyPendingFiles(configDirectory);
 builder.Services.AddDataProtection().PersistKeysToFileSystem(new DirectoryInfo(Path.Combine(configDirectory, "keys")));
 builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme).AddCookie(o =>
 {
@@ -86,6 +88,7 @@ builder.Services.AddSingleton<TerminalService>();
 builder.Services.AddSingleton<MountBluetoothService>();
 builder.Services.AddSingleton<EquipmentProfileService>();
 builder.Services.AddSingleton<DiagnosticsService>();
+builder.Services.AddSingleton<BackupService>();
 builder.Services.AddHostedService<UsbHealthService>();
 builder.Services.AddHostedService(sp => sp.GetRequiredService<StorageService>());
 builder.Services.AddHostedService(sp => sp.GetRequiredService<NotificationService>());
@@ -101,6 +104,9 @@ builder.Services.AddHostedService(sp => sp.GetRequiredService<StellariumTelescop
 builder.Host.UseSystemd();
 
 var app = builder.Build();
+// ...and once NOVA is up, the backup's driver list and hotspot settings.
+if (restoringBackup)
+    app.Lifetime.ApplicationStarted.Register(() => _ = app.Services.GetRequiredService<BackupService>().ApplyPendingExtrasAsync(CancellationToken.None));
 // Created now rather than on first use, so it hears about solves from the start.
 app.Services.GetRequiredService<SetupGuideService>();
 // Created now, so a mount set to Bluetooth connects that way from the first Connect.
@@ -152,4 +158,4 @@ var options = app.Services.GetRequiredService<Microsoft.Extensions.Options.IOpti
 app.Logger.LogInformation("Nova backend: {Backend}. Images go to {Directory}", options.Backend, options.ResolveImageDirectory());
 
 app.Run();
-return 0;
+return Environment.ExitCode; // non-zero to have the service restart NOVA (after a restore)

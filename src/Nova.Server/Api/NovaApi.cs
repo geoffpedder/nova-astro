@@ -277,6 +277,30 @@ public static class NovaApi
             return Results.File(buffer.ToArray(), "application/zip", diagnostics.FileName);
         });
 
+        // All of NOVA's settings in one zip, and restoring one (NOVA then restarts to swap them in).
+        api.MapGet("/backup", async (BackupService backup, CancellationToken ct) =>
+        {
+            using var buffer = new MemoryStream();
+            await backup.WriteAsync(buffer, ct);
+            return Results.File(buffer.ToArray(), "application/zip", backup.FileName);
+        });
+        api.MapPost("/backup/restore", async (HttpContext http, BackupService backup, CancellationToken ct) =>
+        {
+            // Guide darks and sequences can take a backup past the usual request size.
+            if (http.Features.Get<Microsoft.AspNetCore.Http.Features.IHttpMaxRequestBodySizeFeature>() is { IsReadOnly: false } size)
+                size.MaxRequestBodySize = 500_000_000;
+            try
+            {
+                var info = await backup.StageAsync(http.Request.Body, ct);
+                backup.RestartSoon();
+                return Results.Ok(new { info, restarting = BackupService.CanRestartItself });
+            }
+            catch (ArgumentException ex)
+            {
+                return Results.Problem(ex.Message, statusCode: StatusCodes.Status400BadRequest);
+            }
+        });
+
         // Equipment profiles (status: equipmentProfiles in /status)
         api.MapPost("/equipment/profiles", (EquipmentProfileRequest request, EquipmentProfileService profiles) =>
         {

@@ -605,6 +605,12 @@ the activity log. Your own ntfy server works too: set its address, and an access
 - **⏻ in the header** restarts or shuts down the mini PC, optionally parking the mount and turning the
   camera's cooler off first. It's also where you set, change or remove NOVA's password, and sign this browser
   out (see [Network, ports and security](INSTALL.md#network-ports-and-security)).
+- **Back up and restore** (⏻ → **Back up settings** / **Restore settings…**): all of NOVA's settings in one zip, to
+  keep or to move to another mini PC: sites, optics, equipment profiles, sequences, the guider with its calibration
+  and darks, autofocus, notifications, the password, the INDI driver list and the hotspot. Caches that fill
+  themselves again (sky tiles, image history) are left out. It holds your password, notification token, hotspot
+  password and sites, so keep it private. Restoring replaces every setting with the backup's (not a mixture), then
+  NOVA restarts to finish and the page reloads.
 - **The header** shows its network (wired, Wi-Fi with signal, or its own hotspot) and address. Click it for the
   **Network** dialog and the Wi-Fi hotspot.
 - **Terminal** (the Mini PC box at the top of the Activity tab): a shell on the mini PC in the browser, for `nova

@@ -9,6 +9,8 @@ What changed in each release. The newest is first. A release's section here beco
 - **Image tab, loading:** while a frame is still on its way (slow on a weak Wi-Fi link: the history thumbnail
   arrives first) the viewer says **Loading image…**, and if it couldn't load, says so, instead of showing the
   previous frame dimmed with no explanation.
+- **Sequence tab:** the current-exposure line stays put for the whole run (between frames it shows what's
+  happening, e.g. autofocus), so the page below no longer jumps up and down as autofocus, slews and dithers run.
 
 ### Fixed
 

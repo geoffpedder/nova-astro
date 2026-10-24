@@ -279,15 +279,18 @@
         {/if}
       </div>
       <div class="step"><span class="muted">{status.step}:</span> {status.message}</div>
-      {#if exposure}
+      <!-- Kept while running, between frames too (autofocus, slews, dithers), so the box doesn't change height. -->
+      {#if running}
         <div class="exposure">
-          <div class="bar exposing" class:downloading={exposure.state === 'Downloading'} title="This exposure">
-            <div style:width="{exposure.state === 'Downloading' ? 100 : exposurePercent}%"></div>
+          <div class="bar exposing" class:downloading={exposure?.state === 'Downloading'} title="This exposure">
+            <div style:width="{!exposure ? 0 : exposure.state === 'Downloading' ? 100 : exposurePercent}%"></div>
           </div>
-          <span class="mono small">
-            {exposure.state === 'Downloading'
-              ? 'Downloading…'
-              : `${exposure.elapsedSeconds.toFixed(0)} / ${exposure.totalSeconds}s`}
+          <span class="mono small" class:muted={!exposure}>
+            {!exposure
+              ? status.step
+              : exposure.state === 'Downloading'
+                ? 'Downloading…'
+                : `${exposure.elapsedSeconds.toFixed(0)} / ${exposure.totalSeconds}s`}
           </span>
         </div>
       {/if}
@@ -564,7 +567,11 @@
   }
   .exposure .mono {
     min-width: 7em;
+    max-width: 45%;
     text-align: right;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
   .bar.exposing div {
     background: var(--warn);

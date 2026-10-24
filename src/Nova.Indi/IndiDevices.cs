@@ -667,13 +667,57 @@ public sealed class IndiMount(IndiClient client, string name) : IndiDevice(clien
         };
     }
 
+    /// <summary>
+    /// Stops a hand move and makes sure it stopped. Turning the motion switch off isn't always enough (a ZWO AM3 was
+    /// seen carrying on through it), so a full abort follows, which mounts obey; then the position is watched for a
+    /// moment, and if it's still changing, abort again and say so. Tracking is put back as it was.
+    /// </summary>
     public async Task StopMotionAsync(MotionDirection? direction, CancellationToken ct)
     {
-        if (direction is null or MotionDirection.North or MotionDirection.South)
-            await Client.SetSwitchesAsync(Name, "TELESCOPE_MOTION_NS", ct, ("MOTION_NORTH", false), ("MOTION_SOUTH", false));
-        if (direction is null or MotionDirection.East or MotionDirection.West)
-            await Client.SetSwitchesAsync(Name, "TELESCOPE_MOTION_WE", ct, ("MOTION_WEST", false), ("MOTION_EAST", false));
+        var tracking = Client.GetProperty(Name, "TELESCOPE_TRACK_STATE")?["TRACK_ON"]?.IsOn;
+        // Still moving on the other axis (two buttons held, one let go): stop just this one, no abort.
+        bool On(string property) => Client.GetProperty(Name, property)?.Elements.Values.Any(e => e.IsOn) == true;
+        if (direction is MotionDirection.North or MotionDirection.South && On("TELESCOPE_MOTION_WE")
+            || direction is MotionDirection.East or MotionDirection.West && On("TELESCOPE_MOTION_NS"))
+        {
+            await Client.SetSwitchesAsync(Name, direction is MotionDirection.North or MotionDirection.South ? "TELESCOPE_MOTION_NS" : "TELESCOPE_MOTION_WE", ct,
+                direction is MotionDirection.North or MotionDirection.South ? [("MOTION_NORTH", false), ("MOTION_SOUTH", false)] : [("MOTION_WEST", false), ("MOTION_EAST", false)]);
+            return;
+        }
+        try
+        {
+            if (direction is null or MotionDirection.North or MotionDirection.South)
+                await Client.SetSwitchesAsync(Name, "TELESCOPE_MOTION_NS", CancellationToken.None, ("MOTION_NORTH", false), ("MOTION_SOUTH", false));
+            if (direction is null or MotionDirection.East or MotionDirection.West)
+                await Client.SetSwitchesAsync(Name, "TELESCOPE_MOTION_WE", CancellationToken.None, ("MOTION_WEST", false), ("MOTION_EAST", false));
+        }
+        finally
+        {
+            if (HasProperty("TELESCOPE_ABORT_MOTION")) await AbortAsync(CancellationToken.None);
+        }
+
+        // Stopped? The reading lags (drivers read the position about once a second), so first let one arrive from after
+        // the stop, then watch. (A mount that's tracking keeps its RA and Dec; one that isn't drifts 15″ a second.)
+        await Task.Delay(ReadingLag, CancellationToken.None);
+        var before = Coordinates;
+        await Task.Delay(StopCheckTime, CancellationToken.None);
+        if (Precession.Separation(before, Coordinates) > StillMovingDegrees)
+        {
+            if (HasProperty("TELESCOPE_ABORT_MOTION")) await AbortAsync(CancellationToken.None);
+            throw new InvalidOperationException($"{Name} didn't stop when told to (it was still moving {StopCheckTime.TotalSeconds:0.#} s later): aborted it. Check it has stopped");
+        }
+        if (tracking == true && Client.GetProperty(Name, "TELESCOPE_TRACK_STATE")?["TRACK_ON"] is { IsOn: false })
+            await Client.SetSwitchesAsync(Name, "TELESCOPE_TRACK_STATE", ct, ("TRACK_ON", true));
     }
+
+    /// <summary>How long a driver can take to report a new position (it polls the mount).</summary>
+    private static readonly TimeSpan ReadingLag = TimeSpan.FromSeconds(1.2);
+
+    /// <summary>How long after a stop the position is watched to make sure it stopped.</summary>
+    private static readonly TimeSpan StopCheckTime = TimeSpan.FromSeconds(1.5);
+
+    /// <summary>Moving this far (degrees) in <see cref="StopCheckTime"/> after a stop means it didn't stop.</summary>
+    private const double StillMovingDegrees = 0.1;
 
     public bool CanMoveRaAxis => HasProperty("TELESCOPE_MOTION_WE");
 
@@ -759,11 +803,10 @@ public sealed class IndiMount(IndiClient client, string name) : IndiDevice(clien
         }
         finally
         {
-            await Client.SetSwitchesAsync(Name, "TELESCOPE_MOTION_WE", CancellationToken.None, ("MOTION_WEST", false), ("MOTION_EAST", false));
+            await StopMotionAsync(MotionDirection.West, CancellationToken.None); // and makes sure it stopped
         }
 
-        // Let it come to a stop, and make sure it tracks again (some drivers stop tracking after manual motion).
-        for (var i = 0; i < 100 && Client.GetProperty(Name, Coords)?.State == IndiState.Busy; i++) await Task.Delay(100, ct);
+        // Make sure it tracks again (some drivers stop tracking after manual motion).
         if (Client.GetProperty(Name, "TELESCOPE_TRACK_STATE")?["TRACK_ON"] is { IsOn: false })
             await Client.SetSwitchesAsync(Name, "TELESCOPE_TRACK_STATE", ct, ("TRACK_ON", true));
     }

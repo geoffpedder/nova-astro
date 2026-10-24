@@ -583,7 +583,7 @@ public class RaAxisTurnTests
 
         var clock = System.Diagnostics.Stopwatch.StartNew();
         await Assert.ThrowsAsync<InvalidOperationException>(() => mount.MoveRaAxisAsync(90, cts.Token));
-        Assert.InRange(clock.Elapsed.TotalSeconds, 1.5, 4);
+        Assert.InRange(clock.Elapsed.TotalSeconds, 1.5, 7); // stopped after 2 s, then 2.7 s making sure it stopped
         await Task.Delay(300);
         Assert.Contains(server.Received, l => l.Contains("TELESCOPE_MOTION_WE") && l.Contains("Off"));
     }
@@ -600,7 +600,7 @@ public class RaAxisTurnTests
         var clock = System.Diagnostics.Stopwatch.StartNew();
         await Assert.ThrowsAsync<InvalidOperationException>(() =>
             Nova.Server.Services.PolarAlignmentService.StepOffThePoleAsync(mount, new GeoLocation(51.5, -0.1, 0), cts.Token));
-        Assert.InRange(clock.Elapsed.TotalSeconds, 1.5, 4);
+        Assert.InRange(clock.Elapsed.TotalSeconds, 1.5, 7); // stopped after 2 s, then 2.7 s making sure it stopped
         await Task.Delay(300);
         Assert.Contains(server.Received, l => l.Contains("MOTION_SOUTH") && l.Contains("On"));
         Assert.Contains(server.Received, l => l.Contains("TELESCOPE_MOTION_NS") && l.Contains("Off"));
@@ -620,7 +620,8 @@ public class RaAxisTurnTests
         private volatile bool _moving;
         public double TurnedDegrees => Math.Abs(6.0 - _ra) * 15;
 
-        public MovingMount(double degreesPerSecond, int pollMs, double glitchAfter = -1, double glitchDegrees = 0)
+        public MovingMount(double degreesPerSecond, int pollMs, double glitchAfter = -1, double glitchDegrees = 0,
+            bool ignoresDirectionStop = false, bool hasAbort = true)
         {
             _listener.Start();
             _ = Task.Run(async () =>
@@ -638,6 +639,8 @@ public class RaAxisTurnTests
                 string Coords(double ra) => $"""<setNumberVector device="ZWO AM5" name="EQUATORIAL_EOD_COORD" state="Ok"><oneNumber name="RA">{ra.ToString(System.Globalization.CultureInfo.InvariantCulture)}</oneNumber><oneNumber name="DEC">60</oneNumber></setNumberVector>""";
                 await reader.ReadLineAsync(_cts.Token);
                 foreach (var line in Mount(60)) await Send(line);
+                if (hasAbort)
+                    await Send("""<defSwitchVector device="ZWO AM5" name="TELESCOPE_ABORT_MOTION" state="Idle" perm="rw" rule="AtMostOne"><defSwitch name="ABORT">Off</defSwitch></defSwitchVector>""");
                 _ = Task.Run(async () =>
                 {
                     var clock = System.Diagnostics.Stopwatch.StartNew();
@@ -664,8 +667,9 @@ public class RaAxisTurnTests
                 while (await reader.ReadLineAsync(_cts.Token) is { } line)
                 {
                     if (line.Contains("MOTION_WEST") && line.Contains(">On")) _moving = true;
-                    if (line.Contains("TELESCOPE_MOTION_WE") && line.Contains("Off")) _moving = false;
-                    if (line.Contains("oneSwitch") && line.Contains("MOTION_WEST") && line.Contains("Off")) _moving = false;
+                    if (!ignoresDirectionStop && line.Contains("TELESCOPE_MOTION_WE") && line.Contains("Off")) _moving = false;
+                    if (!ignoresDirectionStop && line.Contains("oneSwitch") && line.Contains("MOTION_WEST") && line.Contains("Off")) _moving = false;
+                    if (line.Contains("TELESCOPE_ABORT_MOTION") || line.Contains("\"ABORT\"")) _moving = false;
                 }
             });
         }
@@ -697,6 +701,29 @@ public class RaAxisTurnTests
         await mount.MoveRaAxisAsync(20, CancellationToken.None);
         await Task.Delay(300);
         Assert.InRange(fake.TurnedDegrees, 18.5, 21.5);
+    }
+
+    [Fact]
+    public async Task AMountThatIgnoresTheDirectionStopIsAborted()
+    {
+        // As an AM3 over Bluetooth did: "stop moving west" ignored, the full abort obeyed.
+        using var fake = new MovingMount(degreesPerSecond: 4, pollMs: 250, ignoresDirectionStop: true);
+        var (mount, provider) = await ConnectAsync(fake);
+        await using var _ = provider;
+        await mount.MoveRaAxisAsync(20, CancellationToken.None);
+        await Task.Delay(1000);
+        Assert.InRange(fake.TurnedDegrees, 18.5, 21.5); // stopped, not still going
+    }
+
+    [Fact]
+    public async Task AMountThatWontStopIsReported()
+    {
+        // Nothing stops it (no abort either): NOVA must say so rather than carry on as if it had stopped.
+        using var fake = new MovingMount(degreesPerSecond: 4, pollMs: 250, ignoresDirectionStop: true, hasAbort: false);
+        var (mount, provider) = await ConnectAsync(fake);
+        await using var _ = provider;
+        var error = await Assert.ThrowsAsync<InvalidOperationException>(() => mount.MoveRaAxisAsync(20, CancellationToken.None));
+        Assert.True(error.Message.Contains("didn't stop"), error.Message);
     }
 
     [Fact]

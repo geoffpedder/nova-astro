@@ -15,6 +15,10 @@ What changed in each release. The newest is first. A release's section here beco
   turn watched only by its reading overshot. NOVA now measures the real speed from the readings and stops early by
   how far the mount will have moved since the last one. It also stops the mount if the reading jumps further than
   any mount moves, reverses, or goes backwards.
+- **Hand moves that didn't stop:** a ZWO AM3 (over Bluetooth) carried on moving after NOVA turned its motion off,
+  so stepping off the pole kept going south through the whole polar alignment. Every hand move (polar alignment's
+  and the Mount panel's buttons) now also ends with a full abort, which the mount obeys, then NOVA watches the
+  position for a moment: if it's still moving, it aborts again and says so. Tracking is put back as it was.
 
 ## [0.3.19] - 2026-10-23
 

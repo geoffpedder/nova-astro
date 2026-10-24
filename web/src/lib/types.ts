@@ -561,15 +561,15 @@ export interface EquipmentSelection {
   flatPanel: string | null
 }
 
-/** A saved equipment setup. drivers, simulators and mountConnection are null where they don't apply. */
+/** A saved equipment setup. drivers, mountConnection and guideCamera are null where they don't apply. */
 export interface EquipmentProfile {
   name: string
+  /** "(none)" for a role left empty. */
   devices: EquipmentSelection
   drivers: string[] | null
-  simulators: boolean | null
   mountConnection: { bluetooth: boolean; mount: string | null; address: string | null } | null
   /** "nova" or "phd2". */
-  guider: string | null
+  guider: string
   guideCamera: string | null
 }
 
@@ -1026,14 +1026,6 @@ export interface SiteStatus {
   settleSeconds: number
 }
 
-/** The Simulators switch (INDI only). */
-export interface SimulatorStatus {
-  applicable: boolean
-  enabled: boolean
-  /** NOVA can stop/start the drivers; otherwise simulators are only hidden. */
-  driverControl: boolean
-}
-
 export interface StatusSnapshot {
   backend: string
   /** NOVA is talking to the INDI server (always true for the simulator). */
@@ -1042,7 +1034,6 @@ export interface StatusSnapshot {
   equipmentConnected: boolean
   /** Raw driver settings are available (INDI only). */
   hasDriverSettings: boolean
-  simulators: SimulatorStatus
   devices: DeviceInfo[]
   selection: EquipmentSelection
   camera: CameraStatus | null

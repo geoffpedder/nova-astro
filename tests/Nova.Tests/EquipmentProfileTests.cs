@@ -23,8 +23,7 @@ public sealed class EquipmentProfileTests : IDisposable
         var equipment = new EquipmentService(options, log);
         guider = new NovaGuider(equipment, new OpticsService(equipment, options, log), options, log);
         var profiles = new EquipmentProfileService(equipment, new DriverSetupService(equipment, options, log),
-            new SimulatorService(equipment, options, log), new MountBluetoothService(equipment, options, log), options, log,
-            new GuiderService(options, log, guider), guider);
+            new MountBluetoothService(equipment, options, log), new GuiderService(options, log, guider), guider, options, log);
         return (profiles, equipment);
     }
 

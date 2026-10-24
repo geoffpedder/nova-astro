@@ -6,6 +6,10 @@ What changed in each release. The newest is first. A release's section here beco
 
 ### Changed
 
+- **No Simulators switch:** the simulators are ordinary drivers now, running when they're in the driver list
+  (Drivers…), and equipment profiles switch between them and real equipment: loading one starts its drivers and
+  stops the others. Profiles saved before this need saving again.
+
 - **Image tab, loading:** while a frame is still on its way (slow on a weak Wi-Fi link: the history thumbnail
   arrives first) the viewer says **Loading image…**, and if it couldn't load, says so, instead of showing the
   previous frame dimmed with no explanation.
@@ -21,9 +25,8 @@ What changed in each release. The newest is first. A release's section here beco
   sending (and to check its cable and hub), waits for it to come back, reconnects it and carries on guiding with the
   same calibration and lock position. It gives up after 5 minutes.
 - **Equipment profiles keep what was connected:** a role with nothing in it is saved as None (each device picker has
-  **None** too), so loading the profile doesn't connect, say, a simulated rotator just because the simulators are
-  on. The Simulators switch is restored as saved (it used to come back on whenever the driver list had simulators
-  in it), and profiles now also keep the guider (NOVA's or PHD2) and its guide camera.
+  **None** too), so loading the profile doesn't connect, say, a simulated rotator just because a simulator driver is
+  running. Profiles now also keep the guider (NOVA's or PHD2) and its guide camera.
 - **Sequences that can't guide say so:** when guiding couldn't start at a sequence's start (with NOVA's guider:
   no guide camera), the only sign was "Guiding skipped: PHD2 isn't connected", even with PHD2 not in use. Now the
   warning gives the real reason, a running sequence says once that its frames are unguided, and it still starts

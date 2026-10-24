@@ -90,7 +90,7 @@ connects PHD2's camera and mount. ✎ gives a device a nickname; ⚙ opens all o
 
 **Profiles** (under Connect equipment), like the site and optics presets, save a whole setup to load later: the
 device for each role (what "automatic" picked is saved as that device, and a role with nothing in it as None, so
-loading it connects nothing there), the INDI drivers, the Simulators switch, how the mount connects (USB or
+loading it connects nothing there), the INDI drivers, how the mount connects (USB or
 Bluetooth, and which mount), and the guider (NOVA's or PHD2) with its guide camera. Each device picker also has
 **None**, to leave a role empty instead of taking the first device found. Type a name and press **Save**; **Save current**
 updates the profile shown with what's in use now. Picking a profile while equipment is disconnected loads it: the
@@ -102,8 +102,9 @@ the ports and tries each one, as the driver's *Scan Ports* button does by hand, 
 port it was on.
 
 **Simulators,** for trying NOVA without hardware: tick INDI's simulator drivers in Drivers… (the telescope,
-CCD, focuser, filter wheel and other simulators). The **Simulators** switch in the Equipment panel then
-stops and hides them while you use real equipment, and brings them back, without changing the driver list.
+CCD, focuser, filter wheel and other simulators) and Apply. To switch between the simulators and real equipment,
+save a profile for each (Profiles, above): loading one starts its drivers, stops the others and chooses its
+devices, so the real-equipment profile, without the simulator drivers, leaves them stopped.
 
 ## Mount and site
 

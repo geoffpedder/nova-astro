@@ -34,8 +34,6 @@
   }
   const label = (kind: string) => (kind === 'FilterWheel' ? 'Filter wheel' : kind === 'FlatPanel' ? 'Flat panel' : kind)
   const hasSettings = $derived(nova.status?.hasDriverSettings ?? false)
-  const simulators = $derived(nova.status?.simulators)
-  let switching = $state(false)
 
   // Renaming: one device at a time, inline.
   let renaming = $state<string | null>(null)
@@ -65,12 +63,6 @@
     connecting = false
   }
 
-  async function toggleSimulators() {
-    if (!simulators) return
-    switching = true
-    await act(() => api.setSimulators(!simulators.enabled))
-    switching = false
-  }
 </script>
 
 {#if showDrivers}<DriversDialog onclose={() => (showDrivers = false)} />{/if}
@@ -85,24 +77,6 @@
     {connecting ? 'Working…' : connected ? 'Disconnect equipment' : 'Connect equipment'}
   </button>
   <EquipmentProfiles />
-  {#if simulators?.applicable}
-    <div class="simulators">
-      <label class="switch">
-        <input type="checkbox" role="switch" checked={simulators.enabled} disabled={switching} onchange={toggleSimulators} />
-        <span class="track" aria-hidden="true"><span class="knob"></span></span>
-        Simulators
-      </label>
-      <span class="muted note">
-        {#if simulators.enabled}
-          INDI simulator drivers available
-        {:else if simulators.driverControl}
-          off: simulator drivers stopped
-        {:else}
-          off: hidden here, but still running (re-run install.sh to let NOVA stop them)
-        {/if}
-      </span>
-    </div>
-  {/if}
   {#if indi}
     <button class="secondary small drivers-button" onclick={() => (showDrivers = true)} title="Choose which INDI drivers run (for your mount, camera and so on)"
       >Drivers…</button
@@ -186,59 +160,6 @@
   .drivers-button {
     align-self: flex-start;
     margin-top: 6px;
-  }
-  .simulators {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    margin-bottom: 10px;
-    flex-wrap: wrap;
-  }
-  .switch {
-    display: inline-flex;
-    align-items: center;
-    gap: 8px;
-    cursor: pointer;
-    font-size: 13px;
-  }
-  .switch input {
-    position: absolute;
-    opacity: 0;
-    width: 1px;
-    height: 1px;
-  }
-  .track {
-    width: 32px;
-    height: 18px;
-    border-radius: 999px;
-    background: var(--input);
-    border: 1px solid var(--panel-border);
-    position: relative;
-    transition: background 0.15s;
-  }
-  .knob {
-    position: absolute;
-    top: 2px;
-    left: 2px;
-    width: 12px;
-    height: 12px;
-    border-radius: 50%;
-    background: var(--muted);
-    transition: transform 0.15s, background 0.15s;
-  }
-  .switch input:checked + .track {
-    background: color-mix(in srgb, var(--accent) 35%, var(--input));
-  }
-  .switch input:checked + .track .knob {
-    transform: translateX(14px);
-    background: var(--accent);
-  }
-  .switch input:focus-visible + .track {
-    outline: 2px solid var(--accent);
-    outline-offset: 2px;
-  }
-  .note {
-    font-size: 12px;
   }
   ul {
     list-style: none;

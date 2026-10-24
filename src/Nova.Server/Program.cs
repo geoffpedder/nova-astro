@@ -61,7 +61,6 @@ builder.Services.AddSingleton<NovaGuider>();
 builder.Services.AddSingleton<GuiderService>();
 builder.Services.AddSingleton<OpticsService>();
 builder.Services.AddSingleton<CameraLinkService>();
-builder.Services.AddSingleton<SimulatorService>();
 builder.Services.AddSingleton<SiteService>();
 builder.Services.AddSingleton<PlateSolveService>();
 builder.Services.AddSingleton<AutofocusService>();

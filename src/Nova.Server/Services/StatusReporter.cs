@@ -30,7 +30,7 @@ public sealed record FlatPanelStatus(
 public sealed record AutofocusInfo(bool Running, AutofocusSettings Settings, AutofocusStatus? Last);
 
 public sealed record StatusSnapshot(
-    string Backend, bool ServerConnected, bool EquipmentConnected, bool HasDriverSettings, SimulatorStatus Simulators,
+    string Backend, bool ServerConnected, bool EquipmentConnected, bool HasDriverSettings,
     IReadOnlyList<DeviceInfo> Devices, EquipmentSelection Selection,
     CameraStatus? Camera, MountStatus? Mount, FocuserStatus? Focuser, FilterWheelStatus? FilterWheel,
     RotatorStatus? Rotator, GuiderStatus Guider, IReadOnlyList<CameraOpticsInfo> Optics, LinkedDevices HeaderLinks, SiteStatus Site,
@@ -47,7 +47,7 @@ public sealed record StatusSnapshot(
 /// </summary>
 public sealed class StatusReporter(
     EquipmentService equipment, ImagingService imaging, GuiderService guider, OpticsService optics,
-    CameraLinkService links, SimulatorService simulators, SiteService sites, PlateSolveService solver,
+    CameraLinkService links, SiteService sites, PlateSolveService solver,
     AutofocusService autofocus, FocusPresetService focusPresets, PolarAlignmentService polar, StellariumTelescopeServer stellarium,
     SequencerService sequencer, MountMotionService motion, PowerService power, NetworkService network,
     NicknameService nicknames, FlatsService flats, IHubContext<NovaHub> hub, ILogger<StatusReporter> logger,
@@ -71,7 +71,6 @@ public sealed class StatusReporter(
             provider.IsConnected,
             equipment.EquipmentConnected,
             provider.Settings is not null,
-            simulators.Status,
             equipment.VisibleDevices,
             equipment.Selection,
             camera is null ? null : new CameraStatus(camera.Name, camera.IsConnected, camera.State,

@@ -98,16 +98,11 @@
         {#each contents(existing) as item (item.role)}
           <li><span class="muted">{item.role}</span><span>{nick(item.name)}</span></li>
         {/each}
-        {#if existing.guider}
-          <li>
-            <span class="muted">Guiding</span><span
-              >{existing.guider === 'nova' ? 'NOVA' : 'PHD2'}{existing.guider === 'nova' && existing.guideCamera ? `, ${nick(existing.guideCamera)}` : ''}</span
-            >
-          </li>
-        {/if}
-        {#if existing.simulators != null}
-          <li><span class="muted">Simulators</span><span>{existing.simulators ? 'on' : 'off'}</span></li>
-        {/if}
+        <li>
+          <span class="muted">Guiding</span><span
+            >{existing.guider === 'nova' ? 'NOVA' : 'PHD2'}{existing.guideCamera ? `, ${nick(existing.guideCamera)}` : ''}</span
+          >
+        </li>
         {#if existing.mountConnection?.bluetooth}
           <li><span class="muted">Mount over</span><span>Bluetooth ({existing.mountConnection.mount ?? existing.mountConnection.address})</span></li>
         {/if}
@@ -131,7 +126,7 @@
       {#if existing}<button class="secondary" disabled={busy} onclick={remove}>Delete</button>{/if}
     </div>
     <p class="muted hint">
-      A profile keeps the device for each role (None for an empty one), the INDI drivers, the Simulators switch, how
+      A profile keeps the device for each role (None for an empty one), the INDI drivers (simulators included), how
       the mount connects, and the guider and its camera. Load one while disconnected, then press Connect equipment.
     </p>
   {/if}

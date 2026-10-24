@@ -40,7 +40,6 @@ public sealed record StorageCopyRequest(string Night);
 /// <summary>The gain and offset a camera is given whenever it connects; both null to leave the driver's own.</summary>
 public sealed record CameraDefaultsRequest(string Camera, double? Gain, double? Offset);
 
-public sealed record SimulatorsRequest(bool Enabled);
 /// <summary>Bluetooth on for one mount (by name and/or address; one is required) or off (USB).</summary>
 public sealed record MountBluetoothRequest(bool Enabled, string? Mount = null, string? Address = null);
 
@@ -270,13 +269,6 @@ public static class NovaApi
         api.MapPost("/site/delete", (SiteNameRequest r, SiteService sites, CancellationToken ct) =>
             BadRequestOnArgument(() => sites.DeleteAsync(r.Name, ct)));
 
-        api.MapPost("/equipment/simulators", async (SimulatorsRequest request, SimulatorService simulators, CancellationToken ct) =>
-        {
-            await simulators.SetEnabledAsync(request.Enabled, ct);
-            return Results.NoContent();
-        });
-
-        // ZWO mounts over Bluetooth (status: mountBluetooth in /status)
         // Equipment profiles (status: equipmentProfiles in /status)
         api.MapPost("/equipment/profiles", (EquipmentProfileRequest request, EquipmentProfileService profiles) =>
         {
@@ -317,6 +309,7 @@ public static class NovaApi
                 return Results.Problem(ex.Message, statusCode: StatusCodes.Status400BadRequest);
             }
         });
+        // ZWO mounts over Bluetooth (status: mountBluetooth in /status)
         api.MapPost("/mount/bluetooth", async (MountBluetoothRequest request, MountBluetoothService bluetooth, CancellationToken ct) =>
         {
             try

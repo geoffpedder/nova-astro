@@ -89,7 +89,6 @@ export const api = {
   /** Empty removes the nickname. */
   setNickname: (device: string, nickname: string) => post('/api/equipment/nickname', { device, nickname }),
   disconnect: () => post('/api/equipment/disconnect'),
-  setSimulators: (enabled: boolean) => post('/api/equipment/simulators', { enabled }),
   /** Saves what's in use now as an equipment profile (originalName: the one to replace or rename). */
   saveEquipmentProfile: (name: string, originalName?: string) => post('/api/equipment/profiles', { name, originalName }),
   /** Puts a profile's devices, drivers and mount connection back (equipment must be disconnected). */

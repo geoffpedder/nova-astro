@@ -17,7 +17,7 @@
   const label = $derived(kind === 'FilterWheel' ? 'filter wheel' : kind === 'FlatPanel' ? 'flat panel' : kind.toLowerCase())
 
   const Automatic = ''
-  // Leaves the role empty: nothing is connected for it (no simulated rotator just because the simulators are on).
+  // Leaves the role empty: nothing is connected for it (no simulated rotator just because a simulator driver is running).
   const None = '(none)'
 
   const options = $derived((nova.status?.devices ?? []).filter((d) => d.kinds.includes(kind as DeviceKind)))

@@ -8,7 +8,7 @@ namespace Nova.Server.Services;
 
 /// <summary>
 /// Which device to use for each role. Null means "automatic": the first one found; <see cref="None"/> means none, so
-/// the role stays empty (no simulated rotator connected just because the simulators are on).
+/// the role stays empty (no simulated rotator connected just because a simulator driver is running).
 /// </summary>
 public sealed record EquipmentSelection(
     string? Camera = null, string? Mount = null, string? Focuser = null, string? FilterWheel = null, string? Rotator = null,
@@ -62,12 +62,9 @@ public sealed class EquipmentService : IAsyncDisposable
 
     public IEquipmentProvider Provider { get; }
 
-    /// <summary>Devices to leave out of lists and automatic choices (e.g. simulators when switched off).</summary>
-    public Func<DeviceInfo, bool>? DeviceFilter { get; set; }
-
     /// <summary>The devices NOVA offers: the provider's, minus any filtered out.</summary>
     public IReadOnlyList<DeviceInfo> VisibleDevices =>
-        DeviceFilter is { } keep ? Provider.Devices.Where(keep).ToList() : Provider.Devices;
+        Provider.Devices;
 
     /// <summary>Runs just before a device connects (e.g. pointing the mount's driver at its Bluetooth link).</summary>
     public Func<IDevice, CancellationToken, Task>? BeforeConnect { get; set; }

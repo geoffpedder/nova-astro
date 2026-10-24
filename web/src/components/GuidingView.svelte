@@ -187,12 +187,6 @@
         <span class="muted">Star</span><span>SNR {fmt(star?.snr, 0)}</span>
         <span></span><span>HFD {fmt(guider?.hfd, 1)} px</span>
         <span></span><span>{star ? `${star.found} of ${star.tracked} stars` : '—'}</span>
-        <span class="muted">RMS</span><span>RA {fmt(stats?.rmsRa)}{unit}</span>
-        <span></span><span>Dec {fmt(stats?.rmsDec)}{unit}</span>
-        <span></span><span class="total">Total {fmt(stats?.rmsTotal)}{unit}</span>
-        <span class="muted">Peak</span><span>RA {fmt(stats?.peakRa)}{unit}</span>
-        <span></span><span>Dec {fmt(stats?.peakDec)}{unit}</span>
-        <span></span><span class="muted">{stats?.samples ?? 0} steps</span>
       </div>
       {#if assistant}
         <div class="assistant-result mono">
@@ -270,7 +264,18 @@
   {#if drift?.significant}
     <p class="drift">Dec drifting {drift.arcsecPerMinute.toFixed(0)}″/min: polar alignment at least {polar(drift.polarErrorArcmin)} off</p>
   {/if}
-  <GuideChart history={guider?.history ?? []} {unit} {steps} />
+  <!-- The RMS beside the graph it describes. -->
+  <div class="chart-row">
+    <div class="chart"><GuideChart history={guider?.history ?? []} {unit} {steps} /></div>
+    <div class="rms facts mono">
+      <span class="muted">RMS</span><span>RA {fmt(stats?.rmsRa)}{unit}</span>
+      <span></span><span>Dec {fmt(stats?.rmsDec)}{unit}</span>
+      <span></span><span class="total">Total {fmt(stats?.rmsTotal)}{unit}</span>
+      <span class="muted">Peak</span><span>RA {fmt(stats?.peakRa)}{unit}</span>
+      <span></span><span>Dec {fmt(stats?.peakDec)}{unit}</span>
+      <span></span><span class="muted">{stats?.samples ?? 0} steps</span>
+    </div>
+  </div>
   <div class="legend muted">
     <span class="ra-key">— RA</span><span class="dec-key">— Dec</span><span class="dither-key">┆ dither (settling shaded, left out of the RMS)</span><span>last {steps} steps, newest on the right</span>
     <span class="gap"></span>
@@ -293,6 +298,26 @@
     display: flex;
     align-items: baseline;
     gap: 12px;
+  }
+  .chart-row {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+    min-width: 0;
+  }
+  .chart-row .chart {
+    flex: 1;
+    min-width: 0;
+  }
+  .chart-row .rms {
+    flex: none;
+    width: 11em; /* fixed: changing numbers mustn't resize the graph */
+  }
+  @media (max-width: 700px) {
+    .chart-row {
+      flex-direction: column;
+      align-items: stretch;
+    }
   }
   .head h2 {
     margin: 0;

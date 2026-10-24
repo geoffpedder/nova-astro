@@ -15,7 +15,7 @@
   let height = $state(120)
   const W = $derived(Math.max(200, width))
   const H = $derived(fill ? Math.max(80, height) : 120)
-  const PAD = { left: 28, right: 8, top: 8, bottom: 20 }
+  const PAD = { left: 28, right: 8, top: 20, bottom: 20 }
 
   const t0 = $derived(new Date(curve.points[0]?.utc ?? 0).getTime())
   const t1 = $derived(new Date(curve.points.at(-1)?.utc ?? 0).getTime())
@@ -60,6 +60,23 @@
   })
 
   const peak = $derived(curve.points.reduce((best, p) => (p.altitude > best.altitude ? p : best), curve.points[0]))
+
+  // The key along the top: a sample of each line and what it is. Text is ~5.6 px a character at 10 px.
+  const key = $derived.by(() => {
+    const items = [
+      { cls: 'target', text: 'Target' },
+      { cls: 'limit', text: `Above ${minAltitude}°` },
+      { cls: 'moon', text: 'Moon' },
+      { cls: 'now', text: 'Now' },
+    ]
+    let at = PAD.left
+    const placed = items.map((item) => {
+      const here = { ...item, x: at, end: at + 16 + 4 + item.text.length * 5.6 }
+      at = here.end + 12
+      return here
+    })
+    return placed.filter((k) => k.end <= W - PAD.right) // a narrow chart shows what fits
+  })
 </script>
 
 <div class="wrap" class:fill bind:clientWidth={width} bind:clientHeight={height}>
@@ -70,11 +87,15 @@
     <text class="axis" x={PAD.left - 4} y={y(a) + 3} text-anchor="end">{a}°</text>
   {/each}
   <line class="limit" x1={PAD.left} x2={W - PAD.right} y1={y(minAltitude)} y2={y(minAltitude)} />
+  {#each key as k (k.cls)}
+    <line class={k.cls} x1={k.x} x2={k.x + 16} y1="9" y2="9" />
+    <text class="axis" x={k.x + 20} y="12">{k.text}</text>
+  {/each}
   {#each hours as h (h.x)}<text class="axis" x={h.x} y={H - 6} text-anchor="middle">{h.text}</text>{/each}
   <path class="moon" d={path('moonAltitude')} />
   <path class="target" d={path('altitude')} />
   {#if peak && peak.altitude > 0}
-    <text class="peak" x={x(new Date(peak.utc).getTime())} y={y(peak.altitude) - 4} text-anchor="middle">{peak.altitude.toFixed(0)}°</text>
+    <text class="peak" x={x(new Date(peak.utc).getTime())} y={Math.max(y(peak.altitude) - 4, PAD.top + 9)} text-anchor="middle">{peak.altitude.toFixed(0)}°</text>
   {/if}
   {#if now > t0 && now < t1}<line class="now" x1={x(now)} x2={x(now)} y1={PAD.top} y2={H - PAD.bottom} />{/if}
 </svg>

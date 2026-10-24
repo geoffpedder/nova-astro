@@ -4,6 +4,8 @@ What changed in each release. The newest is first. A release's section here beco
 
 ## [Unreleased]
 
+## [0.3.20] - 2026-10-23
+
 ### Added
 
 - **Mount limits:** a lower and an upper altitude (Mount panel, Limits) to keep the telescope off the tripod and the
@@ -30,6 +32,9 @@ What changed in each release. The newest is first. A release's section here beco
   A Mount panel button held through a Wi-Fi hiccup now has 2 s (was 1.2 s) before NOVA stops the move.
 
 ## [0.3.19] - 2026-10-23
+
+**Withdrawn:** polar alignment on the pole, started from the mount's home position, could turn the mount far
+past 90° (see 0.3.20). Use 0.3.20 or later.
 
 ### Fixed
 
@@ -448,7 +453,8 @@ The first release: ready-made downloads for 64-bit PCs (`linux-x64`) and the Ras
 - **Stellarium:** take its selection, act as its telescope, and turn its Oculars frame to the camera's angle.
 - **The mini PC:** restart and shut down from the page, network status, night mode.
 
-[Unreleased]: https://github.com/geoffpedder/nova-astro/compare/v0.3.19...HEAD
+[Unreleased]: https://github.com/geoffpedder/nova-astro/compare/v0.3.20...HEAD
+[0.3.20]: https://github.com/geoffpedder/nova-astro/releases/tag/v0.3.20
 [0.3.19]: https://github.com/geoffpedder/nova-astro/releases/tag/v0.3.19
 [0.3.18]: https://github.com/geoffpedder/nova-astro/releases/tag/v0.3.18
 [0.3.17]: https://github.com/geoffpedder/nova-astro/releases/tag/v0.3.17

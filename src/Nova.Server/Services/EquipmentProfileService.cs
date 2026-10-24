@@ -4,12 +4,13 @@ using Microsoft.Extensions.Options;
 namespace Nova.Server.Services;
 
 /// <summary>
-/// A saved equipment setup: which device for each role, the INDI drivers that run, the Simulators switch, and how the
-/// mount connects. Null for anything that doesn't apply (e.g. drivers with NOVA's own simulator).
+/// A saved equipment setup: which device for each role (<see cref="EquipmentSelection.None"/> for an empty one), the
+/// INDI drivers that run, the Simulators switch, how the mount connects, and the guider and its camera. Null for
+/// anything that doesn't apply (e.g. drivers with NOVA's own simulator) or wasn't saved by an older NOVA.
 /// </summary>
 public sealed record EquipmentProfile(
     string Name, EquipmentSelection Devices, List<string>? Drivers = null, bool? Simulators = null,
-    MountConnectionSetting? MountConnection = null);
+    MountConnectionSetting? MountConnection = null, string? Guider = null, string? GuideCamera = null);
 
 /// <summary>The mount over Bluetooth (to this mount) or over its USB cable.</summary>
 public sealed record MountConnectionSetting(bool Bluetooth, string? Mount = null, string? Address = null);
@@ -34,9 +35,15 @@ public sealed class EquipmentProfileService
     private readonly SemaphoreSlim _loading = new(1, 1);
     private Saved _saved;
 
+    private readonly GuiderService? _guider;
+    private readonly NovaGuider? _novaGuider;
+
     public EquipmentProfileService(EquipmentService equipment, DriverSetupService drivers, SimulatorService simulators,
-        MountBluetoothService bluetooth, IOptions<NovaOptions> options, ActivityLog log)
+        MountBluetoothService bluetooth, IOptions<NovaOptions> options, ActivityLog log, GuiderService? guider = null,
+        NovaGuider? novaGuider = null)
     {
+        _guider = guider;
+        _novaGuider = novaGuider;
         _equipment = equipment;
         _drivers = drivers;
         _simulators = simulators;
@@ -62,7 +69,8 @@ public sealed class EquipmentProfileService
         var simulators = _simulators.Status.Applicable ? _simulators.Enabled : (bool?)null;
         var bt = _bluetooth.Status;
         var mount = bt.Applicable || bt.Enabled ? new MountConnectionSetting(bt.Enabled, bt.Mount, bt.Address) : null;
-        return new EquipmentProfile(name, _equipment.InUse, drivers, simulators, mount);
+        return new EquipmentProfile(name, _equipment.InUse, drivers, simulators, mount,
+            _guider?.Backend, _novaGuider?.Camera?.Name ?? _novaGuider?.Settings.Camera);
     }
 
     /// <summary>
@@ -106,11 +114,9 @@ public sealed class EquipmentProfileService
         await _loading.WaitAsync(ct);
         try
         {
-            // The Simulators switch first: while it's off, NOVA stops any simulator driver that starts. A profile with
-            // simulator drivers turns it on even if it was saved with the switch off.
-            var simulators = profile.Simulators == true
-                || profile.Drivers?.Any(d => d.StartsWith("indi_simulator_", StringComparison.Ordinal)) == true;
-            if ((profile.Simulators is not null || simulators) && _simulators.Status.Applicable && simulators != _simulators.Enabled)
+            // The Simulators switch first, as it was saved (while it's off, NOVA stops any simulator driver that starts,
+            // and the driver list keeps them either way, so it says nothing about the switch).
+            if (profile.Simulators is { } simulators && _simulators.Status.Applicable && simulators != _simulators.Enabled)
                 await _simulators.SetEnabledAsync(simulators, ct);
             if (profile.Drivers is { } drivers && _drivers.Applicable)
             {
@@ -120,6 +126,10 @@ public sealed class EquipmentProfileService
             if (profile.MountConnection is { } mount && (!mount.Bluetooth || mount.Mount is not null || mount.Address is not null))
                 await _bluetooth.SetAsync(mount.Bluetooth, mount.Mount, mount.Address, ct);
             _equipment.RestoreSelection(profile.Devices);
+            if (profile.Guider is { } guider && _guider is not null && guider != _guider.Backend)
+                await _guider.SetBackendAsync(guider, ct);
+            if (profile.GuideCamera is { } guideCamera && _novaGuider is not null && _novaGuider.Settings.Camera != guideCamera)
+                _novaGuider.UpdateSettings(_novaGuider.Settings with { Camera = guideCamera });
             lock (_sync) _saved = _saved with { Active = name };
             Write();
             _log.Info($"Equipment profile '{name}' loaded: {Describe(profile.Devices)}. Connect equipment to connect them.");
@@ -144,7 +154,8 @@ public sealed class EquipmentProfileService
 
     private static string Describe(EquipmentSelection d)
     {
-        var parts = new[] { d.Camera, d.Mount, d.Focuser, d.FilterWheel, d.Rotator, d.FlatPanel }.Where(n => n is not null).ToList();
+        var parts = new[] { d.Camera, d.Mount, d.Focuser, d.FilterWheel, d.Rotator, d.FlatPanel }
+            .Where(n => n is not null and not EquipmentSelection.None).ToList();
         return parts.Count == 0 ? "automatic" : string.Join(", ", parts);
     }
 

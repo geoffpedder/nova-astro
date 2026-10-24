@@ -6,10 +6,16 @@ using Nova.Indi;
 
 namespace Nova.Server.Services;
 
-/// <summary>Which device to use for each role. Null means "automatic": the first one found.</summary>
+/// <summary>
+/// Which device to use for each role. Null means "automatic": the first one found; <see cref="None"/> means none, so
+/// the role stays empty (no simulated rotator connected just because the simulators are on).
+/// </summary>
 public sealed record EquipmentSelection(
     string? Camera = null, string? Mount = null, string? Focuser = null, string? FilterWheel = null, string? Rotator = null,
-    string? FlatPanel = null);
+    string? FlatPanel = null)
+{
+    public const string None = "(none)";
+}
 
 /// <summary>
 /// Owns the equipment provider, remembers which devices the user chose,
@@ -119,6 +125,7 @@ public sealed class EquipmentService : IAsyncDisposable
             var device = DeviceFor(kind);
             await ConnectDeviceAsync(device, ct);
             var chosen = Chosen(kind);
+            if (chosen == EquipmentSelection.None) continue;
             if (device is null && (RequiredKinds.Contains(kind) || chosen is not null))
                 _log.Warn(chosen is null ? $"No {Label(kind)} found" : $"{Capitalized(kind)} '{chosen}' not found");
         }
@@ -154,7 +161,7 @@ public sealed class EquipmentService : IAsyncDisposable
     {
         if (!SelectableKinds.Contains(kind))
             throw new ArgumentException($"Selecting a {kind} is not supported yet");
-        if (name is not null)
+        if (name is not null and not EquipmentSelection.None)
         {
             var device = VisibleDevices.FirstOrDefault(d => d.Name == name)
                 ?? throw new ArgumentException($"No device named '{name}'");
@@ -173,16 +180,20 @@ public sealed class EquipmentService : IAsyncDisposable
             _ => Selection with { Rotator = name },
         };
         SaveSelection();
-        _log.Info($"{kind}: {name ?? "automatic"}");
+        _log.Info($"{kind}: {(name == EquipmentSelection.None ? "none" : name ?? "automatic")}");
 
         if (EquipmentConnected) await ConnectDeviceAsync(DeviceFor(kind), ct);
         DevicesChanged?.Invoke(this, EventArgs.Empty);
     }
 
-    /// <summary>The device in use for each role: the chosen one, or the one "automatic" picked.</summary>
+    /// <summary>
+    /// The device in use for each role: the chosen one, or the one "automatic" picked; <see cref="EquipmentSelection.None"/>
+    /// for a role with nothing in it.
+    /// </summary>
     public EquipmentSelection InUse => new(
-        Camera?.Name ?? Selection.Camera, Mount?.Name ?? Selection.Mount, Focuser?.Name ?? Selection.Focuser,
-        FilterWheel?.Name ?? Selection.FilterWheel, Rotator?.Name ?? Selection.Rotator, FlatPanel?.Name ?? Selection.FlatPanel);
+        Camera?.Name ?? Selection.Camera ?? EquipmentSelection.None, Mount?.Name ?? Selection.Mount ?? EquipmentSelection.None,
+        Focuser?.Name ?? Selection.Focuser ?? EquipmentSelection.None, FilterWheel?.Name ?? Selection.FilterWheel ?? EquipmentSelection.None,
+        Rotator?.Name ?? Selection.Rotator ?? EquipmentSelection.None, FlatPanel?.Name ?? Selection.FlatPanel ?? EquipmentSelection.None);
 
     /// <summary>
     /// Puts back a saved choice (an equipment profile). Unlike <see cref="SelectAsync"/> the devices needn't be there
@@ -351,6 +362,7 @@ public sealed class EquipmentService : IAsyncDisposable
     private T? Resolve<T>(DeviceKind kind, string? selected, Func<string, T?> get) where T : class
     {
         var visible = VisibleDevices;
+        if (selected == EquipmentSelection.None) return null;
         if (selected is not null) return visible.Any(d => d.Name == selected) ? get(selected) : null;
         var first = visible.FirstOrDefault(d => d.Kinds.Contains(kind));
         return first is null ? null : get(first.Name);

@@ -14,14 +14,42 @@ public sealed class EquipmentProfileTests : IDisposable
         try { Directory.Delete(_folder, recursive: true); } catch (IOException) { }
     }
 
-    private (EquipmentProfileService Profiles, EquipmentService Equipment) Service()
+    private (EquipmentProfileService Profiles, EquipmentService Equipment) Service() => Service(out _);
+
+    private (EquipmentProfileService Profiles, EquipmentService Equipment) Service(out NovaGuider guider)
     {
-        var options = Opts.Create(new NovaOptions { Backend = "Simulator", ConfigDirectory = _folder });
+        var options = Opts.Create(new NovaOptions { Backend = "Simulator", ConfigDirectory = _folder, Phd2AutoConnect = false });
         var log = new ActivityLog(new NullHubContext(), NullLogger<ActivityLog>.Instance);
         var equipment = new EquipmentService(options, log);
+        guider = new NovaGuider(equipment, new OpticsService(equipment, options, log), options, log);
         var profiles = new EquipmentProfileService(equipment, new DriverSetupService(equipment, options, log),
-            new SimulatorService(equipment, options, log), new MountBluetoothService(equipment, options, log), options, log);
+            new SimulatorService(equipment, options, log), new MountBluetoothService(equipment, options, log), options, log,
+            new GuiderService(options, log, guider), guider);
         return (profiles, equipment);
+    }
+
+    [Fact]
+    public async Task AnEmptyRoleStaysEmptyAndNothingIsConnectedForIt()
+    {
+        // Saved with no rotator: loading it mustn't let "automatic" connect one (a simulated one, say).
+        var (profiles, equipment) = Service(out var guider);
+        await equipment.SelectAsync(DeviceKind.Rotator, EquipmentSelection.None, CancellationToken.None);
+        guider.UpdateSettings(guider.Settings with { Camera = "Simulated Guide Camera" });
+        var saved = profiles.Save("No rotator", null);
+        Assert.Equal(EquipmentSelection.None, saved.Devices.Rotator);
+        Assert.Equal("Simulated Guide Camera", saved.GuideCamera);
+
+        await equipment.SelectAsync(DeviceKind.Rotator, null, CancellationToken.None); // back to automatic
+        guider.UpdateSettings(guider.Settings with { Camera = null });
+        await profiles.LoadAsync("No rotator", CancellationToken.None);
+        Assert.Equal(EquipmentSelection.None, equipment.Selection.Rotator);
+        Assert.Null(equipment.Rotator);
+        Assert.Equal("Simulated Guide Camera", guider.Settings.Camera);
+
+        await equipment.ConnectAsync(CancellationToken.None);
+        Assert.False(equipment.Provider.Devices.Single(d => d.Name == "Simulated Rotator").IsConnected);
+        Assert.True(equipment.Camera!.IsConnected);
+        await equipment.DisconnectAsync(CancellationToken.None);
     }
 
     [Fact]

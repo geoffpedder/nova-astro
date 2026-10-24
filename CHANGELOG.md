@@ -20,6 +20,10 @@ What changed in each release. The newest is first. A release's section here beco
   frame first. Now a guide frame more than 15 s late counts as lost, NOVA says plainly that the camera stopped
   sending (and to check its cable and hub), waits for it to come back, reconnects it and carries on guiding with the
   same calibration and lock position. It gives up after 5 minutes.
+- **Equipment profiles keep what was connected:** a role with nothing in it is saved as None (each device picker has
+  **None** too), so loading the profile doesn't connect, say, a simulated rotator just because the simulators are
+  on. The Simulators switch is restored as saved (it used to come back on whenever the driver list had simulators
+  in it), and profiles now also keep the guider (NOVA's or PHD2) and its guide camera.
 - **Sequences that can't guide say so:** when guiding couldn't start at a sequence's start (with NOVA's guider:
   no guide camera), the only sign was "Guiding skipped: PHD2 isn't connected", even with PHD2 not in use. Now the
   warning gives the real reason, a running sequence says once that its frames are unguided, and it still starts

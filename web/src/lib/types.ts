@@ -568,6 +568,9 @@ export interface EquipmentProfile {
   drivers: string[] | null
   simulators: boolean | null
   mountConnection: { bluetooth: boolean; mount: string | null; address: string | null } | null
+  /** "nova" or "phd2". */
+  guider: string | null
+  guideCamera: string | null
 }
 
 export interface EquipmentProfilesStatus {

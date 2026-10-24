@@ -89,8 +89,10 @@ connects PHD2's camera and mount. ✎ gives a device a nickname; ⚙ opens all o
 (for example a mount's serial port). New devices that appear while connected are connected too.
 
 **Profiles** (under Connect equipment), like the site and optics presets, save a whole setup to load later: the
-device for each role (what "automatic" picked is saved as that device), the INDI drivers, the Simulators switch
-and how the mount connects (USB or Bluetooth, and which mount). Type a name and press **Save**; **Save current**
+device for each role (what "automatic" picked is saved as that device, and a role with nothing in it as None, so
+loading it connects nothing there), the INDI drivers, the Simulators switch, how the mount connects (USB or
+Bluetooth, and which mount), and the guider (NOVA's or PHD2) with its guide camera. Each device picker also has
+**None**, to leave a role empty instead of taking the first device found. Type a name and press **Save**; **Save current**
 updates the profile shown with what's in use now. Picking a profile while equipment is disconnected loads it: the
 drivers it needs start, the rest are stopped, and the devices are chosen, ready for **Connect equipment**.
 

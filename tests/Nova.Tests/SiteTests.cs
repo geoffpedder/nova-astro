@@ -79,6 +79,58 @@ public class SiteTests : IDisposable
     }
 
     [Fact]
+    public async Task WaitsForAMountThatSaysItsDoneBeforeItHasStopped()
+    {
+        // As a driver can: the slew reported finished while the mount still moves for 2 s. The frame after must wait.
+        var (_, sites) = Create();
+        await sites.SaveAsync(new Site("Home", 48.5197, -123.4167, 300), null, CancellationToken.None);
+        await sites.SetSunProtectionAsync(false, CancellationToken.None);
+        await sites.SetSettleSecondsAsync(0.5, CancellationToken.None);
+        var mount = new StillMovingMount(TimeSpan.FromSeconds(2));
+        var clock = System.Diagnostics.Stopwatch.StartNew();
+        await sites.SlewSafelyAsync(mount, new EquatorialCoordinates(19.0, 30.0), CancellationToken.None);
+        // 2 s moving, 1.5 s held still, then the 0.5 s settle.
+        Assert.InRange(clock.Elapsed.TotalSeconds, 3.8, 8);
+    }
+
+    /// <summary>Says a slew is done straight away, then keeps moving for a while.</summary>
+    private sealed class StillMovingMount(TimeSpan movesFor) : IMount
+    {
+        private DateTime _stopsUtc = DateTime.MinValue;
+        private EquatorialCoordinates _target = new(19.0, 30.0);
+        public string Name => "ZWO AM5";
+        public bool IsConnected => true;
+        public MountState State => MountState.Idle;
+        public EquatorialCoordinates Coordinates =>
+            DateTime.UtcNow < _stopsUtc ? _target with { DecDegrees = _target.DecDegrees + (_stopsUtc - DateTime.UtcNow).TotalSeconds } : _target;
+        public PierSide? SideOfPier => null;
+        public GeoLocation? Location => new(48.5197, -123.4167, 0);
+        public DateTime? ClockUtc => DateTime.UtcNow;
+        public IReadOnlyList<SlewRate> SlewRates => [];
+        public string? CurrentSlewRate => null;
+        public bool CanMoveRaAxis => false;
+
+        public Task SlewAsync(EquatorialCoordinates target, CancellationToken ct)
+        {
+            (_target, _stopsUtc) = (target, DateTime.UtcNow + movesFor);
+            return Task.CompletedTask;
+        }
+
+        public Task SetSiteAsync(GeoLocation location, DateTimeOffset now, CancellationToken ct) => Task.CompletedTask;
+        public Task ConnectAsync(CancellationToken ct) => Task.CompletedTask;
+        public Task DisconnectAsync(CancellationToken ct) => Task.CompletedTask;
+        public Task SetClockAsync(DateTimeOffset now, CancellationToken ct) => Task.CompletedTask;
+        public Task SetSlewRateAsync(string name, CancellationToken ct) => Task.CompletedTask;
+        public Task StartMotionAsync(MotionDirection direction, CancellationToken ct) => Task.CompletedTask;
+        public Task StopMotionAsync(MotionDirection? direction, CancellationToken ct) => Task.CompletedTask;
+        public Task MoveRaAxisAsync(double degrees, CancellationToken ct) => Task.CompletedTask;
+        public Task SyncAsync(EquatorialCoordinates actual, CancellationToken ct) => Task.CompletedTask;
+        public Task AbortAsync(CancellationToken ct) => Task.CompletedTask;
+        public Task ParkAsync(CancellationToken ct) => Task.CompletedTask;
+        public Task UnparkAsync(CancellationToken ct) => Task.CompletedTask;
+    }
+
+    [Fact]
     public async Task LetsTheMountSettleAfterEachGoTo()
     {
         var (equipment, sites) = Create();

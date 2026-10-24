@@ -150,8 +150,33 @@ public sealed class SiteService
     public async Task SlewSafelyAsync(IMount mount, EquatorialCoordinates targetJNow, CancellationToken ct)
     {
         await SlewAroundTheSunAsync(mount, targetJNow, ct);
-        // Then let it settle: everything that follows a GoTo (a solve frame, the next target's first frame) wants it still.
-        if (SettleSeconds > 0) await Task.Delay(TimeSpan.FromSeconds(SettleSeconds), ct);
+        // Drivers report a slew done when they next poll the mount (about once a second), which can be before it has
+        // stopped: wait until its position holds still, then let it settle. Everything that follows a GoTo (a solve
+        // frame, the next target's first frame) wants it still, or the stars streak.
+        if (SettleSeconds <= 0) return; // settling switched off: no waiting at all
+        await WaitUntilStillAsync(mount, ct);
+        await Task.Delay(TimeSpan.FromSeconds(SettleSeconds), ct);
+    }
+
+    /// <summary>How long the reported position must hold still to count as stopped (it updates about once a second).</summary>
+    private static readonly TimeSpan StillFor = TimeSpan.FromSeconds(1.5);
+
+    /// <summary>
+    /// Waits until the mount's reported position stops changing (a tracking mount keeps its RA and Dec): moved less
+    /// than 5″ over <see cref="StillFor"/>. Gives up after 15 s with a warning, as some mounts report a wandering position.
+    /// </summary>
+    private async Task WaitUntilStillAsync(IMount mount, CancellationToken ct)
+    {
+        var clock = System.Diagnostics.Stopwatch.StartNew();
+        var (since, at) = (mount.Coordinates, clock.Elapsed);
+        while (clock.Elapsed < TimeSpan.FromSeconds(15))
+        {
+            await Task.Delay(TimeSpan.FromMilliseconds(250), ct);
+            var now = mount.Coordinates;
+            if (Precession.Separation(since, now) > 5 / 3600.0) (since, at) = (now, clock.Elapsed);
+            else if (clock.Elapsed - at >= StillFor) return;
+        }
+        _log.Warn($"{mount.Name} still seemed to be moving 15 s after its slew finished: carrying on");
     }
 
     private async Task SlewAroundTheSunAsync(IMount mount, EquatorialCoordinates targetJNow, CancellationToken ct)

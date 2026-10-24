@@ -139,7 +139,9 @@ coordinates show only while the Site section is open.
 
 **Settle after slews** (Mount panel, 3 s by default): after every GoTo (Slew, each centring attempt, a sequence's
 next target, a meridian flip) NOVA leaves the mount this long before it exposes, solves or moves on, so a mount
-still ringing from the slew doesn't trail the stars in a solve frame. 0 turns it off. After a flip, the flip's own
+still ringing from the slew doesn't trail the stars in a solve frame. The time counts from when the mount has
+actually stopped: drivers can report a slew finished a moment early, so NOVA first waits until the position it
+reports holds still. 0 turns both off. Stars that still streak in centring frames: try a few seconds more. After a flip, the flip's own
 settle time counts from the same moment, so the longer of the two applies.
 
 **Sun protection** keeps the telescope at least 30° (adjustable) from the Sun while it's up, for slews and

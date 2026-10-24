@@ -27,6 +27,9 @@ What changed in each release. The newest is first. A release's section here beco
 - **Equipment profiles keep what was connected:** a role with nothing in it is saved as None (each device picker has
   **None** too), so loading the profile doesn't connect, say, a simulated rotator just because a simulator driver is
   running. Profiles now also keep the guider (NOVA's or PHD2) and its guide camera.
+- **Streaked stars after a GoTo:** drivers report a slew finished when they next poll the mount, which can be
+  before it has stopped, so the settle time sometimes ran out with the mount still moving and centring frames came
+  out streaked. NOVA now waits until the mount's position holds still, then settles.
 - **Sequences that can't guide say so:** when guiding couldn't start at a sequence's start (with NOVA's guider:
   no guide camera), the only sign was "Guiding skipped: PHD2 isn't connected", even with PHD2 not in use. Now the
   warning gives the real reason, a running sequence says once that its frames are unguided, and it still starts

@@ -4,6 +4,14 @@ What changed in each release. The newest is first. A release's section here beco
 
 ## [Unreleased]
 
+### Added
+
+- **Mount limits:** a lower and an upper altitude (Mount panel, Limits) to keep the telescope off the tripod and the
+  pier: near the zenith the camera end swings down towards the legs. GoTos outside them (NOVA's and Stellarium's)
+  are refused with the reason, every move is watched and stopped at a limit if it's heading further out (whoever
+  started it), and sequences wait while a target is outside them and move on once it leaves. NOVA writes them into
+  the mount's own altitude limits too where its driver has them (ZWO's), so they hold without NOVA.
+
 ### Fixed
 
 - **Turning RA at the pole could keep going:** NOVA turns the RA axis until the RA the mount reports has changed

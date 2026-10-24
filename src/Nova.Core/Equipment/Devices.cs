@@ -235,6 +235,12 @@ public interface IMount : IDevice
 
     /// <summary>Turns sidereal tracking on (e.g. after the mount stopped by itself at the meridian).</summary>
     Task StartTrackingAsync(CancellationToken ct) => Task.CompletedTask;
+
+    /// <summary>
+    /// Sets the mount's own altitude limits (degrees), where it has them, and switches them on: false if it has none.
+    /// They hold even without NOVA.
+    /// </summary>
+    Task<bool> SetAltitudeLimitsAsync(double lower, double upper, CancellationToken ct) => Task.FromResult(false);
     /// <summary>
     /// Tells the mount it's actually pointing at <paramref name="actual"/> (JNow), e.g. from a plate solve,
     /// correcting its pointing model so later slews land where they should.

@@ -832,6 +832,21 @@ public sealed class IndiMount(IndiClient client, string name) : IndiDevice(clien
     public Task AbortAsync(CancellationToken ct) =>
         Client.SetSwitchesAsync(Name, "TELESCOPE_ABORT_MOTION", ct, ("ABORT", true));
 
+    /// <summary>ZWO's driver (and any with the same properties): its Altitude Limits, set and switched on.</summary>
+    public async Task<bool> SetAltitudeLimitsAsync(double lower, double upper, CancellationToken ct)
+    {
+        if (!HasProperty("ALTITUDE_LIMIT_CONTROL") || !HasProperty("ALTITUDE_LOWER_LIMIT") || !HasProperty("ALTITUDE_UPPER_LIMIT"))
+            return false;
+        // Within what the driver accepts.
+        double Fit(string property, string element, double value) =>
+            Client.GetProperty(Name, property)?[element] is { } e && e.Max > e.Min
+                ? Math.Clamp(value, e.Min, e.Max) : value;
+        await Client.SetNumbersAsync(Name, "ALTITUDE_LOWER_LIMIT", ct, ("LOWER_LIMIT", Fit("ALTITUDE_LOWER_LIMIT", "LOWER_LIMIT", lower)));
+        await Client.SetNumbersAsync(Name, "ALTITUDE_UPPER_LIMIT", ct, ("UPPER_LIMIT", Fit("ALTITUDE_UPPER_LIMIT", "UPPER_LIMIT", upper)));
+        await Client.SetSwitchesAsync(Name, "ALTITUDE_LIMIT_CONTROL", ct, ("ENABLE", true));
+        return true;
+    }
+
     public Task ParkAsync(CancellationToken ct)
     {
         EnsureConnected();

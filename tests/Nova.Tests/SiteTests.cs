@@ -49,10 +49,12 @@ public class SiteTests : IDisposable
         Assert.Contains("<oneText name=\"OFFSET\">1</oneText>", time);
     }
 
+    private ActivityLog? _log;
+
     private (EquipmentService Equipment, SiteService Sites) Create()
     {
         var options = Opts.Create(new NovaOptions { Backend = "Simulator", ConfigDirectory = _config });
-        var log = new ActivityLog(new NullHubContext(), NullLogger<ActivityLog>.Instance);
+        var log = _log = new ActivityLog(new NullHubContext(), NullLogger<ActivityLog>.Instance);
         var equipment = new EquipmentService(options, log);
         return (equipment, new SiteService(equipment, options, log));
     }
@@ -76,6 +78,72 @@ public class SiteTests : IDisposable
         // Something else changes the mount's location: NOVA notices.
         await equipment.Mount!.SetSiteAsync(new GeoLocation(0, 0, 0), DateTimeOffset.Now, CancellationToken.None);
         Assert.True(sites.Status.MountMismatch);
+    }
+
+    // A J2000 position at this altitude and azimuth now, as seen from the site.
+    private static EquatorialCoordinates At(double altitude, double azimuth, GeoLocation site) =>
+        Precession.JNowToJ2000(Horizon.FromVector(Horizon.FromAltAz(altitude, azimuth), DateTime.UtcNow, site), DateTime.UtcNow);
+
+    [Fact]
+    public async Task LimitsRefuseGoTosOutsideThem()
+    {
+        var (_, sites) = Create();
+        var site = new GeoLocation(51.4779, -0.0015, 46);
+        await sites.SaveAsync(new Site("Home", site.Latitude, site.Longitude, site.Elevation), null, CancellationToken.None);
+        await sites.SetSunProtectionAsync(false, CancellationToken.None);
+
+        // Until set, only the horizon.
+        Assert.Null(sites.OutsideLimits(At(10, 180, site)));
+        Assert.Contains("below the horizon", sites.OutsideLimits(At(-5, 180, site)));
+
+        await sites.SetLimitsAsync(20, 80, CancellationToken.None);
+        Assert.Equal((20d, 80d), (sites.Status.LowerLimit, sites.Status.UpperLimit));
+        Assert.Contains("below your lower limit of 20°", sites.OutsideLimits(At(10, 180, site)));
+        Assert.Contains("above your upper limit of 80°", sites.OutsideLimits(At(86, 180, site)));
+        Assert.Null(sites.OutsideLimits(At(50, 180, site)));
+
+        // Every GoTo NOVA makes goes through SlewSafelyAsync: refused there too, without moving.
+        var mount = new ForgetfulMount();
+        await mount.SetSiteAsync(site, DateTimeOffset.Now, CancellationToken.None);
+        var low = Precession.J2000ToJNow(At(10, 180, site), DateTime.UtcNow);
+        await Assert.ThrowsAsync<InvalidOperationException>(() => sites.SlewSafelyAsync(mount, low, CancellationToken.None));
+        Assert.Equal(0, mount.Slews);
+
+        // Kept across restarts; nonsense refused.
+        Assert.Equal(80, Create().Sites.UpperLimit);
+        await Assert.ThrowsAsync<ArgumentException>(() => sites.SetLimitsAsync(50, 60, CancellationToken.None)); // too close
+        await Assert.ThrowsAsync<ArgumentException>(() => sites.SetLimitsAsync(10, 95, CancellationToken.None));
+    }
+
+    [Fact]
+    public async Task AMoveHeadingPastALimitIsStopped()
+    {
+        // The backstop: a slew started outside NOVA's checks (here straight on the mount) is stopped at the limit.
+        var (equipment, sites) = Create();
+        var site = new GeoLocation(51.4779, -0.0015, 46);
+        await sites.SaveAsync(new Site("Home", site.Latitude, site.Longitude, site.Elevation), null, CancellationToken.None);
+        await sites.SetSunProtectionAsync(false, CancellationToken.None);
+        await equipment.ConnectAsync(CancellationToken.None);
+        var mount = equipment.Mount!;
+        await mount.UnparkAsync(CancellationToken.None);
+        await mount.SlewAsync(Precession.J2000ToJNow(At(60, 200, site), DateTime.UtcNow), CancellationToken.None);
+        await sites.SetLimitsAsync(30, 90, CancellationToken.None);
+
+        try
+        {
+            await mount.SlewAsync(Precession.J2000ToJNow(At(5, 200, site), DateTime.UtcNow), CancellationToken.None);
+        }
+        catch (OperationCanceledException)
+        {
+            // aborted
+        }
+        await Task.Delay(300);
+        var altitude = Horizon.AltAz(Horizon.ToVector(mount.Coordinates, DateTime.UtcNow, site)).Altitude;
+        // Stopped before the limit, not at 5°. (The simulated mount starts a long slew very fast, so it stops well
+        // before the limit; a real one, at a few degrees a second, stops near it.)
+        Assert.True(altitude is > 28 and < 59, $"{altitude:0.0}°: " + string.Join(" | ", _log!.Recent.Select(e => e.Message).TakeLast(3)));
+        Assert.Contains(_log.Recent, e => e.Message.Contains("heading below the lower limit of 30°"));
+        await equipment.DisconnectAsync(CancellationToken.None);
     }
 
     [Fact]

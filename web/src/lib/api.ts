@@ -110,6 +110,8 @@ export const api = {
   /** Switches Sun protection on or off (its distance is kept). */
   setSunProtection: (enabled: boolean) => post('/api/site/sun', { enabled }),
   setSettleSeconds: (seconds: number) => post('/api/mount/settle', { seconds }),
+  /** Altitude limits (degrees): the telescope stays between them; upper 90 is none. */
+  setLimits: (lower: number, upper: number) => post('/api/mount/limits', { lower, upper }),
   /** A null name means automatic: use the first device of that kind. */
   select: (kind: DeviceKind, name: string | null) => post('/api/equipment/select', { kind, name }),
 

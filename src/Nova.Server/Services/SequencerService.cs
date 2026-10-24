@@ -562,21 +562,27 @@ public sealed class SequencerService
         // High enough: the minimum altitude if set, else above the horizon. Needs the site and coordinates.
         if (plan.Target is { } target && Site() is { } site)
         {
-            var lowest = plan.MinAltitude ?? 0;
+            // Never below the Mount panel's lower limit, nor above its upper one (the camera can reach the tripod).
+            var lowest = Math.Max(plan.MinAltitude ?? 0, _sites.LowerLimit);
+            var highest = _sites.UpperLimit;
             var limit = stop < DateTime.UtcNow.AddHours(24) ? stop : DateTime.UtcNow.AddHours(24);
             DateTime? up = null;
             for (var t = waitUntil; t < limit; t = t.AddMinutes(2))
-                if (Horizon.Altitude(target.Coordinates, t, site) >= lowest) { up = t; break; }
+                if (Horizon.Altitude(target.Coordinates, t, site) is var altitude && altitude >= lowest && altitude <= highest) { up = t; break; }
             if (up is null)
             {
-                _skipNote = $"it doesn't get above {lowest:0}° {(stop == DateTime.MaxValue ? "in the next 24 hours" : $"before {until}")}";
+                _skipNote = highest < 90
+                    ? $"it isn't between {lowest:0}° and {highest:0}° {(stop == DateTime.MaxValue ? "in the next 24 hours" : $"before {until}")}"
+                    : $"it doesn't get above {lowest:0}° {(stop == DateTime.MaxValue ? "in the next 24 hours" : $"before {until}")}";
                 _log.Warn($"Skipping {name}: {_skipNote}");
                 return null;
             }
             if (up > waitUntil)
             {
+                why = Horizon.Altitude(target.Coordinates, waitUntil, site) > highest
+                    ? $"it to come down below the upper limit of {highest:0}°"
+                    : $"it to rise above {lowest:0}°";
                 waitUntil = up.Value;
-                why = $"it to rise above {lowest:0}°";
             }
         }
         else if (plan.MinAltitude is not null && plan.Target is not null && !state.WarnedNoSite)
@@ -611,8 +617,9 @@ public sealed class SequencerService
         if (row.FrameType == FrameType.Light && plan.Target is { } target && Site() is { } site)
         {
             var altitude = Horizon.Altitude(target.Coordinates, DateTime.UtcNow, site);
-            var lowest = plan.MinAltitude ?? 0;
-            if (altitude < lowest) return plan.MinAltitude is null ? "it set below the horizon" : $"it sank below {lowest:0}°";
+            var lowest = Math.Max(plan.MinAltitude ?? 0, _sites.LowerLimit);
+            if (altitude < lowest) return lowest <= 0 ? "it set below the horizon" : $"it sank below {lowest:0}°";
+            if (altitude > _sites.UpperLimit) return $"it rose above the upper limit of {_sites.UpperLimit:0}°";
         }
         return null;
     }

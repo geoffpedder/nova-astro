@@ -153,7 +153,7 @@ sign in first with `POST /api/auth/login` and send the `nova.session` cookie it 
 | POST | `/api/setup/hidden` | `{ "hidden": true }`: put the setup guide away (or bring it back) |
 | GET · POST | `/api/drivers` | The INDI drivers (installed, chosen, running) · `{ "drivers": ["indi_lx200am5", …] }` saves the choice and starts/stops them |
 | POST | `/api/equipment/connect` · `/disconnect` | |
-| POST | `/api/equipment/profiles` · `/load` · `/delete` | `{ "name": "Askar 71F", "originalName": null }` — save what's in use now (devices, INDI drivers, Simulators, mount connection) as a profile, replacing or renaming `originalName`; load one (equipment disconnected) or delete it. Status: `equipmentProfiles` |
+| POST | `/api/equipment/profiles` · `/load` · `/delete` | `{ "name": "Askar 71F", "originalName": null }` — save what's in use now (the device for each role, `"(none)"` for an empty one; INDI drivers; mount connection; guider and guide camera) as a profile, replacing or renaming `originalName`; load one (equipment disconnected) or delete it. Status: `equipmentProfiles` |
 | POST | `/api/equipment/select` | `{ "kind": "Camera", "name": "ZWO CCD ASI2600MC Pro" }` — kind is Camera, Mount or Focuser; `null` name = automatic |
 | POST | `/api/camera/settings` | `{ "coolerOn": true, "targetTemperature": -10, "gain": 100, "offset": 50, "binning": 2, "frameType": "Dark" }` (any subset) |
 | POST | `/api/optics` | `{ "camera": "ZWO CCD ASI2600MC Pro", "name": "RedCat + 0.8x", "focalLength": 200, "aperture": 51, "originalName": null }` — add a preset (`originalName` null; a name already used is refused) or change/rename one (presets are shared by every camera, so this changes it for each using it), and make it this camera's |
@@ -173,6 +173,7 @@ sign in first with `POST /api/auth/login` and send the `nova.session` cookie it 
 | POST | `/api/devices/{device}/properties/{property}` | `{ "values": { "PORT": "/dev/ttyACM0" } }` |
 | POST | `/api/mount/slew` | `{ "ra": "05:35:17", "dec": "-05:23:28" }` J2000 (decimal also accepted); NOVA converts to the mount's JNow |
 | POST | `/api/mount/park` · `/unpark` · `/abort` | |
+| POST | `/api/mount/bluetooth` · `/scan` | ZWO AM mounts over Bluetooth: `{ "enabled": true, "mount": "AM3_68bc8d", "address": "…" }` (a mount is required: never "the first found"), `{ "enabled": false }` for USB; `scan` searches for a few seconds. Status: `mountBluetooth` (state `Confirming` while the mount waits for its BT button) |
 | POST | `/api/mount/settle` | `{ "seconds": 3 }` — how long the mount settles after every GoTo (0 = none) |
 | POST | `/api/site/sun` | `{ "degrees": 30 }` or `{ "enabled": false }` — Sun protection's distance, or switching it off |
 | POST | `/api/mount/center` | `{ "ra": "05:35:17", "dec": "-05:23:28" }` (J2000) — slew, solve, sync until centred; `/api/mount/abort` stops it |

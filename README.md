@@ -22,13 +22,17 @@ network, with nothing to install there. It's inspired by [N.I.N.A.](https://nigh
   **guiding** with NOVA's own guider (predictive PEC for strain-wave mounts, Dec backlash compensation, a guiding
   assistant and PHD2-style logs) or PHD2 (which runs on the mini PC and shows in a tab), a **flats wizard**, and a
   **Stellarium** link.
+- **Equipment:** INDI drivers chosen on the page, equipment profiles to switch between setups (or the simulators)
+  in one go, and ZWO AM3/AM5/AM7 mounts over USB or Bluetooth, the Bluetooth link locked to your NOVA.
 - **Watch the rig from indoors** with a USB webcam on the mini PC, and pop the webcam, the latest image or the guiding
-  graph out into small windows that stay on screen whichever tab you're on.
+  graph out into small windows that stay on screen whichever tab you're on. A terminal on the mini PC, in the browser,
+  for the odd command.
 - **Built for the field:** no internet needed, a red night mode, and work that carries on when your laptop
   sleeps or the Wi-Fi drops, because everything runs on the mini PC. Optional messages to your phone when a
   sequence finishes or needs you. Frames can be saved straight to a USB drive. With no Wi-Fi at the site, the mini PC
   starts its own hotspot so a phone or tablet can still reach it.
-- **Works on a tablet:** the panels fold away, and the image and sky chart pinch to zoom.
+- **Works on a tablet:** the panels fold away, and the image and sky chart pinch to zoom. Added to an iPad's or
+  phone's Home Screen, it opens as its own full-screen app.
 
 ## Screenshots
 

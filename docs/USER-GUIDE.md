@@ -33,7 +33,8 @@ through the setup:
 4. **Camera optics:** your telescope's focal length, so plate solving knows how big the field is.
 5. **Test plate solve:** a short frame of the night sky, solved. It proves the camera, optics and the plate
    solver work together.
-6. **Guiding** (optional): PHD2 running, with a profile for your guide camera and mount.
+6. **Guiding** (optional): with NOVA's own guider, a guide camera, calibrated (Guiding tab); with PHD2, PHD2
+   running with a profile for your guide camera and mount.
 
 Each step ticks itself when it's done and has a button that opens the place where it's done. Below the
 steps, **On the mini PC** lists anything missing there (a chosen driver that isn't installed, the plate
@@ -111,7 +112,10 @@ devices, so the real-equipment profile, without the simulator drivers, leaves th
 The Mount panel shows where the mount points (J2000; hover for the mount's own JNow), its pier side and time
 past the meridian. **Unpark**, **Park** and **Stop**; the arrow pad moves it by hand at the chosen speed
 (■ stops). Until you choose one, that's the fastest up to 720x (also in ZWO's Heavy Duty Mode), set as soon as
-the mount connects; a speed you choose is remembered. Type coordinates or take them from the Targets tab, then **Slew**, or **Slew & center**: slew,
+the mount connects; a speed you choose is remembered. The mount moves only while the button is held: if the
+browser stops saying so for 2 s (a dropped Wi-Fi link, a closed tab), NOVA stops it. Every hand move ends with a full
+stop, and NOVA checks the mount really has stopped (some carry on through a plain "stop moving"); if it hasn't, it
+stops it again and says so. Type coordinates or take them from the Targets tab, then **Slew**, or **Slew & center**: slew,
 then expose, plate solve and correct until the target is within 1′.
 
 **Bluetooth (ZWO AM3, AM5 and AM7):** the mount can connect without its USB cable. Under the mount's name,
@@ -157,6 +161,8 @@ star count, HFR, FWHM and statistics underneath; **Names** labels the stars once
 **Header** shows the FITS header. **Expose** at the start of the Image tab's toolbar takes a frame with the Camera
 panel's settings (exposure, Save FITS, Loop) and becomes **Abort** while it exposes, handy with the panels folded
 away. The seconds box beside it is the Camera panel's exposure: change it in either place.
+While a frame is still on its way (slow over a weak Wi-Fi link: the history thumbnail arrives first), the viewer
+says **Loading image…**, and says so if it couldn't load.
 **Pop out** opens the latest image in a small window that stays on screen whichever tab is showing, following each
 new frame (drag it by its title, resize it from its bottom-right corner; ⤢ goes to the Image tab, ✕ or **Pop out**
 again closes it).
@@ -259,8 +265,10 @@ and 5′), while you turn the mount's altitude and azimuth knobs. Press **Done**
   live frame then shows the axis with rings at 5′, 1′ and 30″, the pole and Polaris: turn the knobs until the
   pole sits in the rings. Markers off the frame get an arrow at its edge. Needs a field of at least about a
   degree, and a mount whose RA axis NOVA can drive (or turn it by hand). Started from the mount's home position
-  (or anywhere within 2° of the pole), NOVA takes the first frame right there, so RA only turns once, by 90°;
-  from elsewhere it first goes to the pole.
+  (or anywhere within 2° of the pole), NOVA first nudges Dec just off the pole (to 89.7°, no RA swing: right at the
+  pole a mount's RA can't measure a turn), takes the first frame there, then turns RA once, by 90°; from elsewhere
+  it first goes to the pole. The turn is watched closely: it stops on the angle by the speed the mount is really
+  moving (its position readings lag), and stops the mount at once if its readings stall, jump or go backwards.
 
 For mounts without GoTo, tick *Turn RA by hand*: you turn RA yourself, and NOVA carries on once it has turned far
 enough (or press **Continue**). The settings also choose which way RA turns, the exposure, and whether to aim at
@@ -347,11 +355,16 @@ time.
 
 **The Guiding tab** (it takes the PHD2 tab's place while NOVA is the guider) shows it all full size: the whole guide
 frame with the guide star (green square, the cross where it should be) and the stars averaged with it (yellow rings,
-dashed when the last frame missed them), the guide star close up, the RMS and peaks, the calibration, and a large
-graph of the last 300 steps (10 minutes of 2 s frames; a dashed line marks each dither, and the steps while
+dashed when the last frame missed them), the guide star close up, the calibration, and a large graph, with the
+RMS and peaks beside it, of the last 300 steps (10 minutes of 2 s frames; a dashed line marks each dither, and the steps while
 guiding settles after it are shaded and left out of the RMS, so a dither doesn't look like bad guiding). It has the Loop, Calibrate, Guide, Stop and Dither buttons,
 the exposure, and how bright to show the frame: **Low** (black background, just the stars), **Med** (the default)
 or **High** (the full auto stretch, for finding faint stars, noise and all); each browser remembers it. **Click a star** in the frame to guide on it instead; while guiding, guiding carries on from that star.
+
+**A guide camera that drops out** (off USB, say, or a frame more than 15 s late): NOVA says so in the activity log,
+waits for it to come back, reconnects it and carries on guiding with the same calibration and lock position. After
+5 minutes without it, guiding stops. A guide camera that keeps dropping out is usually its USB link: give it its own
+cable rather than the main camera's hub.
 
 **Predictive PEC** (Guiding settings, RA *Algorithm*): mounts have a periodic error in RA, and a strain-wave mount like
 the AM3 a large, fast one. Hysteresis only corrects it after it shows; Predictive PEC learns it while guiding (the RA
@@ -423,7 +436,9 @@ The **Targets** tab finds and frames what to image:
   rotation starts at 0° each time the page opens. The last plate solve shows in green, with how far to turn
   the camera to match the plan.
 - **Slew**, **Centre** (slew, solve and correct) or **Add to sequence** (one target per mosaic panel, with
-  the framing's rotation). The altitude chart shows the night, twilight and the Moon.
+  the framing's rotation). The altitude chart shows the night and twilight (shaded), with a key along its top:
+  the target's altitude (solid), the minimum altitude from the list's **Above** filter (dashed yellow), the Moon
+  (dashed grey) and now.
 - **Match framing** (Image tab): frames exactly what the image on screen shows, for example a FITS file from
   an earlier night. NOVA plate solves it first if needed, then switches to Targets with the frame set to the
   image's centre and rotation. If the image came from a different camera or telescope, NOVA says so.
@@ -459,7 +474,9 @@ The **Sequence** tab runs a night's imaging unattended, for one target or severa
    row or cycled (L, R, G, B, L…, so clouds later still leave a full set). Saved to `<night>/<target>/` in the
    image folder.
 3. **Between frames:** dither every N frames (waits for PHD2 to settle); refocus when the filter changes, the
-   temperature moves (2 °C by default), HFR gets worse or every N frames; restart guiding if it stopped.
+   temperature moves (2 °C by default), HFR gets worse or every N frames; restart guiding if it stopped. If
+   guiding can't start at all (with NOVA's guider: no guide camera), the log says why and that frames are
+   unguided, and guiding starts again before the next frame as soon as it can.
 4. **Meridian flip** (German equatorial mounts): once the target is N minutes past the meridian, stop
    guiding, GoTo the target again so the mount changes sides, re-centre, optionally refocus, and guide again.
    A frame that would run past the latest time isn't started; the sequence waits for the flip. Flips happen between
@@ -479,7 +496,8 @@ where the Sun never gets 18° down (short summer nights far north) it uses nauti
 when its frames are done, at its *stop at* time (no frame is started that would run past it), or when it
 sinks below its minimum altitude. One whose window has passed, or that won't rise in time, is skipped.
 Frame counts, *Refocus when* and *At the end* (including when the night ends) can be changed while it runs; the
-rest is fixed once it starts. Sequences are saved by name in `~/.config/nova/sequences/`.
+rest is fixed once it starts. While it runs, the progress box shows the current exposure (or, between frames,
+what's happening: autofocus, a slew, a dither), the whole sequence's progress, and when it should finish. Sequences are saved by name in `~/.config/nova/sequences/`.
 
 ## Flats
 

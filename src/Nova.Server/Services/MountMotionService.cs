@@ -18,7 +18,8 @@ namespace Nova.Server.Services;
 /// </summary>
 public sealed class MountMotionService : IDisposable
 {
-    public static readonly TimeSpan Timeout = TimeSpan.FromSeconds(1.2);
+    // The browser renews every 0.4 s: 2 s rides out a Wi-Fi hiccup, and still stops a lost connection quickly.
+    public static readonly TimeSpan Timeout = TimeSpan.FromSeconds(2);
 
     private readonly EquipmentService _equipment;
     private readonly ActivityLog _log;

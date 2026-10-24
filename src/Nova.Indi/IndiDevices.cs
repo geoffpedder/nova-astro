@@ -701,6 +701,8 @@ public sealed class IndiMount(IndiClient client, string name) : IndiDevice(clien
         await Task.Delay(ReadingLag, CancellationToken.None);
         var before = Coordinates;
         await Task.Delay(StopCheckTime, CancellationToken.None);
+        // Moving again on purpose meanwhile (a held button renewed after a hiccup): that's not a failed stop.
+        if (On("TELESCOPE_MOTION_NS") || On("TELESCOPE_MOTION_WE")) return;
         if (Precession.Separation(before, Coordinates) > StillMovingDegrees)
         {
             if (HasProperty("TELESCOPE_ABORT_MOTION")) await AbortAsync(CancellationToken.None);

@@ -47,14 +47,6 @@
       return
     act(() => api.setSunProtection(on))
   }
-  // Altitude limits: the telescope stays between them (GoTos refused, moves stopped, sequences wait).
-  const lowerLimit = $derived(site?.lowerLimit ?? 0)
-  const upperLimit = $derived(site?.upperLimit ?? 90)
-  function setLimits(lower: number, upper: number) {
-    if (!Number.isFinite(lower) || !Number.isFinite(upper)) return
-    act(() => api.setLimits(lower, upper))
-  }
-
   // Settle: how long the mount is left after every GoTo before NOVA exposes, solves or moves on.
   const settle = $derived(site?.settleSeconds ?? 3)
   function setSettle(value: string) {
@@ -167,16 +159,6 @@
   <span>Settle after slews</span>
   <span class="inline">
     <input class="mono" type="number" min="0" max="60" step="1" value={settle} aria-label="Settle after slews (seconds)" onchange={(e) => setSettle(e.currentTarget.value)} /> s
-  </span>
-</div>
-
-<div class="sun" title="Keep the telescope between these altitudes: GoTos outside are refused, moves (GoTos, the buttons, polar alignment) stop at them, and sequences wait. Near the zenith the camera end swings down towards the tripod; set the upper limit a few degrees below where it gets close. 90 is no upper limit.">
-  <span>Limits</span>
-  <span class="inline">
-    <input class="mono" type="number" min="-5" max="60" step="1" value={lowerLimit} aria-label="Lower altitude limit (degrees)"
-      onchange={(e) => setLimits(Number(e.currentTarget.value), upperLimit)} />° to
-    <input class="mono" type="number" min="45" max="90" step="1" value={upperLimit} aria-label="Upper altitude limit (degrees)"
-      onchange={(e) => setLimits(lowerLimit, Number(e.currentTarget.value))} />° up
   </span>
 </div>
 

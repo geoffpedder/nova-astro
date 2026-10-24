@@ -173,7 +173,6 @@ sign in first with `POST /api/auth/login` and send the `nova.session` cookie it 
 | POST | `/api/devices/{device}/properties/{property}` | `{ "values": { "PORT": "/dev/ttyACM0" } }` |
 | POST | `/api/mount/slew` | `{ "ra": "05:35:17", "dec": "-05:23:28" }` J2000 (decimal also accepted); NOVA converts to the mount's JNow |
 | POST | `/api/mount/park` · `/unpark` · `/abort` | |
-| POST | `/api/mount/limits` | `{ "lower": 15, "upper": 82 }` — altitude limits in degrees (upper 90 = none): GoTos outside refused, moves stopped at them, sequences wait; also written to the mount's own altitude limits where the driver has them. Status: `site.lowerLimit`, `site.upperLimit` |
 | POST | `/api/mount/settle` | `{ "seconds": 3 }` — how long the mount settles after every GoTo (0 = none) |
 | POST | `/api/site/sun` | `{ "degrees": 30 }` or `{ "enabled": false }` — Sun protection's distance, or switching it off |
 | POST | `/api/mount/center` | `{ "ra": "05:35:17", "dec": "-05:23:28" }` (J2000) — slew, solve, sync until centred; `/api/mount/abort` stops it |

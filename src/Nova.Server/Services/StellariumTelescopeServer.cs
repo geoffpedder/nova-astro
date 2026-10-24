@@ -171,7 +171,7 @@ public sealed class StellariumTelescopeServer(
     {
         var target = JNow ? Precession.JNowToJ2000(received, DateTime.UtcNow) : received;
         log.Info($"Stellarium GoTo {target} (J2000)");
-        if ((Api.NovaApi.ManualMoveLock(imaging, sequencer) ?? sites.OutsideLimits(target) ?? sites.NearSun(target)) is { } refused)
+        if ((Api.NovaApi.ManualMoveLock(imaging, sequencer) ?? sites.BelowHorizon(target) ?? sites.NearSun(target)) is { } refused)
         {
             log.Warn($"Stellarium GoTo not done: {refused}");
             return;

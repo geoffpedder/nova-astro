@@ -4,6 +4,12 @@ What changed in each release. The newest is first. A release's section here beco
 
 ## [Unreleased]
 
+### Removed
+
+- **Mount limits (from 0.3.20):** they stopped GoTos working. NOVA no longer checks or sets altitude limits beyond
+  the horizon. A mount that was given limits by 0.3.20 keeps them in its own settings: switch them off in its
+  driver settings (ZWO AM5: Altitude Limits).
+
 ## [0.3.20] - 2026-10-23
 
 ### Added

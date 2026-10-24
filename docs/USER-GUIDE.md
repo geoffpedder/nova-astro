@@ -142,17 +142,6 @@ settle time counts from the same moment, so the longer of the two applies.
 **Sun protection** keeps the telescope at least 30° (adjustable) from the Sun while it's up, for slews and
 for moving by hand. It can be switched off for testing indoors; the header then shows a red warning.
 
-**Limits** (Mount panel) keep the telescope between two altitudes, so it can't hit the tripod or the pier: low
-down the dew shield can reach the legs or the ground, and near the zenith the camera end swings down towards them.
-Once set, GoTos (and Stellarium's) outside them are refused with the reason. Every move is watched, whoever started
-it (a GoTo, the buttons, polar alignment, another program), and stopped at a limit if it's heading further out;
-moving back inside is allowed. Sequences wait while a target is outside them, and move on once it leaves. NOVA also
-writes them into the mount's own altitude limits where its driver has them (ZWO's), so they hold even without NOVA.
-
-To find yours, go slowly with the buttons, clutches tight: point near the zenith and a little past it on each side,
-and low in each direction, watching the camera end, the dew shield and the legs. Set each limit a few degrees inside
-where it gets close. 0° and 90° mean only the horizon and no upper limit.
-
 ## Camera and optics
 
 The Camera panel sets the exposure, gain, offset, binning, frame type and cooling, and **Expose** takes a

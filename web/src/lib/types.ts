@@ -1021,9 +1021,6 @@ export interface SiteStatus {
   sunProtection: boolean
   /** Seconds the mount is left to settle after every GoTo. */
   settleSeconds: number
-  /** Altitude limits in degrees (0: the horizon; upper 90: none). */
-  lowerLimit: number
-  upperLimit: number
 }
 
 /** The Simulators switch (INDI only). */

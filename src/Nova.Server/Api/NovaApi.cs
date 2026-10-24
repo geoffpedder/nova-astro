@@ -26,9 +26,6 @@ public sealed record SunAvoidanceRequest(double? Degrees = null, bool? Enabled =
 /// <summary>Seconds the mount is left to settle after every GoTo (0 for none).</summary>
 public sealed record SettleRequest(double Seconds);
 
-/// <summary>Altitude limits in degrees: the telescope stays between them (upper 90: no upper limit).</summary>
-public sealed record LimitsRequest(double Lower, double Upper);
-
 public sealed record OpticsPresetRequest(string Camera, string Name);
 
 /// <summary>Save frames to "local" (the mini PC) or "usb"; Device picks which drive when there's more than one.</summary>
@@ -268,8 +265,6 @@ public static class NovaApi
             }));
         api.MapPost("/mount/settle", (SettleRequest request, SiteService sites, CancellationToken ct) =>
             BadRequestOnArgument(() => sites.SetSettleSecondsAsync(request.Seconds, ct)));
-        api.MapPost("/mount/limits", (LimitsRequest request, SiteService sites, CancellationToken ct) =>
-            BadRequestOnArgument(() => sites.SetLimitsAsync(request.Lower, request.Upper, ct)));
         api.MapPost("/site/select", (SiteNameRequest r, SiteService sites, CancellationToken ct) =>
             BadRequestOnArgument(() => sites.SelectAsync(r.Name, ct)));
         api.MapPost("/site/delete", (SiteNameRequest r, SiteService sites, CancellationToken ct) =>
@@ -670,7 +665,7 @@ public static class NovaApi
             if (ManualMoveLock(imaging, sequencer) is { } locked) return Results.Problem(locked, statusCode: StatusCodes.Status409Conflict);
             if (!TryParseTarget(request, out var target, out var problem)) return problem;
             await sites.EnsureMountLocationAsync();
-            if (sites.OutsideLimits(target) is { } low) return Results.Problem(low, statusCode: StatusCodes.Status409Conflict);
+            if (sites.BelowHorizon(target) is { } low) return Results.Problem(low, statusCode: StatusCodes.Status409Conflict);
             if (sites.NearSun(target) is { } sun) return Results.Problem(sun, statusCode: StatusCodes.Status409Conflict);
             return OperationResult(equipment.StartMountOperation($"Slewing to {target} (J2000)",
                 (m, ct) => sites.SlewSafelyAsync(m, Precession.J2000ToJNow(target, DateTime.UtcNow), ct), out var error), error);
@@ -700,7 +695,7 @@ public static class NovaApi
             if (ManualMoveLock(imaging, sequencer) is { } locked) return Results.Problem(locked, statusCode: StatusCodes.Status409Conflict);
             if (!TryParseTarget(request, out var target, out var problem)) return problem;
             await sites.EnsureMountLocationAsync();
-            if (sites.OutsideLimits(target) is { } low) return Results.Problem(low, statusCode: StatusCodes.Status409Conflict);
+            if (sites.BelowHorizon(target) is { } low) return Results.Problem(low, statusCode: StatusCodes.Status409Conflict);
             if (sites.NearSun(target) is { } sun) return Results.Problem(sun, statusCode: StatusCodes.Status409Conflict);
             return OperationResult(solver.StartCentering(target, out var error), error);
         });

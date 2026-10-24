@@ -175,14 +175,14 @@ public class HorizonGuardTests : IDisposable
         await equipment.ConnectAsync(CancellationToken.None);
 
         // No site known: nothing to check against.
-        Assert.Null(sites.OutsideLimits(new EquatorialCoordinates(0, -89)));
+        Assert.Null(sites.BelowHorizon(new EquatorialCoordinates(0, -89)));
 
         await equipment.Mount!.SetSiteAsync(new GeoLocation(51.5, -0.1, 0), DateTimeOffset.UtcNow, CancellationToken.None);
         var lst = Horizon.LocalSiderealDegrees(DateTime.UtcNow, -0.1) / 15;
-        var low = sites.OutsideLimits(Precession.JNowToJ2000(new EquatorialCoordinates((lst + 12) % 24, -30), DateTime.UtcNow), "M 7");
+        var low = sites.BelowHorizon(Precession.JNowToJ2000(new EquatorialCoordinates((lst + 12) % 24, -30), DateTime.UtcNow), "M 7");
         Assert.NotNull(low);
         Assert.StartsWith("M 7 is below the horizon", low);
-        Assert.Null(sites.OutsideLimits(Precession.JNowToJ2000(new EquatorialCoordinates(lst, 45), DateTime.UtcNow)));
+        Assert.Null(sites.BelowHorizon(Precession.JNowToJ2000(new EquatorialCoordinates(lst, 45), DateTime.UtcNow)));
     }
 }
 

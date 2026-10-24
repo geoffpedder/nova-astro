@@ -18,12 +18,10 @@ public sealed record Site(string Name, double Latitude, double Longitude, double
 /// <param name="SunProtection">Whether Sun protection is on (off for indoor testing; the degrees are kept).</param>
 /// <param name="SunAltitude">The Sun's altitude now, when the site is known.</param>
 /// <param name="SettleSeconds">How long the mount is left to settle after every GoTo, before anything else.</param>
-/// <param name="LowerLimit">The lowest altitude the telescope is pointed at (degrees; 0: the horizon).</param>
-/// <param name="UpperLimit">The highest (90: no limit). Near the zenith the camera end swings down towards the tripod.</param>
 public sealed record SiteStatus(
     IReadOnlyList<Site> Sites, string? Active, GeoLocation? MountLocation, bool MountMismatch, DateTime ServerUtc,
     double SunAvoidance = SiteService.DefaultSunAvoidance, double? SunAltitude = null, bool SunProtection = true,
-    double SettleSeconds = SiteService.DefaultSettleSeconds, double LowerLimit = 0, double UpperLimit = 90);
+    double SettleSeconds = SiteService.DefaultSettleSeconds);
 
 /// <summary>
 /// Remembers observing sites and tells the mount where it is and what time it is: on every mount connect
@@ -32,69 +30,7 @@ public sealed record SiteStatus(
 public sealed class SiteService
 {
     private sealed record Settings(
-        string? Active = null, List<Site>? Sites = null, double? SunAvoidance = null, bool? SunProtectionOff = null, double? SettleSeconds = null,
-        double? LowerLimit = null, double? UpperLimit = null);
-
-    /// <summary>Whether limits have been set (until then only the horizon is checked, and only where it always was).</summary>
-    private bool LimitsSet
-    {
-        get
-        {
-            lock (_sync) return _settings.LowerLimit is not null || _settings.UpperLimit is not null;
-        }
-    }
-
-    /// <summary>The lowest altitude the telescope is pointed at (degrees): the horizon unless set.</summary>
-    public double LowerLimit
-    {
-        get
-        {
-            lock (_sync) return _settings.LowerLimit ?? 0;
-        }
-    }
-
-    /// <summary>The highest altitude (degrees): none (90) unless set.</summary>
-    public double UpperLimit
-    {
-        get
-        {
-            lock (_sync) return _settings.UpperLimit ?? 90;
-        }
-    }
-
-    /// <summary>
-    /// Sets the altitude limits, which every GoTo is checked against and every move is watched for, and gives them to
-    /// the mount too where its driver has altitude limits (ZWO's), so they hold even without NOVA.
-    /// </summary>
-    public async Task SetLimitsAsync(double lower, double upper, CancellationToken ct)
-    {
-        if (double.IsNaN(lower) || lower is < -5 or > 60) throw new ArgumentException("The lower limit must be between -5 and 60 degrees");
-        if (double.IsNaN(upper) || upper is < 45 or > 90) throw new ArgumentException("The upper limit must be between 45 and 90 degrees");
-        if (upper - lower < 20) throw new ArgumentException("Leave at least 20 degrees between the lower and upper limits");
-        lock (_sync) _settings = _settings with { LowerLimit = lower, UpperLimit = upper };
-        Save();
-        _log.Info(upper >= 90
-            ? $"Limits: the telescope stays above {lower:0}°"
-            : $"Limits: the telescope stays between {lower:0}° and {upper:0}° altitude");
-        if (_equipment.Mount is { IsConnected: true } mount) await GiveMountLimitsAsync(mount, ct);
-    }
-
-    /// <summary>The limits into the mount's own (firmware) altitude limits, when they've been set and it has them.</summary>
-    private async Task GiveMountLimitsAsync(IMount mount, CancellationToken ct)
-    {
-        double? lower, upper;
-        lock (_sync) (lower, upper) = (_settings.LowerLimit, _settings.UpperLimit);
-        if (lower is null && upper is null) return; // never set: leave the driver's own
-        try
-        {
-            if (await mount.SetAltitudeLimitsAsync(lower ?? 0, upper ?? 90, ct))
-                _log.Info($"{mount.Name}: its own altitude limits set to {lower ?? 0:0}° to {upper ?? 90:0}°");
-        }
-        catch (Exception ex) when (ex is not OperationCanceledException)
-        {
-            _log.Warn($"Couldn't set {mount.Name}'s own altitude limits ({ex.Message}); NOVA still keeps to them");
-        }
-    }
+        string? Active = null, List<Site>? Sites = null, double? SunAvoidance = null, bool? SunProtectionOff = null, double? SettleSeconds = null);
 
     /// <summary>
     /// How long the mount is left after a GoTo before NOVA exposes, solves or moves on (seconds): even a quick mount
@@ -149,74 +85,7 @@ public sealed class SiteService
         _settings = Load();
         equipment.DevicesChanged += (_, _) => ApplyOnNewConnection();
         _clockWatch = new Timer(_ => _ = WatchMountAsync(), null, TimeSpan.FromSeconds(10), TimeSpan.FromSeconds(15));
-        _sunWatch = new Timer(_ => _ = WatchMovingAsync(), null, TimeSpan.FromSeconds(1), TimeSpan.FromMilliseconds(100));
-    }
-
-    private int _watching;
-
-    private async Task WatchMovingAsync()
-    {
-        // The timer doesn't wait for the last check: one at a time, or rates come from samples a moment apart.
-        if (Interlocked.Exchange(ref _watching, 1) == 1) return;
-        try
-        {
-            await HaltIfHeadingIntoSunAsync();
-            await HaltIfLeavingLimitsAsync();
-        }
-        finally
-        {
-            Interlocked.Exchange(ref _watching, 0);
-        }
-    }
-
-    private (double Altitude, DateTime Utc, double Rate)? _lastMovingAltitude; // the last reading that changed
-
-    /// <summary>
-    /// The same backstop for the altitude limits: while the mount moves (a GoTo, a button, polar alignment, another
-    /// program), if it's about to go below the lower limit or above the upper one, and heading further out, abort.
-    /// Moving back inside is left alone, so the buttons can bring it back.
-    /// </summary>
-    private async Task HaltIfLeavingLimitsAsync()
-    {
-        if (!LimitsSet || _equipment.Mount is not { IsConnected: true } mount || mount.State != MountState.Slewing || KnownSite() is not { } site)
-        {
-            _lastMovingAltitude = null;
-            return;
-        }
-        var (lower, upper) = (LowerLimit, UpperLimit);
-        var now = DateTime.UtcNow;
-        var altitude = Horizon.AltAz(Horizon.ToVector(mount.Coordinates, now, site)).Altitude;
-        // Drivers report the position in steps (about once a second), so the rate comes from readings that changed.
-        if (_lastMovingAltitude is not { } last)
-        {
-            _lastMovingAltitude = (altitude, now, 0);
-            return;
-        }
-        if (Math.Abs(altitude - last.Altitude) > 0.001 && (now - last.Utc).TotalSeconds >= 0.05)
-            _lastMovingAltitude = last = (altitude, now, (altitude - last.Altitude) / (now - last.Utc).TotalSeconds);
-        var rate = last.Rate;
-        // Where it is by now (the reading lags), and half a second on: stop before the limit, not after it.
-        var ahead = last.Altitude + rate * ((now - last.Utc).TotalSeconds + 0.5);
-        var below = rate < -0.05 && ahead < lower;
-        var above = rate > 0.05 && ahead > upper && upper < 90;
-        if (!below && !above || Interlocked.Exchange(ref _halting, 1) == 1) return;
-        try
-        {
-            _equipment.CancelMountOperation();
-            await mount.AbortAsync(CancellationToken.None);
-            _log.Warn(below
-                ? $"Stopped {mount.Name}: it was heading below the lower limit of {lower:0}° ({altitude:0}° up, going down {-rate:0.#}° a second). Move it back up before going on."
-                : $"Stopped {mount.Name}: it was heading above the upper limit of {upper:0}° ({altitude:0}° up), where the camera can reach the tripod. Move it back down before going on.");
-        }
-        catch (Exception ex)
-        {
-            _log.Error($"Couldn't stop {mount.Name} at the altitude limit", ex);
-        }
-        finally
-        {
-            _lastMovingAltitude = null;
-            Interlocked.Exchange(ref _halting, 0);
-        }
+        _sunWatch = new Timer(_ => _ = HaltIfHeadingIntoSunAsync(), null, TimeSpan.FromSeconds(1), TimeSpan.FromMilliseconds(100));
     }
 
     private readonly Timer _sunWatch;
@@ -280,7 +149,6 @@ public sealed class SiteService
     /// </summary>
     public async Task SlewSafelyAsync(IMount mount, EquatorialCoordinates targetJNow, CancellationToken ct)
     {
-        if (LimitsSet && OutsideLimits(Precession.JNowToJ2000(targetJNow, DateTime.UtcNow)) is { } outside) throw new InvalidOperationException(outside);
         await SlewAroundTheSunAsync(mount, targetJNow, ct);
         // Then let it settle: everything that follows a GoTo (a solve frame, the next target's first frame) wants it still.
         if (SettleSeconds > 0) await Task.Delay(TimeSpan.FromSeconds(SettleSeconds), ct);
@@ -465,22 +333,16 @@ public sealed class SiteService
     private DateTime? _lastClockReading;
 
     /// <summary>
-    /// Why a GoTo to this J2000 target can't go ahead right now (below the horizon or the lower limit, or above the
-    /// upper limit), or null. Uses the mount's own location if it reports one, else the active site; with neither,
-    /// there's nothing to check against.
+    /// Why a GoTo to this J2000 target can't work right now (it's below the horizon), or null. Uses the mount's
+    /// own location if it reports one, else the active site; with neither, there's nothing to check against.
     /// </summary>
-    public string? OutsideLimits(EquatorialCoordinates j2000, string what = "The target")
+    public string? BelowHorizon(EquatorialCoordinates j2000, string what = "The target")
     {
         if ((_equipment.Mount?.Location ?? ActiveSite?.Location) is not { } site) return null;
         var altitude = Horizon.Altitude(j2000, DateTime.UtcNow, site);
-        var (lower, upper) = (LowerLimit, UpperLimit);
-        if (altitude < 0 && lower <= 0)
-            return $"{what} is below the horizon right now ({altitude:0}° altitude), so the mount can't go there. Pick something higher up.";
-        if (altitude < lower)
-            return $"{what} is only {altitude:0}° up, below your lower limit of {lower:0}° (Mount panel, Limits). Pick something higher up, or wait for it to rise.";
-        if (altitude > upper)
-            return $"{what} is {altitude:0}° up, above your upper limit of {upper:0}° (Mount panel, Limits), where the camera can reach the tripod. Wait for it to come down a little.";
-        return null;
+        return altitude < 0
+            ? $"{what} is below the horizon right now ({altitude:0}° altitude), so the mount can't go there. Pick something higher up."
+            : null;
     }
 
     public Site? ActiveSite
@@ -508,9 +370,7 @@ public sealed class SiteService
                 settings.SunAvoidance ?? InitialSunAvoidance,
                 SunAltitude is { } sunUp ? Math.Round(sunUp, 1) : null,
                 settings.SunProtectionOff != true,
-                settings.SettleSeconds ?? InitialSettleSeconds,
-                settings.LowerLimit ?? 0,
-                settings.UpperLimit ?? 90);
+                settings.SettleSeconds ?? InitialSettleSeconds);
         }
     }
 
@@ -636,11 +496,6 @@ public sealed class SiteService
             _appliedTo = mount.Name;
         }
         _ = ApplyAsync(mount, CancellationToken.None);
-        _ = Task.Run(async () =>
-        {
-            await Task.Delay(TimeSpan.FromSeconds(3)); // the driver lists its settings just after connecting
-            if (mount.IsConnected) await GiveMountLimitsAsync(mount, CancellationToken.None);
-        });
     }
 
     private async Task ApplyAsync(IMount mount, CancellationToken ct)

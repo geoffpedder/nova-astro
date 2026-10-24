@@ -114,6 +114,7 @@ The [API](docs/DEVELOPING.md#api) lists the endpoints.
 - [Installing NOVA](docs/INSTALL.md): systems, setup options, updating, troubleshooting, installing by hand
 - [Using NOVA](docs/USER-GUIDE.md): every part of the page, from the first run to unattended sequences
 - [Developing NOVA](docs/DEVELOPING.md): building, tests, releases and the API
+- [Why NOVA](docs/WHY-NOVA.md): how it compares with an ASIAIR, or N.I.N.A. over Remote Desktop
 - [Changelog](CHANGELOG.md)
 
 ## Status

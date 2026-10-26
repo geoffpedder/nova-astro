@@ -14,6 +14,7 @@
   import GuiderPanel from '../GuiderPanel.svelte'
   import GuidingView from '../GuidingView.svelte'
   import MountPanel from '../MountPanel.svelte'
+  import NetworkBadge from '../NetworkBadge.svelte'
   import Phd2View from '../Phd2View.svelte'
   import PolarView from '../PolarView.svelte'
   import PowerMenu from '../PowerMenu.svelte'
@@ -195,6 +196,8 @@
       <button role="tab" aria-selected={view === 'targets'} class:on={view === 'targets'} onclick={() => showView('targets')}>Targets</button>
     </div>
     <div class="seq wide"><SequenceChip /></div>
+    <!-- How the mini PC is connected; tap for the Network window (Wi-Fi, the hotspot). On a phone it's in Mini PC. -->
+    <div class="net wide"><NetworkBadge /></div>
     <div class="chips wide">
       {#if nova.hub !== 'connected'}
         <span class="badge warn">NOVA {nova.hub}…</span>
@@ -252,6 +255,7 @@
     <div class="view-box covered kept activity" class:hidden={view !== 'activity'}>
       <header class="view-head phone-only">
         <h2>Mini PC</h2>
+        <div class="net"><NetworkBadge /></div>
         <PowerMenu />
         <button class="icon-btn" onclick={() => showView('image')} aria-label="Close"><Icon name="close" size={22} /></button>
       </header>
@@ -448,6 +452,14 @@
     min-width: 0;
     flex: 0 1 auto;
     display: flex;
+  }
+  .net {
+    display: flex;
+    min-width: 0;
+    flex: 0 1 auto;
+  }
+  .view-head .net {
+    margin-right: 6px;
   }
   .chips {
     display: flex;

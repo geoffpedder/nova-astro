@@ -424,10 +424,11 @@
   img.dimmed {
     opacity: 0.6;
   }
+  /* A layout whose bars cover the image's corner (the compact one) moves it clear with --nav-left and --nav-top. */
   .navigator {
     position: absolute;
-    left: 8px;
-    top: 8px;
+    left: var(--nav-left, 8px);
+    top: var(--nav-top, 8px);
     border: 1px solid var(--panel-border);
     background: #000;
     box-shadow: 0 2px 10px rgb(0 0 0 / 0.6);

@@ -57,7 +57,8 @@
 
 <div class="huds">
   {#if image || showingStack}
-    <div class="hud info">
+    <!-- Zoomed in, the navigator takes its place. -->
+    <div class="hud info" class:hidden={zoomed}>
       {#if showingStack && stack}
         <div class="title">{stack.label}</div>
         <div class="facts mono">
@@ -123,6 +124,12 @@
     inset: 0;
     display: flex;
     background: #000;
+    /* The zoom navigator, inside the area the bars leave free (where the info box is). */
+    --nav-left: calc(var(--in-l) + 12px);
+    --nav-top: calc(var(--in-t) + 12px);
+  }
+  .info.hidden {
+    display: none;
   }
   .stage-image :global(> *) {
     flex: 1;

@@ -6,6 +6,7 @@
 <script lang="ts">
   import { tick, untrack, type Snippet } from 'svelte'
   import { reveal } from '../lib/reveal.svelte'
+  import { getPanelHost } from '../lib/panelHost'
 
   let {
     id,
@@ -23,9 +24,12 @@
     children: Snippet
   } = $props()
 
+  // Inside a layout that holds panels in its own containers (the compact layout): no header or box of its own.
+  const host = getPanelHost()
+
   const storageKey = $derived(`nova.panel.${id}.collapsed`)
   // A panel's id never changes, so reading the saved state once is enough.
-  let collapsed = $state(untrack(() => load()))
+  let collapsed = $state(untrack(() => !host && load()))
 
   function load(): boolean {
     try {
@@ -54,6 +58,12 @@
   $effect(() => {
     if (reveal.panel !== id) return
     reveal.panel = null
+    if (host) {
+      host.show(id)
+      flash = true
+      setTimeout(() => (flash = false), 1600)
+      return
+    }
     untrack(() => setCollapsed(false))
     tick().then(() => {
       section?.scrollIntoView({ behavior: 'smooth', block: 'start' })
@@ -63,18 +73,25 @@
   })
 </script>
 
-<section bind:this={section} class="panel" class:flash class:tinted={kind} style:--kind={kind ? `var(--kind-${kind})` : undefined} class:collapsed>
-  <h2>
-    <button class="toggle" aria-expanded={!collapsed} onclick={toggle}>
-      <span class="chevron" aria-hidden="true">▾</span>
-      {title}
-    </button>
-    {@render badge?.()}
-  </h2>
-  {#if !collapsed}
-    <div class="body">{@render children()}</div>
-  {/if}
-</section>
+{#if host}
+  <section bind:this={section} class="hosted" class:flash style:--kind={kind ? `var(--kind-${kind})` : undefined} aria-label={title}>
+    {#if badge}<div class="hosted-badge">{@render badge()}</div>{/if}
+    {@render children()}
+  </section>
+{:else}
+  <section bind:this={section} class="panel" class:flash class:tinted={kind} style:--kind={kind ? `var(--kind-${kind})` : undefined} class:collapsed>
+    <h2>
+      <button class="toggle" aria-expanded={!collapsed} onclick={toggle}>
+        <span class="chevron" aria-hidden="true">▾</span>
+        {title}
+      </button>
+      {@render badge?.()}
+    </h2>
+    {#if !collapsed}
+      <div class="body">{@render children()}</div>
+    {/if}
+  </section>
+{/if}
 
 <style>
   .tinted {
@@ -111,6 +128,17 @@
   }
   .collapsed .chevron {
     transform: rotate(-90deg);
+  }
+  /* Laid out as the box's body is, so a panel looks the same inside either layout. */
+  .hosted {
+    display: block;
+    border-radius: var(--radius);
+  }
+  .hosted-badge {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+    margin-bottom: 10px;
   }
   .flash {
     animation: flash 1.6s ease-out;

@@ -31,8 +31,9 @@ network, with nothing to install there. It's inspired by [N.I.N.A.](https://nigh
   sleeps or the Wi-Fi drops, because everything runs on the mini PC. Optional messages to your phone when a
   sequence finishes or needs you. Frames can be saved straight to a USB drive. With no Wi-Fi at the site, the mini PC
   starts its own hotspot so a phone or tablet can still reach it.
-- **Works on a tablet:** the panels fold away, and the image and sky chart pinch to zoom. Added to an iPad's or
-  phone's Home Screen, it opens as its own full-screen app.
+- **Made for phones and tablets too:** a compact layout with the image full screen and the controls floating over
+  it, chosen automatically on touch screens. Added to an iPad's or phone's Home Screen, it opens as its own
+  full-screen app.
 
 ## Screenshots
 

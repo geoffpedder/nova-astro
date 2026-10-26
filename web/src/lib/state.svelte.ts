@@ -68,9 +68,16 @@ export function startHub(): void {
     nova.exposure = status.exposure
     if (status.latestImage && status.latestImage.id !== nova.image?.id) nova.image = status.latestImage
   })
-  connection.on('exposureProgress', (exposure: ExposureStatus | null) => (nova.exposure = exposure))
-  connection.on('imageReady', (image: ImageInfo) => (nova.image = image))
-  connection.on('logHistory', (entries: LogEntry[]) => (nova.log = entries))
+  // Handlers return nothing: SignalR takes a returned value as a reply the server didn't ask for, and logs an error.
+  connection.on('exposureProgress', (exposure: ExposureStatus | null) => {
+    nova.exposure = exposure
+  })
+  connection.on('imageReady', (image: ImageInfo) => {
+    nova.image = image
+  })
+  connection.on('logHistory', (entries: LogEntry[]) => {
+    nova.log = entries
+  })
   connection.on('log', (entry: LogEntry) => {
     nova.log.push(entry)
     if (nova.log.length > MaxLogEntries) nova.log.splice(0, nova.log.length - MaxLogEntries)

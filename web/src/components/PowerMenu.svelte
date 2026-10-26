@@ -6,6 +6,7 @@
   import { download } from '../lib/download'
   import PasswordDialog from './PasswordDialog.svelte'
   import NotificationsDialog from './NotificationsDialog.svelte'
+  import { isCompact, setLayoutChoice, uiLayout, type LayoutChoice } from '../lib/uiLayout.svelte'
 
   // ⏻ in the header: restart or shut down the mini PC, after a confirmation that says what will stop.
   const power = $derived(nova.status?.power)
@@ -97,6 +98,17 @@
     }
   }
 
+  // Which layout this browser shows: automatic (compact on phones and tablets), or one of them always.
+  const layouts: { value: LayoutChoice; label: string; title: string }[] = [
+    { value: 'auto', label: 'Automatic', title: 'Compact on phones and tablets, desktop otherwise' },
+    { value: 'desktop', label: 'Desktop', title: 'Panels beside the main view' },
+    { value: 'compact', label: 'Compact', title: 'The image full screen, everything else floating over it: made for touch' },
+  ]
+  function chooseLayout(choice: LayoutChoice) {
+    open = false
+    setLayoutChoice(choice)
+  }
+
   function closeOnOutsideClick(event: MouseEvent) {
     if (open && !(event.target as Element).closest('.power-wrap')) open = false
   }
@@ -135,6 +147,13 @@
       <button role="menuitem" class="item" onclick={() => ((open = false), restoreInput?.click())}
         title="Put back the settings from a backup (this mini PC's or another's); NOVA restarts to finish">Restore settings…</button
       >
+      <hr />
+      <div class="menu-title muted">Layout on this browser{uiLayout.choice === 'auto' ? `: ${isCompact() ? 'compact' : 'desktop'}` : ''}</div>
+      {#each layouts as l (l.value)}
+        <button role="menuitemradio" aria-checked={uiLayout.choice === l.value} class="item layout" title={l.title} onclick={() => chooseLayout(l.value)}>
+          <span class="tick">{uiLayout.choice === l.value ? '●' : ''}</span>{l.label}
+        </button>
+      {/each}
     </div>
   {/if}
 </div>
@@ -233,6 +252,27 @@
   .hint {
     font-size: 11px;
     margin: 6px 8px 2px;
+  }
+  .menu-title {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    padding: 4px 8px;
+  }
+  .item.layout {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .tick {
+    width: 10px;
+    font-size: 9px;
+    color: var(--accent);
+  }
+  /* Opened from the compact layout's bars, the menu can be taller than the space: it scrolls. */
+  .menu {
+    max-height: calc(100dvh - 80px);
+    overflow-y: auto;
   }
   .backdrop {
     position: fixed;

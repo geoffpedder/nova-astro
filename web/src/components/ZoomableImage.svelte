@@ -19,6 +19,7 @@
     onfailed,
     dimmed = false,
     overlay,
+    ontap,
   }: {
     src: string
     alt: string
@@ -40,6 +41,11 @@
     dimmed?: boolean
     /** Drawn over the image, sized and moved with it (fill 100% × 100%, e.g. an SVG). */
     overlay?: Snippet
+    /**
+     * A single tap does this instead of zooming (the compact layout hides its controls); a double tap then zooms in on
+     * that spot, and out again.
+     */
+    ontap?: () => void
   } = $props()
 
   const NavigatorMax = 160 // longest side of the navigator thumbnail, px
@@ -197,6 +203,7 @@
   let start = { px: 0, py: 0, x: 0, y: 0, moved: false }
 
   function pointerDown(event: PointerEvent) {
+    start.moved = false
     if (event.pointerType === 'touch') {
       fingers.set(event.pointerId, { x: event.clientX, y: event.clientY })
       if (fingers.size === 1) pinched = false
@@ -236,13 +243,25 @@
     capture(viewport, event.pointerId, false)
   }
 
+  let tapTimer: ReturnType<typeof setTimeout> | undefined
   function click(event: MouseEvent) {
     if (pinched) {
       pinched = false
       return
     }
+    if (ontap) {
+      if (start.moved) return // the end of a drag, not a tap
+      // Wait a moment: a second tap makes it a double tap (zoom), not two taps.
+      clearTimeout(tapTimer)
+      tapTimer = setTimeout(ontap, 260)
+      return
+    }
+    zoomIn(event)
+  }
+
+  // Zoom to 1:1 centred on the clicked spot.
+  function zoomIn(event: MouseEvent) {
     if (zoomed || !nw || !viewport) return
-    // Zoom to 1:1 centred on the clicked spot.
     const rect = viewport.getBoundingClientRect()
     zoomCentre = {
       u: (event.clientX - rect.left - x) / fitScale / nw,
@@ -251,8 +270,10 @@
     zoomed = true
   }
 
-  function doubleClick() {
+  function doubleClick(event: MouseEvent) {
+    clearTimeout(tapTimer)
     if (zoomed) zoomed = false
+    else if (ontap) zoomIn(event)
   }
 
   // ---- Navigator ----

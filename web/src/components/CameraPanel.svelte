@@ -1,7 +1,7 @@
 <script lang="ts">
   import { api } from '../lib/api'
   import { act, nova } from '../lib/state.svelte'
-  import { abortExposure, expose, exposure as settings, looping } from '../lib/exposure.svelte'
+  import { abortExposure, expose, exposure as settings } from '../lib/exposure.svelte'
   import type { CameraSettingsUpdate, FrameType } from '../lib/types'
   import DevicePicker from './DevicePicker.svelte'
   import OpticsEditor from './OpticsEditor.svelte'
@@ -32,16 +32,6 @@
   // Fill the target field once: what the camera was last asked for, else -10 °C. Then leave it to the user.
   $effect(() => {
     if (target === null && cooler) target = cooler.targetTemperature ?? -10
-  })
-
-  // Loop mode: start the next exposure as soon as a new frame arrives. Handy for framing and focusing. The settings
-  // are shared with the Image tab's Expose button (lib/exposure), so a loop started there carries on here too.
-  $effect(() => {
-    const id = nova.image?.id
-    if (id === undefined || id === looping.lastImageId) return
-    const first = looping.lastImageId === undefined
-    looping.lastImageId = id
-    if (settings.loop && !first && ready) act(() => api.expose(settings.duration, settings.save))
   })
 
   const apply = (update: CameraSettingsUpdate) => act(() => api.cameraSettings(update))

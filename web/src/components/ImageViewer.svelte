@@ -4,6 +4,8 @@
   import { api } from '../lib/api'
   import { act, nova } from '../lib/state.svelte'
   import type { CompareMode, PreviewMode } from '../lib/types'
+  import { preview, previewModes as modes, previewSizes as sizes, setPreviewMode, setPreviewSize, setPreviewStretch } from '../lib/preview.svelte'
+  import { liveStack, span } from '../lib/liveStack.svelte'
   import ImageHistory from './ImageHistory.svelte'
   import FitsHeader from './FitsHeader.svelte'
   import ZoomableImage from './ZoomableImage.svelte'
@@ -12,8 +14,7 @@
   import { setOcularsRotation } from '../lib/stellarium'
   import { ocularsAngle, stellariumSettings } from '../lib/stellariumSettings.svelte'
   import { framing, mainView } from '../lib/inbox.svelte'
-  import { imageFloat, imageView, setStackView } from '../lib/floats.svelte'
-  import { ask } from '../lib/confirm.svelte'
+  import { imageFloat, setStackView } from '../lib/floats.svelte'
 
   // The history: which image is on screen (null follows the latest), and comparing two.
   const history = $derived(nova.status?.imageHistory ?? null)
@@ -63,57 +64,22 @@
   let zoomCentre = $state<{ u: number; v: number } | null>(null)
   const stats = $derived(image?.statistics)
 
-  // Live stacking: the switch stacks Expose and Loop frames; Frame | Stack picks what's shown (the pop-out follows).
-  const live = $derived(nova.status?.liveStack ?? null)
-  const stack = $derived(live?.current ?? null)
-  const showingStack = $derived(imageView.stack && !!stack && stack.frames > 0)
-  let stackNote = $state<string | null>(null)
-  let savingStack = $state(false)
-  async function setLiveStack(on: boolean) {
-    // The stack is shown as soon as it has a frame.
-    if ((await act(() => api.setLiveStack(on))) && on) setStackView(true)
-  }
-  async function saveStack() {
-    if (!stack) return
-    savingStack = true
-    try {
-      await act(async () => (stackNote = `Saved ${await api.saveLiveStack(stack.key)}`))
-    } finally {
-      savingStack = false
-    }
-  }
-  async function resetStack() {
-    if (!stack) return
-    const ok = await ask(`Start ${stack.label} again?`, {
-      message: `The ${stack.frames} frames stacked so far are dropped from the stack (the frames themselves stay saved). Save it first to keep it.`,
-      confirm: 'Start again',
-      danger: true,
-    })
-    if (ok && (await act(() => api.resetLiveStack(stack.key)))) stackNote = null
-  }
-  const span = (seconds: number) => {
-    const s = Math.round(seconds)
-    if (s >= 3600) return `${Math.floor(s / 3600)} h ${Math.floor((s % 3600) / 60)} min`
-    if (s >= 60) return `${Math.floor(s / 60)} min ${s % 60} s`
-    return `${s} s`
-  }
+  // Live stacking (lib/liveStack): the switch stacks Expose and Loop frames; Frame | Stack picks what's shown.
+  const live = $derived(liveStack.status)
+  const stack = $derived(liveStack.current)
+  const showingStack = $derived(liveStack.showing)
+  const setLiveStack = (on: boolean) => liveStack.setEnabled(on)
+  const saveStack = () => liveStack.save()
+  const resetStack = () => liveStack.reset()
   let actualSize = $state(false)
   let magnification = $state(1)
   // The viewer on screen (the single image, the blinking one, or the left of a pair) for the zoom buttons.
   let zoomer = $state<ZoomableImage | undefined>()
 
-  const modes: { value: PreviewMode; label: string }[] = [
-    { value: 'auto', label: 'Colour (auto)' },
-    { value: 'mono', label: 'Mono (raw)' },
-    { value: 'RGGB', label: 'Colour: RGGB' },
-    { value: 'BGGR', label: 'Colour: BGGR' },
-    { value: 'GRBG', label: 'Colour: GRBG' },
-    { value: 'GBRG', label: 'Colour: GBRG' },
-  ]
-
-  // Remembered per browser. "auto" debayers whenever the camera reports a Bayer pattern.
-  let mode = $state<PreviewMode>(loadMode())
-  let stretch = $state(load('nova.previewStretch') !== '0')
+  // Colour, stretch and resolution: shared by every viewer (lib/preview), remembered per browser.
+  const mode = $derived(preview.mode)
+  const stretch = $derived(preview.stretch)
+  const size = $derived(preview.size)
   let rendering = $state(false)
   let showHeader = $state(false)
 
@@ -297,25 +263,9 @@
     }
   }
 
-  // Preview resolution: the longest side in pixels, 0 = full sensor resolution.
-  const sizes = [
-    { value: 800, label: '800 px', note: 'fastest' },
-    { value: 1200, label: '1200 px', note: '' },
-    { value: 1600, label: '1600 px', note: 'default' },
-    { value: 2400, label: '2400 px', note: '' },
-    { value: 0, label: 'Full resolution', note: 'slow over Wi-Fi' },
-  ]
-  let size = $state(Number(load('nova.previewSize') ?? 1600))
-  if (!sizes.some((s) => s.value === size)) size = 1600
-
   function setSize(value: number) {
-    size = value
+    setPreviewSize(value)
     menuOpen = false
-    try {
-      localStorage.setItem('nova.previewSize', String(value))
-    } catch {
-      // ignore
-    }
   }
 
   // The actual size of what's displayed, read from the loaded image.
@@ -349,33 +299,8 @@
     }
   }
 
-  function setStretch(value: boolean) {
-    stretch = value
-    try {
-      localStorage.setItem('nova.previewStretch', value ? '1' : '0')
-    } catch {
-      // ignore
-    }
-  }
-
-  function loadMode(): PreviewMode {
-    try {
-      const saved = localStorage.getItem('nova.previewMode')
-      if (modes.some((m) => m.value === saved)) return saved as PreviewMode
-    } catch {
-      // storage unavailable
-    }
-    return 'auto'
-  }
-
-  function setMode(value: PreviewMode) {
-    mode = value
-    try {
-      localStorage.setItem('nova.previewMode', value)
-    } catch {
-      // ignore
-    }
-  }
+  const setStretch = setPreviewStretch
+  const setMode = setPreviewMode
 
   const src = $derived(image ? api.previewUrl(image, mode, stretch, size) : null)
   $effect(() => {
@@ -639,8 +564,8 @@
       <span class="fact"><span class="k">Size</span>{stack.width}×{stack.height}</span>
       <span class="fact"><span class="k">Updated</span>{time(stack.updatedUtc)}</span>
       <span class="fact stack-actions">
-        <button class="secondary small" disabled={savingStack} onclick={saveStack} title="Save the stack as it is now (FITS and PNG) in the night's Stacked folder">
-          {savingStack ? 'Saving…' : 'Save'}
+        <button class="secondary small" disabled={liveStack.saving} onclick={saveStack} title="Save the stack as it is now (FITS and PNG) in the night's Stacked folder">
+          {liveStack.saving ? 'Saving…' : 'Save'}
         </button>
         <button class="secondary small" onclick={resetStack} title="Start this stack again from the next frame">Reset</button>
       </span>
@@ -648,8 +573,8 @@
       <div class="solve-line">
         {#if stack.lastRejected && stack.rejected > 0}<span class="muted">Last left out: {stack.lastRejected}</span>{/if}
       </div>
-      {#if stackNote ?? stack.savedPath}
-        {@const note = stackNote ?? `Saved ${stack.savedPath}`}
+      {#if liveStack.note ?? stack.savedPath}
+        {@const note = liveStack.note ?? `Saved ${stack.savedPath}`}
         <span class="muted path" title={note}>{note}</span>
       {/if}
     </div>

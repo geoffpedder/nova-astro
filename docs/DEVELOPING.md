@@ -51,6 +51,20 @@ dotnet run --project src/Nova.Server --launch-profile simulator
 Open http://localhost:5000, click **Connect equipment**, **Unpark**, **Slew**, then **Expose**. The simulator
 draws a star field around wherever the mount points, and plate solves it.
 
+**The UI's two layouts.** `web/src/Root.svelte` starts the session and shows one of two layouts: `App.svelte`
+(desktop: panels beside the main views) or `components/compact/CompactApp.svelte` (compact: for phones and
+tablets, chosen by `lib/uiLayout.svelte.ts`). The layouts only arrange things; everything they show and do is
+shared, so a feature is written once and placed in each:
+
+- `lib/session.svelte.ts`: signing in and live updates, night mode, full screen, Loop, errors, the setup guide's
+  state, the sequence's progress and which equipment exists.
+- `lib/preview.svelte.ts`, `lib/liveStack.svelte.ts`, `lib/exposure.svelte.ts`: how frames are shown, live
+  stacking, and manual exposures.
+- The panels (`CameraPanel`, `MountPanel`, …) and views (`SequenceView`, `TargetsView`, …) are the same
+  components in both. Inside a host that holds panels in its own containers (`lib/panelHost.ts`, set by the
+  compact layout), `Panel.svelte` drops its header and box. Both layouts keep every panel mounted, so effects in a
+  panel keep running while it's out of sight.
+
 For live UI reloading, keep the server running and in a second terminal run `cd web && npm run dev`, then
 open http://localhost:5173. Vite proxies `/api` and `/hub` to port 5000. To develop the UI against the mini PC
 instead, start Vite with `NOVA_BACKEND=http://minipc.local:5000`.

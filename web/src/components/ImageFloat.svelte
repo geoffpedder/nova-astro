@@ -1,9 +1,10 @@
 <script lang="ts">
   import { api } from '../lib/api'
-  import { imageFloat, imageView } from '../lib/floats.svelte'
+  import { imageFloat } from '../lib/floats.svelte'
+  import { liveStack } from '../lib/liveStack.svelte'
+  import { previewSrc } from '../lib/preview.svelte'
   import { mainView } from '../lib/inbox.svelte'
   import { nova } from '../lib/state.svelte'
-  import type { PreviewMode } from '../lib/types'
   import FloatWindow from './FloatWindow.svelte'
 
   // The latest image popped out: just the picture, over every tab, following each new frame. Or the live stack,
@@ -11,22 +12,14 @@
   const layout = imageFloat.layout
   const visible = $derived(layout.popped)
   const image = $derived(nova.image)
-  const stack = $derived(nova.status?.liveStack?.current ?? null)
-  const showingStack = $derived(imageView.stack && !!stack && stack.frames > 0)
+  const stack = $derived(liveStack.current)
+  const showingStack = $derived(liveStack.showing)
 
-  // Shown as the Image tab shows it (its colour and stretch choices, read again whenever it reappears or a frame comes).
-  function load(key: string): string | null {
-    try {
-      return localStorage.getItem(key)
-    } catch {
-      return null
-    }
-  }
+  // Shown as the Image tab shows it (its colour and stretch choices, lib/preview).
   const src = $derived.by(() => {
     if (visible && showingStack && stack) return api.liveStackUrl(stack, layout.width > 480 ? 1600 : 800)
     if (!visible || !image) return null
-    const mode = (load('nova.previewMode') ?? 'auto') as PreviewMode
-    return api.previewUrl(image, mode, load('nova.previewStretch') !== '0', layout.width > 480 ? 1600 : 800)
+    return previewSrc(image, layout.width > 480 ? 1600 : 800)
   })
   const hfr = $derived(image?.stars.medianHfr)
   const caption = $derived(

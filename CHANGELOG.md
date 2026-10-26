@@ -6,6 +6,13 @@ What changed in each release. The newest is first. A release's section here beco
 
 ### Added
 
+- **Compact layout for phones and tablets:** the image fills the screen, with the bars and controls floating over it
+  and most able to be put away (everything but the top bar and the shutter, with a tap on the image). Icons open the equipment
+  panels, sliding out over the image; the top bar has your equipment profile and **Image** | **Targets**; the shutter
+  has the mode (Preview, Live stack, Autorun), the exposure, Loop and Save. It's the same NOVA: the same panels,
+  settings and live state. Phones and iPads use it automatically; ⏻ → *Layout on this browser* picks
+  **Automatic**, **Desktop** or **Compact** per browser.
+
 - **Live stacking** (optional): frames stacked as they come, so the target builds up on screen. The Image tab's
   **Live stack** switch stacks Expose and Loop frames, and **Frame** | **Stack** picks which is shown (the pop-out
   follows); a sequence target with **Live stack** ticked has its frames stacked and the stack saved (FITS and PNG,

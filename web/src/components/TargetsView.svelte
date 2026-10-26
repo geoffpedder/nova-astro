@@ -544,9 +544,9 @@
           {/if}
         </div>
         <label class="check follow" title="Keep the mount in the middle of the chart">
-          <input type="checkbox" bind:checked={s.follow} disabled={!mountInfo} /> Follow mount
+          <input type="checkbox" bind:checked={s.follow} disabled={!mountInfo} /> Follow
         </label>
-        <select bind:value={s.survey} title="Sky imagery: the stored survey is instant (and offline once downloaded); the high-res images are rendered for each view, online only">
+        <select class="survey" bind:value={s.survey} title="Sky imagery: the stored survey is instant (and offline once downloaded); the high-res images are rendered for each view, online only">
           <option value="tiles">Sky: DSS (stored, fast)</option>
           <option value="CDS/P/DSS2/color">Sky: high-res DSS colour (online, slow)</option>
           <option value="CDS/P/DSS2/red">Sky: high-res DSS red (online, slow)</option>
@@ -555,6 +555,8 @@
         </select>
         <OfflineSky />
         <span class="spacer"></span>
+        <!-- Together, so a narrow window wraps them as a pair. -->
+        <span class="panel-buttons">
         {#if curve && centre}
           <button class="secondary panel-toggle" class:on={s.show.altitude} aria-pressed={s.show.altitude} onclick={() => (s.show.altitude = !s.show.altitude)}
             title="The target's altitude through the night">Altitude</button
@@ -565,6 +567,7 @@
             title="Camera, rotation, mosaic, slew and centre">Framing</button
           >
         {/if}
+        </span>
       </div>
       <div class="side left">
         {#if s.show.picker}
@@ -1008,7 +1011,7 @@
     grid-area: toolbar;
     display: flex;
     flex-wrap: wrap;
-    gap: 6px;
+    gap: 5px;
     align-items: center;
     pointer-events: none;
   }
@@ -1021,6 +1024,15 @@
     padding: 3px 9px;
     font-size: 12px;
     background: rgb(22 22 22 / 0.85);
+  }
+  /* Sized for the chosen sky, not the longest choice, so the toolbar fits on one line on a tablet. */
+  .survey {
+    max-width: 140px;
+    text-overflow: ellipsis;
+  }
+  .panel-buttons {
+    display: flex;
+    gap: 6px;
   }
   .segmented {
     display: flex;

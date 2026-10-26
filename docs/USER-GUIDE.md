@@ -67,10 +67,34 @@ a sequence. Open NOVA from as many browsers as you like; they all show the same 
 as its own app, filling the screen without Safari's bars. That's steadier than Safari's **Full screen**, which a
 swipe down (easy to make by accident while using NOVA) closes.
 
-**On a tablet:** **◂ Hide panels** (top of the panel column) folds the column away to a strip down the left edge;
+**On a tablet in the desktop layout:** **◂ Hide panels** (top of the panel column) folds the column away to a strip down the left edge;
 click the strip to bring it back. Each browser remembers its own layout. Pinch with two fingers to zoom the image and the
 Targets tab's sky chart. To open NOVA like an app, add it to the home screen (Safari: Share → Add to Home Screen); it
 gets NOVA's star icon.
+
+### The compact layout (phones and tablets)
+
+On a phone or an iPad NOVA uses its **compact layout**, made for touch and small screens. Everything in it is the
+same NOVA (the same panels, settings and live state) arranged differently:
+
+- **The image fills the screen.** The bars and controls float over it on see-through panels, and small boxes show
+  the frame's exposure, filter, HFR and stars, the guiding graph (tap it for the guider), and buttons to zoom, show
+  the live stack and plate solve.
+- **Top bar:** your equipment profile (tap it for Equipment: profiles, devices and drivers), **Image** and
+  **Targets**, a running sequence, **Setup** while there's something to do, full screen, night mode and ⏻.
+  **Targets** is the full target planner in place of the image.
+- **Icons** (down the left on a tablet, along the bottom on a phone): Mount, Camera, Focus, Filter and Guide each
+  open that panel, sliding out from behind the icons (from below on a phone); a dot shows whether it's connected.
+  Plan (the sequence), Polar, Webcam and Mini PC (activity, the mini PC's health, and ⏻ on a phone) cover the image
+  until closed with ✕.
+- **The shutter** (down the right on a tablet, a floating pill on a phone): **Mode** (Preview, Live stack, or
+  Autorun to open the plan), the exposure (tap for common times or type your own), gain and filter, the shutter
+  itself with the exposure's progress around it, Loop and Save, and the last few frames.
+- **Putting things away:** the arrow on the shutter folds it down to just the shutter, and a tap on the image hides
+  everything but the top bar and the shutter (tap again to bring it all back). Double-tap the image to zoom in, and pinch or double-tap again to zoom out.
+
+**Which layout:** ⏻ → *Layout on this browser*: **Automatic** (compact on phones and tablets, desktop otherwise),
+**Desktop** or **Compact**. Each browser remembers its own choice, so an iPad can use either.
 
 **Pop-outs:** the Webcam tab, the Image tab and the guiding graph (Guiding tab, or under the Guider panel's graph)
 each have **Pop out**, which keeps a small window of it on screen whichever tab is showing. Drag one by its title,
@@ -429,7 +453,7 @@ The **Targets** tab finds and frames what to image:
 - **Sky chart**, Stellarium-style: drag to look anywhere, scroll to zoom from the whole sky to arcminutes.
   Horizon view (level horizon, compass points) or equatorial (north up); stars, constellation figures,
   deep-sky outlines, the Sun, Moon and planets, and survey imagery when zoomed in. Click any object, or any
-  point of sky, to target it. The mount's position is shown live with its camera frame, and *Follow mount*
+  point of sky, to target it. The mount's position is shown live with its camera frame, and *Follow*
   keeps it centred while it slews. **Layers** turns the target, mount and solve boxes on and off, and can shade
   the best patch of sky for calibrating guiding.
 - **Framing:** the camera's field (sensor size and active optics preset) on the chart, dragged into place,

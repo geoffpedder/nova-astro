@@ -458,8 +458,8 @@ The **Targets** tab finds and frames what to image:
   the best patch of sky for calibrating guiding.
 - **Framing:** the camera's field (sensor size and active optics preset) on the chart, dragged into place,
   rotated (position angle of the frame's top, north through east) and optionally split into a mosaic. Its
-  label shows the rotation (*Target 35.0°*); drag the round handle above the frame to turn it there on the
-  chart, to the nearest half degree, or type the angle under Framing. The rotation starts at 0° each time the
+  label shows the rotation (*Target 35.0°*); drag the small right angle just outside its bottom-right corner to
+  turn it there on the chart, to the nearest half degree, or type the angle under Framing. The rotation starts at 0° each time the
   page opens. The last plate solve shows in green, with how far to turn
   the camera to match the plan.
 - **Slew**, **Centre** (slew, solve and correct) or **Add to sequence** (one target per mosaic panel, with

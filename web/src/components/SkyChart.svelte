@@ -917,7 +917,8 @@
     boxLabel(framePoints, frameAngle != null ? `Target ${(Math.round(frameAngle * 10) / 10).toFixed(1)}°` : 'Target', c.frame, 'top-left')
     rotateHandle = null
     if (onrotateframe && frameCentre && framePoints.length >= 4) {
-      // Above the middle of the frame's top edge (of the whole mosaic), along the frame's own "up".
+      // A small right angle just outside the frame's bottom-right corner (the whole mosaic's), along the frame's own
+      // axes: the corner to grab to turn it.
       const unit = (x: number, y: number) => {
         const l = Math.hypot(x, y) || 1
         return { x: x / l, y: y / l }
@@ -927,39 +928,28 @@
       const up = unit(pts[0].x + pts[1].x - pts[2].x - pts[3].x, pts[0].y + pts[1].y - pts[2].y - pts[3].y)
       const a = (q: { x: number; y: number }) => q.x * along.x + q.y * along.y
       const u = (q: { x: number; y: number }) => q.x * up.x + q.y * up.y
-      const mid = (Math.min(...pts.map(a)) + Math.max(...pts.map(a))) / 2
-      const top = Math.max(...pts.map(u))
-      const edge = { x: along.x * mid + up.x * top, y: along.y * mid + up.y * top }
-      // Clear of the name above the top edge (about 20 px), so a small frame's label and handle don't overlap.
-      const knob = { x: edge.x + up.x * 42, y: edge.y + up.y * 42 }
-      if (visible(knob)) {
+      const right = Math.max(...pts.map(a))
+      const bottom = Math.min(...pts.map(u))
+      const at = (alongPos: number, upPos: number) => ({ x: along.x * alongPos + up.x * upPos, y: along.y * alongPos + up.y * upPos })
+      const gapOut = 6 // outside the box
+      const arm = 11
+      const corner = at(right + gapOut, bottom - gapOut)
+      if (visible(corner)) {
         g.save()
         g.strokeStyle = c.frame
-        g.lineWidth = 1.5
+        g.lineWidth = 2.5
+        g.lineCap = 'round'
+        g.lineJoin = 'round'
         g.beginPath()
-        g.moveTo(edge.x + up.x * 22, edge.y + up.y * 22)
-        g.lineTo(knob.x - up.x * 8, knob.y - up.y * 8)
+        const startPt = at(right + gapOut - arm, bottom - gapOut)
+        const endPt = at(right + gapOut, bottom - gapOut + arm)
+        g.moveTo(startPt.x, startPt.y)
+        g.lineTo(corner.x, corner.y)
+        g.lineTo(endPt.x, endPt.y)
         g.stroke()
-        g.fillStyle = c.frame
-        g.beginPath()
-        g.arc(knob.x, knob.y, 8, 0, Math.PI * 2)
-        g.fill()
-        // A turning arrow on the knob.
-        g.strokeStyle = c.bg
-        g.lineWidth = 1.6
-        g.beginPath()
-        g.arc(knob.x, knob.y, 4, -Math.PI * 0.9, Math.PI * 0.45)
-        g.stroke()
-        const tip = { x: knob.x + 4 * Math.cos(Math.PI * 0.45), y: knob.y + 4 * Math.sin(Math.PI * 0.45) }
-        g.fillStyle = c.bg
-        g.beginPath()
-        g.moveTo(tip.x + 2.6, tip.y - 0.6)
-        g.lineTo(tip.x - 2.2, tip.y + 2.2)
-        g.lineTo(tip.x - 0.8, tip.y - 2.6)
-        g.closePath()
-        g.fill()
         g.restore()
-        rotateHandle = knob
+        // Picked up anywhere around the angle.
+        rotateHandle = at(right + gapOut - arm / 3, bottom - gapOut + arm / 3)
       }
     }
     if (frames.length > 1) {
@@ -1124,7 +1114,7 @@
       }
       if (fingers.size > 2) return
     }
-    if (rotateHandle && frameCentre && onrotateframe && Math.hypot(at.x - rotateHandle.x, at.y - rotateHandle.y) <= 16) {
+    if (rotateHandle && frameCentre && onrotateframe && Math.hypot(at.x - rotateHandle.x, at.y - rotateHandle.y) <= 18) {
       const centre = projection.sky(frameCentre.ra, frameCentre.dec)
       if (centre) {
         drag = {
@@ -1174,7 +1164,7 @@
     }
     if (!drag) {
       const at = local(e)
-      overHandle = !!rotateHandle && Math.hypot(at.x - rotateHandle.x, at.y - rotateHandle.y) <= 16
+      overHandle = !!rotateHandle && Math.hypot(at.x - rotateHandle.x, at.y - rotateHandle.y) <= 18
     }
     if (!drag || e.pointerId !== drag.pointer) return
     const at = local(e)

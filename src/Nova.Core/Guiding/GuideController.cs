@@ -8,11 +8,15 @@ public enum DecGuideMode { Auto, North, South, Off }
 /// <summary>RA's algorithm: Hysteresis (reacts to each error), or Predictive PEC (also corrects the mount's learned periodic error ahead of time).</summary>
 public enum RaAlgorithm { Hysteresis, PredictivePec }
 
+/// <summary>Dec's algorithm: Resist Switch (slow to reverse; PHD2's usual), or Lowpass2 (follows a fitted line through the recent errors).</summary>
+public enum DecAlgorithm { ResistSwitch, Lowpass2 }
+
 /// <summary>The guiding algorithms' settings, with PHD2-like defaults suited to a strain-wave mount (ZWO AM3/AM5).</summary>
 /// <param name="PecPeriodSeconds">Predictive PEC: the periodic error's period if known (seconds); 0 finds it.</param>
 /// <param name="PecPredictionGain">Predictive PEC: how much of the predicted motion to correct ahead (0–1).</param>
 /// <param name="PecReactiveAggressiveness">Predictive PEC: the reactive part's aggressiveness, gentler as the prediction does most of the work.</param>
 /// <param name="DecBacklashCompensation">When a Dec correction reverses, add a pulse to take up the backlash measured at calibration (adjusted as it guides).</param>
+/// <param name="DecAlgorithm">Dec's algorithm; both use <c>DecAggressiveness</c> and <c>DecMinMove</c> (FastSwitch is Resist Switch's).</param>
 public sealed record GuideAlgorithmSettings(
     double RaHysteresis = 0.1,
     double RaAggressiveness = 0.7,
@@ -27,7 +31,8 @@ public sealed record GuideAlgorithmSettings(
     double PecPeriodSeconds = 0,
     double PecPredictionGain = 0.8,
     double PecReactiveAggressiveness = 0.5,
-    bool DecBacklashCompensation = true);
+    bool DecBacklashCompensation = true,
+    DecAlgorithm DecAlgorithm = DecAlgorithm.ResistSwitch);
 
 /// <summary>A guide correction to send.</summary>
 public sealed record GuidePulse(GuideDirection Direction, int Milliseconds);
@@ -114,13 +119,14 @@ public sealed class DecBacklashCompensator
 
 /// <summary>
 /// Turns a star offset into guide pulses: split into RA and Dec with the calibration, each through its algorithm
-/// (Hysteresis for RA, Resist Switch for Dec), then pulse length = correction ÷ that axis's rate, capped.
+/// (Hysteresis or Predictive PEC for RA, Resist Switch or Lowpass2 for Dec), then pulse length = correction ÷ that axis's rate, capped.
 /// </summary>
 public sealed class GuideController
 {
     private readonly HysteresisAlgorithm _ra = new();
     private readonly HysteresisAlgorithm _raReactive = new(); // Predictive PEC's reactive part
     private readonly ResistSwitchAlgorithm _dec = new();
+    private readonly Lowpass2Algorithm _decLowpass = new();
 
     /// <summary>Predictive PEC's model of the mount's periodic error (learning whenever Predictive PEC is chosen).</summary>
     public PeriodicErrorPredictor Pec { get; } = new();
@@ -140,6 +146,7 @@ public sealed class GuideController
             (_raReactive.Hysteresis, _raReactive.Aggressiveness, _raReactive.MinMove) = (value.RaHysteresis, value.PecReactiveAggressiveness, value.RaMinMove);
             Pec.PeriodOverride = value.PecPeriodSeconds > 0 ? value.PecPeriodSeconds : null;
             (_dec.Aggressiveness, _dec.MinMove, _dec.FastSwitch) = (value.DecAggressiveness, value.DecMinMove, value.DecFastSwitch);
+            (_decLowpass.Aggressiveness, _decLowpass.MinMove) = (value.DecAggressiveness, value.DecMinMove);
         }
     }
 
@@ -149,6 +156,7 @@ public sealed class GuideController
         _ra.Reset();
         _raReactive.Reset();
         _dec.Reset();
+        _decLowpass.Reset();
     }
 
     /// <summary>The lock moved along RA on purpose (a dither): the PEC model's record of the mount's motion carries on smoothly.</summary>
@@ -188,7 +196,7 @@ public sealed class GuideController
         GuidePulse? dec = null;
         if (Settings.DecMode != DecGuideMode.Off)
         {
-            var decCorrection = _dec.Correction(decError);
+            var decCorrection = Settings.DecAlgorithm == DecAlgorithm.Lowpass2 ? _decLowpass.Correction(decError) : _dec.Correction(decError);
             dec = ToPulse(decCorrection, calibration.DecRate, Settings.MaxDecPulseMs, GuideDirection.South, GuideDirection.North);
             if (dec is not null &&
                 ((Settings.DecMode == DecGuideMode.North && dec.Direction != GuideDirection.North) ||

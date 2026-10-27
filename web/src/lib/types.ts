@@ -809,6 +809,8 @@ export interface GuideAlgorithmSettings {
   pecReactiveAggressiveness: number
   /** Add a pulse to take up Dec backlash when a Dec correction reverses (measured at calibration, adjusted as it guides). */
   decBacklashCompensation: boolean
+  /** Dec: Resist Switch (slow to reverse), or Lowpass2 (follows a line fitted through the recent errors). */
+  decAlgorithm: 'ResistSwitch' | 'Lowpass2'
 }
 
 /** Predictive PEC's model: learning or predicting, the period(s), the share of RA motion it explains, its size (px). */
@@ -839,6 +841,21 @@ export interface NovaGuiderSettings {
   gain: number | null
   /** Write a guide log (PHD2's format) into each night's image folder. */
   guideLog: boolean
+  /** Choose the exposure (minimum to maximum) to keep the guide star near the target SNR. */
+  autoExposure: boolean
+  minExposureSeconds: number
+  maxExposureSeconds: number
+  targetSnr: number
+  /** Skip a frame whose guide star's brightness changes by more than this (fraction); 0 = off. */
+  starMassTolerance: number
+  /** An off-axis guider: the calibration turns with the main camera (rotator, or plate solves). */
+  rotateCalibration: boolean
+  /** The guide image turns the other way from the main camera. */
+  rotationReversed: boolean
+  /** Follow a moving object: the lock moves at these rates (″/h; RA on the sky, east +; Dec north +). */
+  cometTracking: boolean
+  cometRaRate: number
+  cometDecRate: number
 }
 
 /** A guide log file of NOVA's guider (one per night, in the night's image folder). */
@@ -880,6 +897,8 @@ export interface GuideCalibrationInfo {
   /** Dec backlash measured at calibration: how far short the South steps came of the North ones. */
   decBacklashPixels: number
   decBacklashMs: number
+  /** How far the main camera has turned since calibrating (degrees), when the calibration turns with it. */
+  cameraTurn: number | null
 }
 
 /** Dec backlash compensation now: measured, the pulse added on a reversal now, and reversals compensated. */
@@ -921,6 +940,8 @@ export interface NovaGuiderStatus {
   pec: PecStatus | null
   /** Once a calibration has measured some Dec backlash. */
   backlash: DecBacklashStatus | null
+  /** The guide exposure now (s): the setting, or what automatic exposure chose. */
+  exposure: number | null
 }
 
 export interface DecDrift {

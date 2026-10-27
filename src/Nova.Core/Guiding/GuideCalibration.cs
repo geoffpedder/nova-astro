@@ -43,6 +43,29 @@ public sealed record GuideCalibration(
     }
 
     /// <summary>
+    /// This calibration with the guide camera turned by <paramref name="radians"/> (an off-axis guider turns with the
+    /// main camera, so its calibration turns with it): both directions turn by that much in the image.
+    /// </summary>
+    public GuideCalibration Rotated(double radians) =>
+        radians == 0 ? this : this with { RaAngle = RaAngle + radians, DecAngle = DecAngle + radians };
+
+    /// <summary>
+    /// How far (pixels, image axes) an object moving on the sky at these rates moves against the stars in
+    /// <paramref name="seconds"/>: <paramref name="raArcsecPerHour"/> east positive, measured on the sky (dRA×cos Dec, as
+    /// ephemerides give it), <paramref name="decArcsecPerHour"/> north positive. Stars move along <see cref="RaAngle"/>
+    /// when the scope moves west, the way something moving east moves against them; and along <see cref="DecAngle"/>
+    /// when it moves north, the way something moving south does. Needs a calibration whose Dec sense is the sky's (not
+    /// reversed after a flip).
+    /// </summary>
+    public (double Dx, double Dy) SkyMotion(double raArcsecPerHour, double decArcsecPerHour, double seconds, double arcsecPerPixel)
+    {
+        if (arcsecPerPixel <= 0) return (0, 0);
+        var east = raArcsecPerHour / 3600 * seconds / arcsecPerPixel;
+        var south = -decArcsecPerHour / 3600 * seconds / arcsecPerPixel;
+        return (east * Math.Cos(RaAngle) + south * Math.Cos(DecAngle), east * Math.Sin(RaAngle) + south * Math.Sin(DecAngle));
+    }
+
+    /// <summary>
     /// Splits a star offset (pixels, from where it should be) into how far it is along the West-pulse direction and
     /// along the North-pulse direction (pixels). Solves for both at once, so axes that aren't quite square still
     /// come apart correctly.
@@ -124,6 +147,51 @@ public sealed class ResistSwitchAlgorithm(double aggressiveness = 1.0, double mi
         _recent.Clear();
         _side = 0;
     }
+}
+
+/// <summary>
+/// PHD2's Lowpass2 (an alternative Dec algorithm): fits a straight line through the recent errors and corrects to the
+/// line's latest value, so seeing jitter averages out while a steady drift is still followed. Each correction is taken
+/// off the remembered errors (the star moved by that much), the correction is never more than the error, and errors
+/// under the minimum move are left alone.
+/// </summary>
+public sealed class Lowpass2Algorithm(double aggressiveness = 0.8, double minMove = 0.2) : IGuideAlgorithm
+{
+    public const int HistoryLength = 40;
+    private readonly List<double> _history = [];
+
+    public double Aggressiveness { get; set; } = aggressiveness;
+    public double MinMove { get; set; } = minMove;
+
+    public double Correction(double error)
+    {
+        _history.Add(error);
+        if (_history.Count > HistoryLength) _history.RemoveAt(0);
+        if (Math.Abs(error) < MinMove) return 0;
+
+        var n = _history.Count;
+        double fitted;
+        if (n < 3) fitted = error;
+        else
+        {
+            var meanX = (n - 1) / 2.0;
+            var meanY = _history.Average();
+            double sxy = 0, sxx = 0;
+            for (var i = 0; i < n; i++)
+            {
+                sxy += (i - meanX) * (_history[i] - meanY);
+                sxx += (i - meanX) * (i - meanX);
+            }
+            fitted = meanY + sxy / sxx * (n - 1 - meanX);
+        }
+        var result = fitted * Aggressiveness;
+        if (Math.Sign(result) != Math.Sign(error)) return 0;
+        result = Math.Sign(result) * Math.Min(Math.Abs(result), Math.Abs(error));
+        for (var i = 0; i < n; i++) _history[i] -= result;
+        return result;
+    }
+
+    public void Reset() => _history.Clear();
 }
 
 /// <summary>

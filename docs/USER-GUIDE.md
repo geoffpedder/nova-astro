@@ -359,7 +359,11 @@ time.
 - **Camera**: the guide camera (*Automatic* takes the first camera that isn't the imaging camera). **Pulses to**: the
   mount (pulse guiding, as with the ZWO AM3/AM5), or a guide camera's ST4 port. **Exposure** (2 s is a good start)
   and binning. **Gain**: set on the guide camera before every frame (its range shows beside it); empty leaves it as
-  the driver has it. Darks are taken at this gain too.
+  the driver has it. Darks are taken at this gain too. **Auto** chooses the exposure itself, between a shortest and a
+  longest (1–4 s to start with), to keep the guide star near a target SNR (20): a step longer when the star fades
+  below it (thin cloud) or is lost, a step shorter when it's well above, at most every three frames so it doesn't hunt.
+  The exposure it's using shows beside it while the guide camera runs. Take darks across the range, so each frame has
+  one close to its exposure.
 - **Loop** exposes the guide camera and picks a guide star: the brightest one that isn't saturated, crowded or near
   the edge, plus up to 8 more whose average cancels some of the seeing. The small view shows the star (yellow ring)
   and where it should be (green cross).
@@ -421,6 +425,33 @@ frame after, the next reversal gets a little more; if it overshot, less. Under h
 backlash. It matters most when Dec reverses often (polar alignment close to perfect, or Dec corrections both ways);
 with Dec drifting steadily one way, Resist Switch rarely reverses anyway. Calibrate again after changing the
 mount's Dec balance or gear mesh, as both change the backlash.
+
+**Lowpass2** (Guiding settings, Dec *Algorithm*): instead of Resist Switch, Dec can fit a straight line through its
+last 40 errors and correct to the line, so the seeing's jitter averages out while a steady drift is still followed,
+and it reverses as soon as the line does. It suits a well polar-aligned mount in poor seeing; Resist Switch stays the
+better choice when Dec backlash is large. It uses the same aggressiveness and min move (Fast switch is Resist
+Switch's own).
+
+**Brightness jumps** (Guiding settings, Guide star): a guide frame whose star is suddenly much brighter or fainter
+than over the last ten frames (by more than 50% to start with) usually has something wrong with it: a satellite or
+plane crossing, a hot pixel, a cloud edge, another star drifting into the box. Its position can't be trusted, so it
+isn't corrected (the guide log has it as a dropped frame, *Star mass changed*). If the change lasts five frames,
+it's taken as the star's brightness now (cloud thickening, say) and guiding carries on. 0 turns the check off.
+
+**Off-axis guider** (Guiding settings, Calibration): with an OAG the guide camera turns with the main camera, so a
+calibration made before turning it points the wrong way after. Tick *Off-axis guider* and NOVA turns the calibration
+by as much as the main camera has turned since it was made: as the rotator says when there's one connected,
+otherwise as plate solves of the main camera's frames say (solve after turning the camera by hand, as matching the
+planned framing does anyway). The calibration summary shows how far it has turned, and the guide log notes each turn.
+If guiding runs away after turning the camera, the guide image turns the other way round from the main one: tick
+*Reversed*. A meridian flip isn't a turn: that's allowed for already. With a guide scope leave it off.
+
+**Comets** (Guiding settings, Comet): guiding on a comet or asteroid, rather than a star, needs the lock position to
+move with it, so it stays still in the frames while the stars trail. Tick *Follow* and enter its rates from an
+ephemeris (JPL Horizons, say) in arcseconds an hour: RA as motion on the sky, east positive (Horizons' *dRA×cosD*),
+and Dec, north positive. Each guide frame moves the lock by as far as it has gone since the last; it needs the guide
+camera's image scale (Guide scope optics) and a calibration. Set the rates again every hour or so for a fast-moving
+object, and untick *Follow* for ordinary targets.
 
 **Seeing or settings?** Under the graph (and under the Guider panel's graph, with PHD2 too) NOVA says what limits the
 guiding, once there are 30 steady steps: *seeing-limited* (errors the size of the seeing: nothing to gain),

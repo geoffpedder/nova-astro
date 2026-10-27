@@ -150,7 +150,24 @@
       <select value={s.binning} disabled={running} onchange={(e) => save({ binning: num(e) })} aria-label="Guide camera binning">
         {#each [1, 2, 3, 4] as b (b)}<option value={b}>{b}×{b}</option>{/each}
       </select>
+      <label class="small inline" title="Choose the exposure by itself, to keep the guide star near the target SNR (longer when it fades or is lost)">
+        <input type="checkbox" checked={s.autoExposure} onchange={(e) => save({ autoExposure: e.currentTarget.checked })} /> Auto
+      </label>
     </div>
+    {#if s.autoExposure}
+      <span class="muted small-label">Auto</span>
+      <div class="pair">
+        <input class="mono short" type="number" min="0.05" max="30" step="0.5" value={s.minExposureSeconds} aria-label="Shortest exposure"
+          onchange={(e) => save({ minExposureSeconds: num(e) })} />
+        <span class="muted">to</span>
+        <input class="mono short" type="number" min="0.05" max="30" step="0.5" value={s.maxExposureSeconds} aria-label="Longest exposure"
+          onchange={(e) => save({ maxExposureSeconds: num(e) })} />
+        <span class="muted">s, SNR</span>
+        <input class="mono short" type="number" min="3" max="200" step="5" value={s.targetSnr} aria-label="Target SNR"
+          onchange={(e) => save({ targetSnr: num(e) })} title="The guide star's SNR to aim for" />
+        {#if n.exposure != null && running}<span class="muted small-label">now {n.exposure} s</span>{/if}
+      </div>
+    {/if}
     <label for="ng-gain">Gain</label>
     <div class="pair">
       <input id="ng-gain" class="mono" type="number" step="1" min={n.cameraGain?.min} max={n.cameraGain?.max}
@@ -188,6 +205,9 @@
       <span>RA {calibration.raAngle.toFixed(0)}° at {rate(calibration.raRate, calibration.raArcsecPerSecond)}</span>
       <span>Dec {calibration.decAngle.toFixed(0)}° at {rate(calibration.decRate, calibration.decArcsecPerSecond)}</span>
       <span class:warn={calibration.orthogonality > 10}>{calibration.orthogonality.toFixed(1)}° from square</span>
+      {#if calibration.cameraTurn != null && Math.abs(calibration.cameraTurn) >= 0.5}
+        <span title="An off-axis guider: the calibration turns with the main camera">turned {calibration.cameraTurn.toFixed(0)}° with the camera</span>
+      {/if}
       <button class="secondary clear" onclick={() => (showGraph = !showGraph)} aria-pressed={showGraph}
         title="Where the star went during calibration, as PHD2 shows it">{showGraph ? 'Hide graph' : 'Graph'}</button>
       <button class="secondary clear" onclick={() => act(api.guiderClearCalibration)} title="Forget it: the next Guide calibrates again">Clear</button>
@@ -262,6 +282,13 @@
         onchange={(e) => saveAlgorithms({ maxRaPulseMs: num(e) })} /> <span class="muted">ms</span></div>
 
       <span class="head">Dec</span><span></span>
+      <label for="ng-dec-alg">Algorithm</label>
+      <select id="ng-dec-alg" value={s.algorithms.decAlgorithm ?? 'ResistSwitch'}
+        onchange={(e) => saveAlgorithms({ decAlgorithm: e.currentTarget.value as GuideAlgorithmSettings['decAlgorithm'] })}
+        title="Resist Switch is slow to reverse (Dec mostly drifts one way); Lowpass2 follows a line fitted through the recent errors, smoothing out seeing">
+        <option value="ResistSwitch">Resist switch</option>
+        <option value="Lowpass2">Lowpass2</option>
+      </select>
       <label for="ng-dec-mode">Corrections</label>
       <select id="ng-dec-mode" value={s.algorithms.decMode} onchange={(e) => saveAlgorithms({ decMode: e.currentTarget.value as GuideAlgorithmSettings['decMode'] })}>
         <option value="Auto">Both ways</option>
@@ -278,13 +305,22 @@
       <label for="ng-dec-max">Max pulse</label>
       <div class="pair"><input id="ng-dec-max" class="mono" type="number" min="50" max="10000" step="100" value={s.algorithms.maxDecPulseMs}
         onchange={(e) => saveAlgorithms({ maxDecPulseMs: num(e) })} /> <span class="muted">ms</span></div>
-      <label for="ng-fast">Fast switch</label>
-      <input id="ng-fast" type="checkbox" checked={s.algorithms.decFastSwitch} onchange={(e) => saveAlgorithms({ decFastSwitch: e.currentTarget.checked })}
-        title="Reverse Dec at once for a large error, instead of waiting a few frames" />
+      {#if s.algorithms.decAlgorithm !== 'Lowpass2'}
+        <label for="ng-fast">Fast switch</label>
+        <input id="ng-fast" type="checkbox" checked={s.algorithms.decFastSwitch} onchange={(e) => saveAlgorithms({ decFastSwitch: e.currentTarget.checked })}
+          title="Reverse Dec at once for a large error, instead of waiting a few frames" />
+      {/if}
       <label for="ng-backlash">Backlash comp</label>
       <input id="ng-backlash" type="checkbox" checked={s.algorithms.decBacklashCompensation}
         onchange={(e) => saveAlgorithms({ decBacklashCompensation: e.currentTarget.checked })}
         title="When Dec reverses, add a pulse to take up the gears' slack first: measured at calibration, then adjusted as it guides" />
+
+      <span class="head">Guide star</span><span></span>
+      <label for="ng-mass">Brightness jump</label>
+      <div class="pair"><input id="ng-mass" class="mono" type="number" min="0" max="200" step="10" value={Math.round(s.starMassTolerance * 100)}
+        onchange={(e) => save({ starMassTolerance: num(e) / 100 })}
+        title="A frame whose guide star suddenly brightens or fades by more than this (a cloud, a satellite, another star) isn't corrected. 0 turns it off" />
+        <span class="muted">% (0 = off)</span></div>
 
       <span class="head">Calibration</span><span></span>
       <label for="ng-step">Step</label>
@@ -293,6 +329,29 @@
       <label for="ng-flip">Reverse Dec after flip</label>
       <input id="ng-flip" type="checkbox" checked={s.reverseDecAfterFlip} onchange={(e) => save({ reverseDecAfterFlip: e.currentTarget.checked })}
         title="Only for mounts whose Dec guide pulses change direction after a meridian flip" />
+      <label for="ng-oag">Off-axis guider</label>
+      <div class="pair">
+        <input id="ng-oag" type="checkbox" checked={s.rotateCalibration} onchange={(e) => save({ rotateCalibration: e.currentTarget.checked })}
+          title="The guide camera turns with the main camera: when that turns (its rotator, or a plate solve after turning it by hand), the calibration turns with it, so there's no need to calibrate again" />
+        {#if s.rotateCalibration}
+          <label class="small inline" title="Tick if guiding goes wrong after turning the camera: the guide image turns the other way">
+            <input type="checkbox" checked={s.rotationReversed} onchange={(e) => save({ rotationReversed: e.currentTarget.checked })} /> Reversed
+          </label>
+        {/if}
+      </div>
+
+      <span class="head">Comet</span><span></span>
+      <label for="ng-comet">Follow</label>
+      <input id="ng-comet" type="checkbox" checked={s.cometTracking} onchange={(e) => save({ cometTracking: e.currentTarget.checked })}
+        title="Guide on a comet (or asteroid): the lock position moves with it at these rates, so it stays put while the stars trail" />
+      {#if s.cometTracking}
+        <label for="ng-comet-ra">RA rate</label>
+        <div class="pair"><input id="ng-comet-ra" class="mono" type="number" step="1" value={s.cometRaRate}
+          onchange={(e) => save({ cometRaRate: num(e) })} title="On the sky, east positive (an ephemeris's dRA×cos Dec)" /> <span class="muted">″/h</span></div>
+        <label for="ng-comet-dec">Dec rate</label>
+        <div class="pair"><input id="ng-comet-dec" class="mono" type="number" step="1" value={s.cometDecRate}
+          onchange={(e) => save({ cometDecRate: num(e) })} title="North positive" /> <span class="muted">″/h</span></div>
+      {/if}
 
       <span class="head">Log</span><span></span>
       <label for="ng-log">Guide log</label>
@@ -321,6 +380,24 @@
   }
   .pair input {
     width: 70px;
+  }
+  .pair input.short {
+    width: 52px;
+  }
+  .pair input[type='checkbox'] {
+    width: auto;
+  }
+  .pair {
+    flex-wrap: wrap;
+  }
+  .pair .inline {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    margin: 0;
+  }
+  .small-label {
+    font-size: 12px;
   }
   .head {
     font-weight: 600;

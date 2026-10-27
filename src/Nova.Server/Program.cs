@@ -126,6 +126,14 @@ var storage = app.Services.GetRequiredService<StorageService>();
 app.Services.GetRequiredService<ImagingService>().Storage = storage;
 app.Services.GetRequiredService<SequencerService>().Storage = storage;
 app.Services.GetRequiredService<NovaGuider>().Storage = storage;
+// An off-axis guider's calibration turns with the main camera: each solve of a frame just taken tells it the camera's angle.
+var solver = app.Services.GetRequiredService<PlateSolveService>();
+solver.Solved += () =>
+{
+    if (solver.Last is { Solved: true, Rotation: { } angle } last && app.Services.GetRequiredService<ImagingService>().LatestImage is { OpenedFile: null } latest
+        && latest.Id == last.ImageId)
+        app.Services.GetRequiredService<NovaGuider>().CameraSolved(angle);
+};
 storage.FellBack += (_, why) => notifications.Notify(NotificationKind.Storage, "Frames are going to the mini PC", why);
 // A new password (or none) drops every live connection; each reconnects only if still signed in.
 app.Services.GetRequiredService<PasswordService>().Changed += Nova.Server.Hubs.NovaHub.DisconnectAll;

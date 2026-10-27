@@ -390,6 +390,51 @@ public class NovaGuiderTests : IDisposable
     }
 
     [Fact]
+    public async Task FollowsACometWithLowpass2AndAutomaticExposureAndTurnsWithTheCamera()
+    {
+        await using var rig = await SetUpAsync();
+        using var timeout = new CancellationTokenSource(TimeSpan.FromMinutes(3));
+        Assert.Throws<ArgumentException>(() => rig.Nova.UpdateSettings(rig.Nova.Settings with { AutoExposure = true, MinExposureSeconds = 2, MaxExposureSeconds = 1 }));
+        Assert.Throws<ArgumentException>(() => rig.Nova.UpdateSettings(rig.Nova.Settings with { TargetSnr = 1 }));
+        await rig.Nova.CalibrateAsync(timeout.Token);
+        var rotator = rig.Equipment.Rotator!;
+        Assert.True(rotator.IsConnected);
+
+        // A comet going north at 10″ a second, guided with Lowpass2 on Dec; the star is bright, so exposures shorten to the minimum.
+        rig.Nova.UpdateSettings(rig.Nova.Settings with
+        {
+            ExposureSeconds = 0.5, CometTracking = true, CometDecRate = 36_000, AutoExposure = true, MinExposureSeconds = 0.1, MaxExposureSeconds = 0.5, TargetSnr = 100,
+            Algorithms = rig.Nova.Settings.Algorithms with { DecAlgorithm = DecAlgorithm.Lowpass2 },
+        });
+        await rig.Guider.GuideAndWaitAsync(new SettleSettings(2, 1, 60), timeout.Token);
+        var cal = rig.Nova.Status.Calibration!;
+        var scale = cal.DecArcsecPerSecond!.Value / cal.DecRate;
+        var start = rig.Nova.Status.Star!;
+        var clock = System.Diagnostics.Stopwatch.StartNew();
+        await Task.Delay(TimeSpan.FromSeconds(6), timeout.Token);
+        var now = rig.Nova.Status.Star!;
+        var moved = Math.Sqrt(Math.Pow(now.LockX - start.LockX, 2) + Math.Pow(now.LockY - start.LockY, 2)) * scale;
+        Assert.InRange(moved, 10 * clock.Elapsed.TotalSeconds * 0.7, 10 * clock.Elapsed.TotalSeconds * 1.3);
+        Assert.True(Math.Sqrt(Math.Pow(now.X - now.LockX, 2) + Math.Pow(now.Y - now.LockY, 2)) < 3, "the star follows the lock");
+        Assert.True(rig.Nova.Status.Exposure == 0.1, $"exposure {rig.Nova.Status.Exposure}, SNR {now.Snr}");
+        await rig.Guider.StopAsync(CancellationToken.None);
+
+        var lines = File.ReadAllLines(rig.Nova.GuideLogPath(rig.Nova.GuideLogs()[0].Name, onDrive: false)!);
+        Assert.Contains(lines, l => l.StartsWith("Y guide algorithm = Lowpass2, Aggressiveness = 100.000"));
+        Assert.Contains(lines, l => l.StartsWith("Comet tracking = enabled, RA rate = 0.00 a-s/hr, Dec rate = 36000.00 a-s/hr"));
+        Assert.Contains(lines, l => l.Contains("Star mass tolerance = 50.0%"));
+        Assert.Contains(lines, l => l.StartsWith("INFO: Guiding parameter change, Exposure = ") && l.EndsWith("ms (auto)"));
+
+        // An off-axis guider: turning the camera turns the calibration with it.
+        rig.Nova.UpdateSettings(rig.Nova.Settings with { RotateCalibration = true });
+        Assert.Equal(0, rig.Nova.Status.Calibration!.CameraTurn);
+        await rotator.MoveToAsync((rotator.Angle + 30) % 360, timeout.Token);
+        Assert.Equal(30, rig.Nova.Status.Calibration!.CameraTurn!.Value, 0.5);
+        rig.Nova.UpdateSettings(rig.Nova.Settings with { RotateCalibration = false });
+        Assert.Null(rig.Nova.Status.Calibration!.CameraTurn);
+    }
+
+    [Fact]
     public async Task ANewInstallGuidesWithNovaAndAUsedOneKeepsPhd2()
     {
         NovaGuider Make(string folder)

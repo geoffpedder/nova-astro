@@ -16,9 +16,17 @@ namespace Nova.Server.Services;
 /// <param name="UseDarks">Subtract the guide camera's dark library (when it has one) from every guide frame.</param>
 /// <param name="Gain">The guide camera's gain, set before every frame; null leaves it as the driver has it.</param>
 /// <param name="GuideLog">Write a guide log (PHD2's format) into each night's image folder.</param>
+/// <param name="AutoExposure">Choose the exposure (between the minimum and maximum) to keep the guide star near <c>TargetSnr</c>.</param>
+/// <param name="StarMassTolerance">Skip correcting a frame whose guide star's brightness jumps or drops by more than this (fraction); 0 = off.</param>
+/// <param name="RotateCalibration">An off-axis guider: when the main camera turns (its rotator, or a plate solve), the calibration turns with it.</param>
+/// <param name="RotationReversed">The guide camera's image turns the other way from the main camera's (turned the wrong way? tick this).</param>
+/// <param name="CometTracking">Follow a moving object: the lock position moves at <c>CometRaRate</c> (″/h on the sky, east +) and <c>CometDecRate</c> (″/h, north +).</param>
 public sealed record NovaGuiderSettings(
     string? Camera = null, string? Output = null, double ExposureSeconds = 2, int Binning = 1, int CalibrationStepMs = 0,
-    bool ReverseDecAfterFlip = false, GuideAlgorithmSettings? Algorithms = null, bool UseDarks = true, double? Gain = null, bool GuideLog = true)
+    bool ReverseDecAfterFlip = false, GuideAlgorithmSettings? Algorithms = null, bool UseDarks = true, double? Gain = null, bool GuideLog = true,
+    bool AutoExposure = false, double MinExposureSeconds = 1, double MaxExposureSeconds = 4, double TargetSnr = 20,
+    double StarMassTolerance = 0.5, bool RotateCalibration = false, bool RotationReversed = false,
+    bool CometTracking = false, double CometRaRate = 0, double CometDecRate = 0)
 {
     public GuideAlgorithmSettings Algorithms { get; init; } = Algorithms ?? new GuideAlgorithmSettings();
 }
@@ -33,7 +41,7 @@ public sealed record GuideOutputChoice(string? Name, string Label);
 public sealed record GuideCalibrationInfo(
     double RaAngle, double DecAngle, double RaRate, double DecRate, double? RaArcsecPerSecond, double? DecArcsecPerSecond,
     double Orthogonality, double DecDegrees, PierSide? PierSide, DateTime Utc, string? Warning,
-    IReadOnlyList<CalibrationPoint>? Points = null, double DecBacklashPixels = 0, int DecBacklashMs = 0);
+    IReadOnlyList<CalibrationPoint>? Points = null, double DecBacklashPixels = 0, int DecBacklashMs = 0, double? CameraTurn = null);
 
 /// <summary>Dec backlash compensation now: what calibration measured, the pulse it adds on a reversal now (adjusted as it
 /// guides), and how many reversals it has compensated.</summary>
@@ -48,6 +56,7 @@ public sealed record GuideStarMark(double X, double Y, bool Lock, bool Found);
 /// <param name="Activity">What it's doing in words ("West step 4", "Lost the guide star"), or null when idle.</param>
 /// <param name="CameraGain">The guide camera's gain now and its range, when it's connected and has one.</param>
 /// <param name="Frame">Increments with every guide frame, so the browser knows when to fetch frame.png.</param>
+/// <param name="Exposure">The guide exposure now (seconds): the setting, or what automatic exposure chose.</param>
 public sealed record NovaGuiderStatus(
     NovaGuiderSettings Settings, IReadOnlyList<string> Cameras, IReadOnlyList<GuideOutputChoice> Outputs,
     string? Camera, string? Activity, GuideCalibrationInfo? Calibration, GuideStarInfo? Star,
@@ -55,7 +64,7 @@ public sealed record NovaGuiderStatus(
     GuideDarkInfo? Darks = null, string? DarkProgress = null, NumberSetting? CameraGain = null,
     GuidingAssistantResult? Assistant = null, bool CameraConnected = false,
     IReadOnlyList<GuideProfileInfo>? Profiles = null, string? Profile = null, GuideDefaults? Defaults = null,
-    PecStatus? Pec = null, DecBacklashStatus? Backlash = null);
+    PecStatus? Pec = null, DecBacklashStatus? Backlash = null, double? Exposure = null);
 
 /// <summary>A guide settings profile to choose from: the user's own (everything, equipment included) or built in.</summary>
 public sealed record GuideProfileInfo(string Name, bool BuiltIn, string? Description);
@@ -91,6 +100,8 @@ public sealed class NovaGuider : IAsyncDisposable
     private readonly GuideController _controller = new();
     private readonly DecDriftMonitor _drift = new();
     private readonly GuideHistory _history = new(HistoryLength);
+    private readonly GuideExposureController _autoExposure = new();
+    private readonly StarMassMonitor _mass = new();
     private readonly Random _dither = new();
     private readonly System.Diagnostics.Stopwatch _clock = System.Diagnostics.Stopwatch.StartNew();
 
@@ -115,6 +126,9 @@ public sealed class NovaGuider : IAsyncDisposable
     private IReadOnlyList<DetectedStar> _frameStars = [];
     private int _frameId;
     private double? _scale;
+    private (double Angle, PierSide? Pier)? _solvedAngle;
+    private double? _cometTime;
+    private double _reportedTurn;
 
     private enum Mode { Looping, Calibrating, Guiding, Assistant }
 
@@ -128,6 +142,7 @@ public sealed class NovaGuider : IAsyncDisposable
         _localImages = options.Value.ResolveImageDirectory();
         _saved = Load();
         _controller.Settings = _saved.Nova.Algorithms;
+        ConfigureChecks(_saved.Nova);
         _guideLog = new GuideLog(() => Settings.GuideLog ? _guideLogPath : null);
         _guideLog.Problem += problem =>
         {
@@ -297,6 +312,13 @@ public sealed class NovaGuider : IAsyncDisposable
         if (settings.Gain is < 0 or > 10_000) throw new ArgumentException("The guide camera gain must be 0–10000");
         if (settings.Gain is { } gain && Camera is { IsConnected: true, Controls.Gain: { } range } && (gain < range.Min || gain > range.Max))
             throw new ArgumentException($"The guide camera's gain goes from {range.Min:0.##} to {range.Max:0.##}");
+        if (settings.AutoExposure && (settings.MinExposureSeconds is < 0.05 or > 30 || settings.MaxExposureSeconds is < 0.05 or > 30 ||
+                                      settings.MinExposureSeconds > settings.MaxExposureSeconds))
+            throw new ArgumentException("Automatic exposure's minimum and maximum must be 0.05–30 s, the minimum no more than the maximum");
+        if (settings.TargetSnr is < 3 or > 200) throw new ArgumentException("The target SNR must be 3–200");
+        if (settings.StarMassTolerance is < 0 or > 2) throw new ArgumentException("The star brightness change allowed must be 0 (off) to 200%");
+        if (Math.Abs(settings.CometRaRate) > 1e6 || Math.Abs(settings.CometDecRate) > 1e6)
+            throw new ArgumentException("The comet rates must be within ±1,000,000″/h");
         var a = settings.Algorithms;
         if (a.RaAggressiveness is < 0 or > 2 || a.DecAggressiveness is < 0 or > 2 || a.RaHysteresis is < 0 or >= 1 ||
             a.RaMinMove < 0 || a.DecMinMove < 0 || a.MaxRaPulseMs is < 50 or > 10_000 || a.MaxDecPulseMs is < 50 or > 10_000)
@@ -308,11 +330,27 @@ public sealed class NovaGuider : IAsyncDisposable
         lock (_sync)
         {
             foreach (var change in Changes(_saved.Nova, settings)) _guideLog.Info($"Guiding parameter change, {change}");
+            var before = _saved.Nova;
             _saved = _saved with { Nova = settings };
             _controller.Settings = settings.Algorithms;
+            if (before.Algorithms.DecAlgorithm != settings.Algorithms.DecAlgorithm) _controller.Reset();
+            if (before.CometTracking != settings.CometTracking) _cometTime = null;
+            ConfigureChecks(settings, before);
         }
         Save();
     }
+
+    /// <summary>Sets up automatic exposure and the star brightness check from the settings (exposure afresh when its settings changed).</summary>
+    private void ConfigureChecks(NovaGuiderSettings s, NovaGuiderSettings? before = null)
+    {
+        _mass.Tolerance = s.StarMassTolerance;
+        if (before is null || before.AutoExposure != s.AutoExposure || before.MinExposureSeconds != s.MinExposureSeconds ||
+            before.MaxExposureSeconds != s.MaxExposureSeconds || before.TargetSnr != s.TargetSnr || before.ExposureSeconds != s.ExposureSeconds)
+            _autoExposure.Configure(s.MinExposureSeconds, s.MaxExposureSeconds, s.TargetSnr, s.ExposureSeconds);
+    }
+
+    /// <summary>The guide exposure for the next frame (seconds): the setting, or what automatic exposure chose.</summary>
+    public double Exposure => Settings.AutoExposure ? _autoExposure.Exposure : Settings.ExposureSeconds;
 
     /// <summary>What differs between two sets of settings, as "Name = value" for the guide log.</summary>
     private static IEnumerable<string> Changes(NovaGuiderSettings before, NovaGuiderSettings after)
@@ -321,7 +359,13 @@ public sealed class NovaGuider : IAsyncDisposable
         (string Name, object? Old, object? New)[] fields =
         [
             ("Exposure", before.ExposureSeconds * 1000, after.ExposureSeconds * 1000), ("Gain", before.Gain, after.Gain),
-            ("Use darks", before.UseDarks, after.UseDarks),
+            ("Use darks", before.UseDarks, after.UseDarks), ("Auto exposure", before.AutoExposure, after.AutoExposure),
+            ("Auto exposure min", before.MinExposureSeconds * 1000, after.MinExposureSeconds * 1000),
+            ("Auto exposure max", before.MaxExposureSeconds * 1000, after.MaxExposureSeconds * 1000), ("Target SNR", before.TargetSnr, after.TargetSnr),
+            ("Star mass tolerance", before.StarMassTolerance * 100, after.StarMassTolerance * 100),
+            ("Rotate calibration with camera", before.RotateCalibration, after.RotateCalibration),
+            ("Rotator reversed", before.RotationReversed, after.RotationReversed), ("Comet tracking", before.CometTracking, after.CometTracking),
+            ("Comet RA rate", before.CometRaRate, after.CometRaRate), ("Comet Dec rate", before.CometDecRate, after.CometDecRate),
             ("RA Hysteresis", a.RaHysteresis, b.RaHysteresis), ("RA Aggression", a.RaAggressiveness, b.RaAggressiveness),
             ("RA Minimum move", a.RaMinMove, b.RaMinMove), ("Dec Aggression", a.DecAggressiveness, b.DecAggressiveness),
             ("Dec Minimum move", a.DecMinMove, b.DecMinMove), ("Dec FastSwitch", a.DecFastSwitch, b.DecFastSwitch),
@@ -329,7 +373,7 @@ public sealed class NovaGuider : IAsyncDisposable
             ("Max DEC duration", a.MaxDecPulseMs, b.MaxDecPulseMs),
             ("X guide algorithm", a.RaAlgorithm, b.RaAlgorithm), ("PEC period", a.PecPeriodSeconds, b.PecPeriodSeconds),
             ("PEC prediction gain", a.PecPredictionGain, b.PecPredictionGain), ("PEC reactive aggression", a.PecReactiveAggressiveness, b.PecReactiveAggressiveness),
-            ("Backlash comp", a.DecBacklashCompensation, b.DecBacklashCompensation),
+            ("Backlash comp", a.DecBacklashCompensation, b.DecBacklashCompensation), ("Y guide algorithm", a.DecAlgorithm, b.DecAlgorithm),
         ];
         return fields.Where(f => !Equals(f.Old, f.New)).Select(f => FormattableString.Invariant($"{f.Name} = {f.New ?? "driver"}"));
     }
@@ -348,7 +392,11 @@ public sealed class NovaGuider : IAsyncDisposable
             lock (_sync)
             {
                 var stored = StoredFor(Camera?.Name);
-                var info = stored is null ? null : Describe(stored.Calibration, stored.Warning) with { Points = stored.Points };
+                var info = stored is null ? null : Describe(stored.Calibration, stored.Warning) with
+                {
+                    Points = stored.Points,
+                    CameraTurn = Settings.RotateCalibration && Turn(stored) is { } turn ? Math.Round(turn, 1) : null,
+                };
                 var lockHome = _tracker.LockHome;
                 var star = _last is { } m && lockHome is { } home
                     ? new GuideStarInfo(Math.Round(m.X, 2), Math.Round(m.Y, 2), Math.Round(home.X, 2), Math.Round(home.Y, 2),
@@ -365,7 +413,7 @@ public sealed class NovaGuider : IAsyncDisposable
                      .. GuidePresets.All.Select(p => new GuideProfileInfo(p.Name, true, p.Description))],
                     MatchingProfile(), Defaults,
                     Settings.Algorithms.RaAlgorithm == RaAlgorithm.PredictivePec ? _controller.Pec.Status : null,
-                    BacklashStatus(stored?.Calibration));
+                    BacklashStatus(stored?.Calibration), Exposure);
             }
         }
     }
@@ -471,6 +519,7 @@ public sealed class NovaGuider : IAsyncDisposable
             if (_tracker.LockHome is { } home) _guideLog.Info(FormattableString.Invariant($"Star selected at {home.X:0.000}, {home.Y:0.000}"));
             _controller.Reset();
             _controller.Pec.Reset();
+            _mass.Reset();
             _lostFrames = 0;
             _last = null;
         }
@@ -549,6 +598,9 @@ public sealed class NovaGuider : IAsyncDisposable
             _controller.Reset();
             _controller.Pec.Reset();
             (_pecState, _pecPier) = (null, null);
+            _mass.Reset();
+            _cometTime = null;
+            _reportedTurn = Settings.RotateCalibration && StoredFor(Camera?.Name) is { } turned ? Turn(turned) ?? 0 : 0;
             _rehome = true;
             _mode = Mode.Guiding;
             _activity = "Guiding";
@@ -563,7 +615,7 @@ public sealed class NovaGuider : IAsyncDisposable
     /// <summary>Waits until the loop has found a guide star: a few exposures' time, then gives up.</summary>
     private async Task WaitForStarAsync(CancellationToken ct)
     {
-        var deadline = DateTime.UtcNow.AddSeconds(Math.Max(10, 3 * Settings.ExposureSeconds + 5));
+        var deadline = DateTime.UtcNow.AddSeconds(Math.Max(10, 3 * Exposure + 5));
         while (true)
         {
             lock (_sync)
@@ -827,7 +879,7 @@ public sealed class NovaGuider : IAsyncDisposable
         {
             while (!ct.IsCancellationRequested)
             {
-                var exposure = Settings.ExposureSeconds;
+                var exposure = Exposure;
                 CapturedImage frame;
                 try
                 {
@@ -842,6 +894,7 @@ public sealed class NovaGuider : IAsyncDisposable
                 var image = WithoutDark(camera, frame.Image, exposure);
                 var stars = StarDetector.Analyze(image, new StarDetectionOptions(MinSnr: 6, MaxStars: 60)).Stars;
                 var pulses = Process(camera, image, stars, DateTime.UtcNow);
+                AdjustExposure();
                 if (pulses.Count > 0 && Output is { } output)
                     await Task.WhenAll(pulses.Select(p => output.PulseAsync(p.Direction, TimeSpan.FromMilliseconds(p.Milliseconds), ct)));
             }
@@ -893,7 +946,7 @@ public sealed class NovaGuider : IAsyncDisposable
                     await back.ConnectAsync(ct);
                     _equipment.NotifyDevicesChanged();
                 }
-                await back.ExposeAsync(new ExposureRequest(Math.Min(Settings.ExposureSeconds, 1), GuideFrameTimeout), null, ct); // a frame comes through
+                await back.ExposeAsync(new ExposureRequest(Math.Min(Exposure, 1), GuideFrameTimeout), null, ct); // a frame comes through
             }
             catch (Exception ex) when (ex is not OperationCanceledException)
             {
@@ -934,6 +987,7 @@ public sealed class NovaGuider : IAsyncDisposable
                 _tracker.SetHomeHere();
                 _rehome = false;
             }
+            if (_mode == Mode.Guiding) CometStep();
 
             var m = _tracker.Measure(stars);
             if (m is null)
@@ -981,6 +1035,16 @@ public sealed class NovaGuider : IAsyncDisposable
 
                 case Mode.Guiding when Current() is { } calibration:
                     State = GuiderState.Guiding;
+                    message = TurnWatch();
+                    if (!_mass.Add(m.Mass, out var change))
+                    {
+                        // A cloud, a satellite or another star in the box: this frame's position can't be trusted.
+                        var percent = FormattableString.Invariant($"{change * 100:+0;-0}%");
+                        _activity = $"Guide star brightness changed {percent}: frame skipped";
+                        _guideLog.StarLost(utc, $"Star mass changed {percent}");
+                        Settle(utc, null);
+                        break;
+                    }
                     pecInfo = PecWatch(calibration);
                     var c = _controller.Correct(m.Dx, m.Dy, calibration, _clock.Elapsed.TotalSeconds, steady: _settle is null);
                     _history.Add(c.RaPixels, c.DecPixels, settling: _settle is not null);
@@ -1027,9 +1091,11 @@ public sealed class NovaGuider : IAsyncDisposable
         _guideLog.EndCalibration(DateTime.UtcNow, calibrator.Points, calibrator.Result, calibrator.Error, PixelScale);
         if (calibrator.Result is { } result)
         {
+            var angle = CameraAngle();
             _saved = _saved with
             {
-                Calibration = new StoredCalibration(camera.Name, Settings.Output, Settings.Binning, result, calibrator.Warning, [.. calibrator.Points]),
+                Calibration = new StoredCalibration(camera.Name, Settings.Output, Settings.Binning, result, calibrator.Warning, [.. calibrator.Points],
+                    angle?.Degrees, angle?.Source, angle?.Pier),
             };
             SaveLocked();
             var info = Describe(result, null);
@@ -1077,7 +1143,7 @@ public sealed class NovaGuider : IAsyncDisposable
     /// <summary>Works out and keeps the assistant's result, and goes back to looping. Returns its summary to log.</summary>
     private string? FinishAssistant(ICamera camera, DateTime utc, bool calibrated)
     {
-        var result = _assistant!.Result(utc, PixelScale, calibrated, Settings.ExposureSeconds);
+        var result = _assistant!.Result(utc, PixelScale, calibrated, Exposure);
         var done = _assistantDone;
         (_assistant, _assistantDone, _mode) = (null, null, Mode.Looping);
         _activity = "Looping";
@@ -1110,12 +1176,81 @@ public sealed class NovaGuider : IAsyncDisposable
         if (_mode == Mode.Calibrating) _mode = Mode.Looping;
     }
 
-    /// <summary>The stored calibration, adapted to where the mount points now.</summary>
-    private GuideCalibration? Current()
+    /// <summary>The stored calibration, adapted to where the mount points now (and how far the camera has turned, for an off-axis guider).</summary>
+    private GuideCalibration? Current() => Adapted(Settings.ReverseDecAfterFlip);
+
+    /// <summary>The calibration as it is now; with <paramref name="reverseDecAfterFlip"/> false, Dec's directions are the sky's (for moving the lock with a comet).</summary>
+    private GuideCalibration? Adapted(bool reverseDecAfterFlip)
     {
         if (StoredFor(Camera?.Name) is not { } stored) return null;
+        var calibration = stored.Calibration;
+        if (Settings.RotateCalibration && Turn(stored) is { } turn)
+            calibration = calibration.Rotated((Settings.RotationReversed ? -turn : turn) * Math.PI / 180);
         var (dec, pier) = Pointing();
-        return dec is null ? stored.Calibration : stored.Calibration.For(dec.Value, pier, Settings.ReverseDecAfterFlip);
+        return dec is null ? calibration : calibration.For(dec.Value, pier, reverseDecAfterFlip);
+    }
+
+    /// <summary>
+    /// The main camera's angle now (degrees): the rotator's when one is connected, else the last plate solve's (with the
+    /// pier side then, since a meridian flip turns the solved angle half way round). Null when neither is known.
+    /// </summary>
+    private (double Degrees, string Source, PierSide? Pier)? CameraAngle() =>
+        _equipment.Rotator is { IsConnected: true } rotator ? (rotator.Angle, "rotator", null)
+        : _solvedAngle is { } solved ? (solved.Angle, "solve", solved.Pier)
+        : null;
+
+    /// <summary>
+    /// How far the main camera has turned since the calibration (degrees, −180 to 180), measured the same way (rotator or
+    /// solve) as then; null when it can't be told. A flip between solves isn't a turn: the calibration allows for that.
+    /// </summary>
+    private double? Turn(StoredCalibration stored)
+    {
+        if (stored.CameraAngle is not { } then || CameraAngle() is not { } now || now.Source != stored.AngleSource) return null;
+        var turn = now.Degrees - then;
+        if (now.Source == "solve" && now.Pier is not null && stored.AnglePier is not null && now.Pier != stored.AnglePier) turn -= 180;
+        return ((turn % 360) + 540) % 360 - 180;
+    }
+
+    /// <summary>A plate solve of the main camera's latest frame: its angle (degrees), for turning an off-axis guider's calibration.</summary>
+    public void CameraSolved(double rotation)
+    {
+        var (_, pier) = Pointing();
+        lock (_sync) _solvedAngle = (rotation, pier);
+    }
+
+    /// <summary>Notes in the guide log when the calibration turns with the camera. Returns a line for the activity log.</summary>
+    private string? TurnWatch()
+    {
+        if (!Settings.RotateCalibration || StoredFor(Camera?.Name) is not { } stored || Turn(stored) is not { } turn) return null;
+        if (Math.Abs(turn - _reportedTurn) < 1) return null;
+        _reportedTurn = turn;
+        var line = FormattableString.Invariant($"The camera has turned {turn:0.#}° since calibrating: the guide calibration turned with it");
+        _guideLog.Info(line);
+        return line;
+    }
+
+    /// <summary>Comet tracking: moves the lock position as far as the object has moved since the last frame.</summary>
+    private void CometStep()
+    {
+        var now = _clock.Elapsed.TotalSeconds;
+        var last = _cometTime;
+        _cometTime = now;
+        if (!Settings.CometTracking || last is null || PixelScale is not { } scale || Adapted(false) is not { } sky) return;
+        var (dx, dy) = sky.SkyMotion(Settings.CometRaRate, Settings.CometDecRate, now - last.Value, scale);
+        _tracker.ShiftHome(dx, dy);
+        if (Current() is { } calibration) _controller.LockMoved(calibration.ToAxes(dx, dy).Ra);
+    }
+
+    /// <summary>Automatic exposure: feeds it the frame just processed (the lock star's SNR, or no star) and notes a change in the guide log.</summary>
+    private void AdjustExposure()
+    {
+        if (!Settings.AutoExposure) return;
+        lock (_sync)
+        {
+            if (_mode == Mode.Calibrating) return; // the same exposure all through a calibration
+            if (_autoExposure.Add(_tracker.HasLock ? _last?.Snr : null) is { } exposure)
+                _guideLog.Info(FormattableString.Invariant($"Guiding parameter change, Exposure = {exposure * 1000:0} ms (auto)"));
+        }
     }
 
     /// <summary>The saved calibration, if it was made with this camera, output and binning.</summary>
@@ -1215,17 +1350,21 @@ public sealed class NovaGuider : IAsyncDisposable
         {
             "Dither = both axes, Dither scale = 1.000, Image noise reduction = none, Guide-frame time lapse = 0, Server enabled",
             FormattableString.Invariant($"Pixel scale = {(scale is { } sc ? sc.ToString("0.00", CultureInfo.InvariantCulture) : "N/A")} arc-sec/px, Binning = {s.Binning}, Focal length = N/A mm"),
-            FormattableString.Invariant($"Search region = {_tracker.SearchRadius:0} px, Star mass tolerance = disabled"),
+            FormattableString.Invariant($"Search region = {_tracker.SearchRadius:0} px, Star mass tolerance = {(s.StarMassTolerance > 0 ? (s.StarMassTolerance * 100).ToString("0.0", CultureInfo.InvariantCulture) + "%" : "disabled")}"),
             "Equipment Profile = NOVA",
             FormattableString.Invariant($"Camera = {camera.Name}, gain = {camera.Controls.Gain?.Value.ToString("0", CultureInfo.InvariantCulture) ?? "N/A"}, full size = {size}, {dark}, no defect map, pixel size = {camera.PixelSize?.ToString("0.00", CultureInfo.InvariantCulture) ?? "N/A"} um"),
-            FormattableString.Invariant($"Exposure = {s.ExposureSeconds * 1000:0} ms"),
+            s.AutoExposure
+                ? FormattableString.Invariant($"Exposure = {Exposure * 1000:0} ms (auto, {s.MinExposureSeconds * 1000:0}–{s.MaxExposureSeconds * 1000:0} ms, target SNR {s.TargetSnr:0})")
+                : FormattableString.Invariant($"Exposure = {s.ExposureSeconds * 1000:0} ms"),
             calibration is { } c
                 ? FormattableString.Invariant($"Mount = {output.Name}, connected, guiding enabled, xAngle = {Deg(c.RaAngle):0.0}, xRate = {c.RaRate:0.000}, yAngle = {Deg(c.DecAngle):0.0}, yRate = {c.DecRate:0.000}, parity = +/+")
                 : $"Mount = {output.Name}, connected, guiding enabled",
             a.RaAlgorithm == RaAlgorithm.PredictivePec
                 ? FormattableString.Invariant($"X guide algorithm = Predictive PEC, Period = {(a.PecPeriodSeconds > 0 ? $"{a.PecPeriodSeconds:0.0} s" : "auto")}, Prediction gain = {a.PecPredictionGain:0.000}, Reactive aggression = {a.PecReactiveAggressiveness:0.000}, Hysteresis = {a.RaHysteresis:0.000}, Minimum move = {a.RaMinMove:0.000}")
                 : FormattableString.Invariant($"X guide algorithm = Hysteresis, Hysteresis = {a.RaHysteresis:0.000}, Aggression = {a.RaAggressiveness:0.000}, Minimum move = {a.RaMinMove:0.000}"),
-            FormattableString.Invariant($"Y guide algorithm = Resist Switch, Minimum move = {a.DecMinMove:0.000} Aggression = {a.DecAggressiveness * 100:0}% FastSwitch = {(a.DecFastSwitch ? "enabled" : "disabled")}"),
+            a.DecAlgorithm == DecAlgorithm.Lowpass2
+                ? FormattableString.Invariant($"Y guide algorithm = Lowpass2, Aggressiveness = {a.DecAggressiveness * 100:0.000}, Minimum move = {a.DecMinMove:0.000}")
+                : FormattableString.Invariant($"Y guide algorithm = Resist Switch, Minimum move = {a.DecMinMove:0.000} Aggression = {a.DecAggressiveness * 100:0}% FastSwitch = {(a.DecFastSwitch ? "enabled" : "disabled")}"),
             a.DecBacklashCompensation && _controller.Backlash.PulseMs >= 10
                 ? FormattableString.Invariant($"Backlash comp = enabled, pulse = {_controller.Backlash.PulseMs:0} ms")
                 : calibration is { DecBacklashPixels: >= DecBacklashCompensator.MinimumPixels } && a.DecBacklashCompensation
@@ -1236,6 +1375,11 @@ public sealed class NovaGuider : IAsyncDisposable
         if (calibration is { } cal && scale is { } px)
             lines.Add(FormattableString.Invariant($"RA Guide Speed = {cal.RaRate * px:0.0} a-s/s, Dec Guide Speed = {cal.DecRate * px:0.0} a-s/s, Cal Dec = {cal.DecDegrees:0.0}, Last Cal Issue = None, Timestamp = {cal.Utc.ToLocalTime():yyyy-MM-dd HH:mm:ss}"));
         lines.Add(FormattableString.Invariant($"RA = {(ra is { } r ? r.ToString("0.00", CultureInfo.InvariantCulture) : "N/A")} hr, Dec = {(dec is { } d ? d.ToString("0.0", CultureInfo.InvariantCulture) : "N/A")} deg, Hour angle = N/A hr, Pier side = {pier?.ToString() ?? "N/A"}, Rotator pos = N/A, Alt = N/A deg, Az = N/A deg"));
+        if (s.CometTracking)
+            lines.Add(FormattableString.Invariant($"Comet tracking = enabled, RA rate = {s.CometRaRate:0.00} a-s/hr, Dec rate = {s.CometDecRate:0.00} a-s/hr"));
+        if (s.RotateCalibration)
+            lines.Add(FormattableString.Invariant($"Calibration follows camera rotation = enabled{(s.RotationReversed ? ", reversed" : "")}") +
+                      (StoredFor(camera.Name) is { } turned && Turn(turned) is { } turn ? FormattableString.Invariant($", turned {turn:0.0} deg") : ""));
         if (_tracker.LockHome is { } home) lines.Add(FormattableString.Invariant($"Lock position = {home.X:0.000}, {home.Y:0.000}"));
         if (_last is { } m) lines.Add(FormattableString.Invariant($"Star position = {m.X:0.000}, {m.Y:0.000}, HFD = {m.Hfr * 2:0.00} px"));
         return lines;
@@ -1289,8 +1433,10 @@ public sealed class NovaGuider : IAsyncDisposable
 
     // ---- Settings file ----
 
+    /// <param name="CameraAngle">The main camera's angle at calibration (degrees), from <c>AngleSource</c> ("rotator" or "solve"; the solve's pier side in <c>AnglePier</c>).</param>
     private sealed record StoredCalibration(
-        string Camera, string? Output, int Binning, GuideCalibration Calibration, string? Warning, IReadOnlyList<CalibrationPoint>? Points = null);
+        string Camera, string? Output, int Binning, GuideCalibration Calibration, string? Warning, IReadOnlyList<CalibrationPoint>? Points = null,
+        double? CameraAngle = null, string? AngleSource = null, PierSide? AnglePier = null);
 
     private sealed record StoredDark(
         string Camera, int Binning, double? Gain, double ExposureSeconds, int Frames, DateTime Utc, int HotPixels, string File);

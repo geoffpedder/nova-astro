@@ -16,6 +16,16 @@ What changed in each release. The newest is first. A release's section here beco
 
 ### Added
 
+- **NOVA's guider has more of what other guiders have** (all in Guiding settings):
+  - **Auto exposure**: chooses the guide exposure, between a shortest and longest, to keep the star near a target SNR,
+    longer when it fades or is lost.
+  - **Brightness jumps** are skipped: a frame whose guide star suddenly brightens or fades by more than 50% (a
+    satellite, a cloud edge, another star) isn't corrected; a lasting change is accepted after five frames.
+  - **Lowpass2** for Dec, besides Resist Switch: corrects to a line fitted through the recent errors.
+  - **Off-axis guider**: the calibration turns with the main camera (its rotator, or plate solves), so turning the
+    camera doesn't need a new calibration; *Reversed* for a guide image that turns the other way.
+  - **Comet guiding**: the lock position moves at the object's RA and Dec rates (″/h).
+
 - **Files** in the Mini PC tab: the image folders on the mini PC (and a mounted USB drive), night by night. Open a
   FITS file in the Image tab, view a picture (a live stack's PNG) in a new browser tab, or download any file to the
   device you're using. Each frame has a thumbnail (made once on the mini PC, then kept), and 🗑 deletes a file or a

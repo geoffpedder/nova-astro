@@ -18,6 +18,8 @@
     frames,
     frameCentre,
     onmoveframe,
+    frameAngle = null,
+    onrotateframe,
     solved = null,
     solvedAngle = null,
     mount = null,
@@ -39,6 +41,10 @@
     frames: { centre: Sky; corners: Sky[]; label: string }[]
     frameCentre: Sky | null
     onmoveframe: (centre: Sky) => void
+    /** The planned frame's rotation (position angle of its top, degrees), for its label. */
+    frameAngle?: number | null
+    /** With this, the frame gets a handle above it: drag it round to turn the frame (to a new position angle). */
+    onrotateframe?: (pa: number) => void
     solved?: Sky[] | null
     /** The solved frame's rotation (position angle of its top, degrees), for its label. */
     solvedAngle?: number | null
@@ -908,7 +914,54 @@
 
     if (solved) boxLabel(polygon(solved, c.solved, [8, 5]), solvedAngle != null ? `Solve ${((Math.round(solvedAngle * 10) / 10) % 360).toFixed(1)}°` : 'Solve', c.solved, 'bottom')
     const framePoints = frames.flatMap((f) => polygon(f.corners, c.frame, [], 'rgba(255, 210, 90, 0.07)') ?? [])
-    boxLabel(framePoints, 'Target', c.frame, 'top-left')
+    boxLabel(framePoints, frameAngle != null ? `Target ${(Math.round(frameAngle * 10) / 10).toFixed(1)}°` : 'Target', c.frame, 'top-left')
+    rotateHandle = null
+    if (onrotateframe && frameCentre && framePoints.length >= 4) {
+      // Above the middle of the frame's top edge (of the whole mosaic), along the frame's own "up".
+      const unit = (x: number, y: number) => {
+        const l = Math.hypot(x, y) || 1
+        return { x: x / l, y: y / l }
+      }
+      const pts = framePoints
+      const along = unit(pts[1].x - pts[0].x, pts[1].y - pts[0].y)
+      const up = unit(pts[0].x + pts[1].x - pts[2].x - pts[3].x, pts[0].y + pts[1].y - pts[2].y - pts[3].y)
+      const a = (q: { x: number; y: number }) => q.x * along.x + q.y * along.y
+      const u = (q: { x: number; y: number }) => q.x * up.x + q.y * up.y
+      const mid = (Math.min(...pts.map(a)) + Math.max(...pts.map(a))) / 2
+      const top = Math.max(...pts.map(u))
+      const edge = { x: along.x * mid + up.x * top, y: along.y * mid + up.y * top }
+      // Clear of the name above the top edge (about 20 px), so a small frame's label and handle don't overlap.
+      const knob = { x: edge.x + up.x * 42, y: edge.y + up.y * 42 }
+      if (visible(knob)) {
+        g.save()
+        g.strokeStyle = c.frame
+        g.lineWidth = 1.5
+        g.beginPath()
+        g.moveTo(edge.x + up.x * 22, edge.y + up.y * 22)
+        g.lineTo(knob.x - up.x * 8, knob.y - up.y * 8)
+        g.stroke()
+        g.fillStyle = c.frame
+        g.beginPath()
+        g.arc(knob.x, knob.y, 8, 0, Math.PI * 2)
+        g.fill()
+        // A turning arrow on the knob.
+        g.strokeStyle = c.bg
+        g.lineWidth = 1.6
+        g.beginPath()
+        g.arc(knob.x, knob.y, 4, -Math.PI * 0.9, Math.PI * 0.45)
+        g.stroke()
+        const tip = { x: knob.x + 4 * Math.cos(Math.PI * 0.45), y: knob.y + 4 * Math.sin(Math.PI * 0.45) }
+        g.fillStyle = c.bg
+        g.beginPath()
+        g.moveTo(tip.x + 2.6, tip.y - 0.6)
+        g.lineTo(tip.x - 2.2, tip.y + 2.2)
+        g.lineTo(tip.x - 0.8, tip.y - 2.6)
+        g.closePath()
+        g.fill()
+        g.restore()
+        rotateHandle = knob
+      }
+    }
     if (frames.length > 1) {
       g.font = 'bold 14px system-ui, sans-serif'
       g.textAlign = 'center'
@@ -991,8 +1044,32 @@
   }
 
   // ---- Interaction: drag to pan (or move the frame), wheel to zoom, click to pick ----
-  type Drag = { pointer: number; x: number; y: number; moved: boolean; start: Projection; kind: 'pan' | 'frame'; frameAt: { x: number; y: number } | null }
+  type Drag = {
+    pointer: number
+    x: number
+    y: number
+    moved: boolean
+    start: Projection
+    kind: 'pan' | 'frame' | 'rotate'
+    frameAt: { x: number; y: number } | null
+    /** Turning the frame: its centre on screen, the pointer's angle round it and the frame's angle at the start, and
+     * which way a position angle turns on screen here (+1 or -1: the chart can show the sky either way round). */
+    turn?: { cx: number; cy: number; from: number; pa: number; sense: number }
+  }
   let drag: Drag | null = null
+  /** Where the rotation handle was drawn, for picking it up. */
+  let rotateHandle: { x: number; y: number } | null = null
+  let overHandle = $state(false)
+
+  // Which way the position angle turns on screen at a point: from north towards east, clockwise or anticlockwise.
+  function turnSense(at: Sky): number {
+    const c = projection.sky(at.ra, at.dec)
+    const n = projection.sky(at.ra, Math.min(89.9, at.dec + 0.1))
+    const e = projection.sky(at.ra + 0.1 / 15 / Math.max(0.05, Math.cos((at.dec * Math.PI) / 180)), at.dec)
+    if (!c || !n || !e) return 1
+    const cross = (n.x - c.x) * (e.y - c.y) - (n.y - c.y) * (e.x - c.x)
+    return cross >= 0 ? 1 : -1
+  }
 
   function local(e: PointerEvent | WheelEvent) {
     const r = canvas!.getBoundingClientRect()
@@ -1047,6 +1124,27 @@
       }
       if (fingers.size > 2) return
     }
+    if (rotateHandle && frameCentre && onrotateframe && Math.hypot(at.x - rotateHandle.x, at.y - rotateHandle.y) <= 16) {
+      const centre = projection.sky(frameCentre.ra, frameCentre.dec)
+      if (centre) {
+        drag = {
+          pointer: e.pointerId,
+          ...at,
+          moved: false,
+          start: projection,
+          kind: 'rotate',
+          frameAt: null,
+          turn: { cx: centre.x, cy: centre.y, from: Math.atan2(at.y - centre.y, at.x - centre.x), pa: frameAngle ?? 0, sense: turnSense(frameCentre) },
+        }
+        overHandle = true // the turning cursor while it's held
+        try {
+          canvas.setPointerCapture(e.pointerId)
+        } catch {
+          // synthetic pointer: fine
+        }
+        return
+      }
+    }
     const onFrame = frameCentre && insideFrames(at.x, at.y)
     drag = {
       pointer: e.pointerId,
@@ -1074,13 +1172,23 @@
         return
       }
     }
+    if (!drag) {
+      const at = local(e)
+      overHandle = !!rotateHandle && Math.hypot(at.x - rotateHandle.x, at.y - rotateHandle.y) <= 16
+    }
     if (!drag || e.pointerId !== drag.pointer) return
     const at = local(e)
     const dx = at.x - drag.x
     const dy = at.y - drag.y
     if (!drag.moved && Math.hypot(dx, dy) < 4) return
     drag.moved = true
-    if (drag.kind === 'frame' && drag.frameAt) {
+    if (drag.kind === 'rotate' && drag.turn) {
+      // The frame turns as far as the pointer has gone round its centre, to the nearest half degree.
+      const t = drag.turn
+      const turned = ((Math.atan2(at.y - t.cy, at.x - t.cx) - t.from) * 180) / Math.PI
+      const pa = (((t.pa + t.sense * turned) % 360) + 360) % 360
+      onrotateframe?.((Math.round(pa * 2) / 2) % 360)
+    } else if (drag.kind === 'frame' && drag.frameAt) {
       onmoveframe(drag.start.unproject(drag.frameAt.x + dx, drag.frameAt.y + dy))
     } else {
       follow = false
@@ -1090,7 +1198,7 @@
   function pointerup(e: PointerEvent) {
     releaseFinger(e)
     if (!drag || e.pointerId !== drag.pointer) return
-    const wasClick = !drag.moved
+    const wasClick = !drag.moved && drag.kind !== 'rotate'
     const at = local(e)
     drag = null
     if (wasClick) pick(at.x, at.y)
@@ -1195,6 +1303,7 @@
 <div class="chart" bind:clientWidth={width} bind:clientHeight={height}>
   <canvas
     bind:this={canvas}
+    class:turning={overHandle}
     onpointerdown={pointerdown}
     onpointermove={pointermove}
     onpointerup={pointerup}
@@ -1232,6 +1341,9 @@
   }
   canvas:active {
     cursor: grabbing;
+  }
+  canvas.turning {
+    cursor: crosshair;
   }
   .hud {
     position: absolute;

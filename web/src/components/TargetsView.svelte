@@ -485,6 +485,8 @@
       frames={s.layers.target ? frames : []}
       frameCentre={centre}
       onmoveframe={moveFrame}
+      frameAngle={s.layers.target && centre ? s.pa : null}
+      onrotateframe={(pa) => (s.pa = pa)}
       solved={s.layers.solve ? solvedCorners : null}
       solvedAngle={solvedInfo?.pa ?? null}
       showMount={s.layers.mount}

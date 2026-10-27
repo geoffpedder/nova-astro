@@ -6,6 +6,9 @@ What changed in each release. The newest is first. A release's section here beco
 
 ### Added
 
+- **Turn the planned frame on the chart:** the yellow target frame's label shows its rotation (*Target 35.0°*),
+  and a round handle above the frame turns it by dragging, to the nearest half degree.
+
 - **Compact layout for phones and tablets:** the image fills the screen, with the bars and controls floating over it
   and most able to be put away (everything but the top bar and the shutter, with a tap on the image). Icons open the equipment
   panels, sliding out over the image; the top bar has your equipment profile and **Image** | **Targets**; the shutter

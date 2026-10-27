@@ -35,7 +35,7 @@
   }
   .side {
     min-height: 0;
-    overflow: auto;
+    overflow: hidden auto; /* a panel's cut corner reaches 1 px past its edge: no sideways scrolling for that */
   }
   .files {
     display: grid;

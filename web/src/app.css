@@ -271,6 +271,12 @@ select {
 }
 .panel[role='dialog']::after,
 .panel[role='alertdialog']::after {
+  /* Inside the box, not 1 px over its edge as on a panel: the corner is clipped off anyway, and a dialog that scrolls
+     would otherwise scroll sideways by that pixel. */
+  top: 0;
+  right: 0;
+  width: var(--cut);
+  height: var(--cut);
   background: linear-gradient(
     to top right,
     transparent calc(50% - 1.2px),

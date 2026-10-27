@@ -217,6 +217,7 @@
     flex-direction: column;
     gap: 12px;
     overflow-y: auto;
+    overflow-x: hidden; /* a panel's cut corner reaches 1 px past its edge */
     /* Room for the scrollbar kept whether it's there or not, so folding panels away doesn't widen the column. */
     scrollbar-gutter: stable;
   }

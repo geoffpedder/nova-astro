@@ -76,7 +76,6 @@
 <header>
   <div class="brand"><NovaStar size={17} />NOVA</div>
   {#if nova.status?.version}<span class="version mono muted" title="NOVA version">{nova.status.version === '0.0.0-dev' ? 'dev build' : `v${nova.status.version}`}</span>{/if}
-  <span class="muted">{nova.status?.backend ?? '…'}</span>
   {#if nova.hub !== 'connected'}
     <span class="badge warn">NOVA {nova.hub}…</span>
   {:else if !session.serverConnected}

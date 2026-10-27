@@ -2,8 +2,9 @@
   import { api } from '../lib/api'
   import { download } from '../lib/download'
   import type { SystemStats, TerminalStatus } from '../lib/types'
+  import { nova } from '../lib/state.svelte'
 
-  // The mini PC at a glance (CPU, memory, temperature, disks), read every few seconds while the Mini PC tab shows.
+  // The mini PC at a glance (CPU, memory, temperature, disks, the driver server), read every few seconds while the Mini PC tab shows.
   let { active }: { active: boolean } = $props()
   let stats = $state<SystemStats | null>(null)
   let failed = $state(false)
@@ -142,6 +143,12 @@
         <span class="bar"><span class={level(used)} style:width="{used}%"></span></span>
         <span title={disk.path}>{gb(disk.freeBytes)} GB free of {gb(disk.totalBytes)} GB</span>
       {/each}
+
+      {#if nova.status?.backend}
+        <span class="label">Drivers</span>
+        <span></span>
+        <span title="Where NOVA talks to the equipment drivers">{nova.status.backend}{nova.status.serverConnected ? '' : ', offline'}</span>
+      {/if}
     </div>
   {:else}
     <p class="muted small">{failed ? "Couldn't read the mini PC's stats." : 'Reading…'}</p>

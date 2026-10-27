@@ -51,7 +51,8 @@ The checklist goes away once the steps are done. **Setup** in the header brings 
 - **Main area:** the **Image**, **Plan**, **Targets**, **Polar alignment**, **PHD2** (or **Guiding**, with NOVA's
   own guider), **Webcam**, **Mini PC** and **Activity** tabs.
   - **Mini PC:** its CPU use (with load and temperature), memory in use (and NOVA's share), free space on the image
-    disk (and the USB drive when frames go there) and how long it's been up; the bars turn yellow at 75% and red at
+    disk (and the USB drive when frames go there), the driver server NOVA uses (INDI and its address, or the
+    simulator) and how long it's been up; the bars turn yellow at 75% and red at
     90%. **Terminal** and **Diagnostics** are there too, and **Files** (below).
   - **Activity:** the whole log, with *Warnings and errors only* to pick out problems. A dot on the tab means a
     warning or error came in since you last looked. Under every tab, one line shows the latest activity (yellow for

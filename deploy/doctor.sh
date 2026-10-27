@@ -290,13 +290,14 @@ section "Listening ports"
 # Something answers on the port (bash's /dev/tcp, so no ss or netstat needed).
 listens() { (exec 3<>"/dev/tcp/127.0.0.1/$1") 2>/dev/null; }
 ports="5000:NOVA web|7624:INDI|10001:Stellarium telescope link"
-[ "$phd2" = yes ] && ports="$ports|4400:PHD2 event server|6080:PHD2 screen (noVNC)"
+[ "$phd2" = yes ] && ports="$ports|4400:PHD2 event server|5999:PHD2 screen sharing (x11vnc, for NOVA's PHD2 tab)|6080:PHD2 screen (noVNC)"
 IFS='|' read -ra entries <<<"$ports"
 for entry in "${entries[@]}"; do
   port=${entry%%:*}; what=${entry#*:}
   if listens "$port"; then pass "$port $what"
   elif [ "$port" = 4400 ]; then note "$port $what not listening" "In PHD2 (http://<minipc>:6080): Tools > Enable Server"
   elif [ "$port" = 10001 ]; then note "$port $what not listening" "off if Nova__StellariumPort=0 in /etc/nova/nova.env"
+  elif [ "$port" = 5999 ]; then fail "$port $what not listening" "sudo systemctl restart nova-screen   (journalctl -u nova-screen -n 30 says why it stopped)"
   else fail "$port $what not listening" "see the service checks above"; fi
 done
 

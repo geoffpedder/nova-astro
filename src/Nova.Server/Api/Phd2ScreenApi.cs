@@ -38,7 +38,7 @@ public static class Phd2ScreenApi
             if (NoVncFolder(o) is null)
                 return Results.Ok(new { Available = false, Problem = "noVNC isn't installed on the mini PC: run nova setup (Arch: yay -S novnc websockify, then install.sh again)" });
             if (!await CanReachAsync(o.Phd2VncPort, ct))
-                return Results.Ok(new { Available = false, Problem = "PHD2's screen isn't being shared: is nova-screen running? (sudo systemctl status nova-screen)" });
+                return Results.Ok(new { Available = false, Problem = $"PHD2's screen isn't being shared: nothing answers on port {o.Phd2VncPort} (x11vnc, started by nova-screen). Try sudo systemctl restart nova-screen; journalctl -u nova-screen -n 30 says why it stopped" });
             return Results.Ok(new { Available = true, Problem = (string?)null });
         });
 

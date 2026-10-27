@@ -90,6 +90,7 @@ builder.Services.AddSingleton<EquipmentProfileService>();
 builder.Services.AddSingleton<DiagnosticsService>();
 builder.Services.AddSingleton<BackupService>();
 builder.Services.AddSingleton<LiveStackService>();
+builder.Services.AddSingleton<FileBrowserService>();
 builder.Services.AddHostedService<UsbHealthService>();
 builder.Services.AddHostedService(sp => sp.GetRequiredService<StorageService>());
 builder.Services.AddHostedService(sp => sp.GetRequiredService<NotificationService>());

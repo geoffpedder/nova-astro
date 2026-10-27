@@ -11,7 +11,7 @@ public sealed record BackupInfo(string Version, DateTime CreatedUtc, string Host
 /// Backs up all of NOVA's settings into one zip, and restores one: to move to another mini PC, or to go back after
 /// a mistake. The backup holds the settings folder (sites, optics, equipment profiles, the guider and its darks,
 /// sequences, notifications, the password...), the INDI driver list and the hotspot's settings; caches that fill
-/// themselves again (sky tiles, survey images, image history) are left out.
+/// themselves again (sky tiles, survey images, image history, file thumbnails) are left out.
 /// <para>
 /// A restore doesn't swap the files while NOVA runs (its services would save over them): it puts the backup aside and
 /// restarts NOVA, which swaps them in at startup, before anything reads its settings, then sets the drivers and the
@@ -30,7 +30,7 @@ public sealed class BackupService(
     public const string Pending = "restore-pending";
 
     /// <summary>Folders in the settings folder that are caches or runtime state, not settings.</summary>
-    private static readonly string[] NotSettings = ["sky", "survey-cache", "image-history", "terminal", "keys", Pending];
+    private static readonly string[] NotSettings = ["sky", "survey-cache", "image-history", "file-thumbnails", "terminal", "keys", Pending];
 
     /// <summary>Folders a restore replaces as a whole (top-level .json files are always replaced).</summary>
     private static readonly string[] SettingsFolders = ["sequences", "guide-darks"];

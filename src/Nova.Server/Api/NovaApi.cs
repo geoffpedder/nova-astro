@@ -29,6 +29,7 @@ public sealed record SettleRequest(double Seconds);
 /// <summary>The Image tab's Live stack switch: stack Expose and Loop frames.</summary>
 public sealed record LiveStackRequest(bool Enabled);
 public sealed record LiveStackKeyRequest(string? Key = null);
+public sealed record DeleteFileRequest(string? Root, string? Path, string? Password);
 
 public sealed record OpticsPresetRequest(string Camera, string Name);
 
@@ -577,6 +578,34 @@ public static class NovaApi
                 return Results.File(file.FullName, StorageService.ContentTypeOf(file.Name), inline == true ? null : file.Name, enableRangeProcessing: true);
             }
             catch (ArgumentException ex)
+            {
+                return Results.Problem(ex.Message, statusCode: StatusCodes.Status400BadRequest);
+            }
+        });
+        // A small preview of a FITS file in the image folders (made once, then kept).
+        api.MapGet("/files/thumbnail", async (string? root, string? path, FileBrowserService files, CancellationToken ct) =>
+        {
+            try
+            {
+                return await files.ThumbnailAsync(root ?? "local", path ?? "", ct) is { } png ? Results.File(png, "image/png") : Results.NotFound();
+            }
+            catch (ArgumentException ex)
+            {
+                return Results.Problem(ex.Message, statusCode: StatusCodes.Status400BadRequest);
+            }
+        });
+        // Delete a file, or a folder and everything in it, with NOVA's password (asked every time).
+        api.MapPost("/files/delete", async (DeleteFileRequest request, FileBrowserService files, CancellationToken ct) =>
+        {
+            try
+            {
+                return Results.Ok(await files.DeleteAsync(request.Root ?? "local", request.Path ?? "", request.Password, ct));
+            }
+            catch (UnauthorizedAccessException ex)
+            {
+                return Results.Problem(ex.Message, statusCode: StatusCodes.Status403Forbidden);
+            }
+            catch (Exception ex) when (ex is ArgumentException or IOException)
             {
                 return Results.Problem(ex.Message, statusCode: StatusCodes.Status400BadRequest);
             }

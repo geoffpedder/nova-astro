@@ -303,6 +303,27 @@ export const api = {
   browseFiles: (root: string, path: string, all = false) => get<FolderListing>(`/api/files?${query({ root, path, all: all ? 'true' : null })}`),
   /** A file in the image folders, to download; inline shows a picture in the browser instead. */
   fileUrl: (root: string, path: string, inline = false) => `/api/files/download?${query({ root, path, inline: inline ? 'true' : null })}`,
+  /** A FITS file's small preview; version (its time) makes a rewritten file get a new one. */
+  fileThumbnailUrl: (root: string, path: string, version: string | null) => `/api/files/thumbnail?${query({ root, path, v: version })}`,
+  /** Deletes a file, or a folder and everything in it, with NOVA's password. */
+  deleteFile: async (root: string, path: string, password: string): Promise<{ path: string; files: number; bytes: number }> => {
+    const response = await fetch('/api/files/delete', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ root, path, password }),
+    })
+    if (!response.ok) {
+      let message = `${response.status} ${response.statusText}`
+      try {
+        const problem = await response.json()
+        message = problem.detail ?? problem.title ?? message
+      } catch {
+        // keep the status text
+      }
+      throw new Error(message)
+    }
+    return response.json()
+  },
   /** Opens a FITS file saved on the mini PC (or its USB drive) in the viewer. */
   openMiniPcFile: (root: string, path: string) => post('/api/images/open-file', { root, path }),
   /** Sends a FITS file from this computer to become the viewer's image (solve it, measure its stars…). */

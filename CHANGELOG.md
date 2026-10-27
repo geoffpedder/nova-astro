@@ -14,7 +14,9 @@ What changed in each release. The newest is first. A release's section here beco
 
 - **Files** in the Mini PC tab: the image folders on the mini PC (and a mounted USB drive), night by night. Open a
   FITS file in the Image tab, view a picture (a live stack's PNG) in a new browser tab, or download any file to the
-  device you're using. Image → Open ▾ → From the mini PC is the same browser, showing just FITS files.
+  device you're using. Each frame has a thumbnail (made once on the mini PC, then kept), and 🗑 deletes a file or a
+  folder with everything in it after asking for NOVA's password, every time (nothing can be deleted without a
+  password set). Image → Open ▾ → From the mini PC is the same browser, showing just FITS files.
 
 - **Turn the planned frame on the chart:** the yellow target frame's label shows its rotation (*Target 35.0°*),
   and a small right angle just outside its bottom-right corner turns it by dragging, to the nearest half degree.

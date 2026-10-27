@@ -59,8 +59,11 @@ The checklist goes away once the steps are done. **Setup** in the header brings 
 - **Files** (Mini PC tab): the image folders on the mini PC, and a USB drive when one is mounted, night by night.
   **Open** a FITS file in the Image tab (to solve it, check its stars or match framing to it), **View** a picture
   (a live stack's PNG, say) in a new browser tab, or download any file to the phone, tablet or laptop you're
-  using. Nothing outside the image folders can be listed or downloaded. Image → **Open ▾** → *From the mini PC…*
-  is the same browser, showing just FITS files.
+  using. Each frame has a thumbnail (made on the mini PC the first time it's shown, then kept; untick
+  **Thumbnails** on a slow link). 🗑 deletes a file, or a folder and everything in it, after asking for NOVA's
+  password every time: with no password set nothing can be deleted, so nobody else on the network can. There's no
+  bin to get it back from. Nothing outside the image folders can be listed, downloaded or deleted. Image →
+  **Open ▾** → *From the mini PC…* is the same browser, showing just FITS files.
 - **Header:** the connection, the network (click it for the **Network** dialog and the
   [Wi-Fi hotspot](#wi-fi-hotspot-no-wi-fi-at-the-site)), a running sequence's progress (from any tab), **Setup**,
   **Full screen**, **Night** (everything in red, to keep your night vision) and ⏻ (restart or shut down the

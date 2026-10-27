@@ -475,6 +475,33 @@ public sealed class StorageService : BackgroundService
         return file;
     }
 
+    /// <summary>
+    /// Deletes a file, or a folder with everything in it, inside a root (FileBrowserService checks the password
+    /// first). Never a root's top, and never through a link that leads out of the image folders.
+    /// </summary>
+    public DeleteResult Delete(string root, string path)
+    {
+        var relative = (path ?? "").Replace('\\', '/').Trim('/');
+        if (relative.Length == 0) throw new ArgumentException("Choose a night, folder or file to delete, not the whole image folder");
+        var full = Resolve(root, relative);
+        if (EscapesByLink(root, full)) throw new ArgumentException("Not inside the image folders");
+        if (File.Exists(full))
+        {
+            var file = new FileInfo(full);
+            var bytes = file.Length;
+            file.Delete();
+            return new DeleteResult(relative, 1, bytes);
+        }
+        if (!Directory.Exists(full)) throw new ArgumentException("That isn't there any more");
+        var dir = new DirectoryInfo(full);
+        // A link inside is removed as a link (its target is left alone), so only real files count.
+        var files = dir.LinkTarget is null
+            ? dir.EnumerateFiles("*", new EnumerationOptions { RecurseSubdirectories = true, AttributesToSkip = FileAttributes.ReparsePoint }).ToList()
+            : [];
+        dir.Delete(recursive: true);
+        return new DeleteResult(relative, files.Count, files.Sum(f => f.Length));
+    }
+
     /// <summary>The content type a downloaded file is sent with.</summary>
     public static string ContentTypeOf(string name)
     {

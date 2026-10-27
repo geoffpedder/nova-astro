@@ -14,7 +14,8 @@
   const indi = $derived((nova.status?.backend ?? '').toUpperCase().startsWith('INDI'))
   import { api } from '../lib/api'
   import { act, nick, nova } from '../lib/state.svelte'
-  import Panel from './Panel.svelte'
+  import Panel, { type PanelKind } from './Panel.svelte'
+  import KindBadge from './KindBadge.svelte'
 
   const devices = $derived(nova.status?.devices ?? [])
 
@@ -28,8 +29,9 @@
     Guider: 'guider',
     FlatPanel: 'flatpanel',
   }
+  const kindOf = (kinds: string[]) => (kinds.map((k) => kindColor[k]).find(Boolean) ?? null) as PanelKind | null
   const colorOf = (kinds: string[]) => {
-    const kind = kinds.map((k) => kindColor[k]).find(Boolean)
+    const kind = kindOf(kinds)
     return kind ? `var(--kind-${kind})` : 'var(--muted)'
   }
   const label = (kind: string) => (kind === 'FilterWheel' ? 'Filter wheel' : kind === 'FlatPanel' ? 'Flat panel' : kind)
@@ -96,6 +98,7 @@
     <ul>
       {#each devices as device (device.name)}
         <li style:--kind={colorOf(device.kinds)}>
+          {#if kindOf(device.kinds)}<KindBadge kind={kindOf(device.kinds)!} size={22} />{/if}
           <span class="dot" class:on={device.isConnected} title={device.isConnected ? 'Connected' : 'Not connected'}></span>
           {#if renaming === device.name}
             <input
@@ -172,9 +175,8 @@
     display: flex;
     align-items: center;
     gap: 8px;
-    padding: 3px 6px;
-    border-left: 3px solid var(--kind);
-    border-radius: 4px;
+    padding: 4px 6px;
+    border-radius: 6px;
     background: color-mix(in srgb, var(--panel) 88%, var(--kind) 12%);
   }
   .name {

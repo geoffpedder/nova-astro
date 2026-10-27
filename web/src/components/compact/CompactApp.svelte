@@ -27,6 +27,8 @@
   import WebcamView from '../WebcamView.svelte'
   import CompactImage from './CompactImage.svelte'
   import Icon, { type IconName } from '../Icon.svelte'
+  import KindBadge from '../KindBadge.svelte'
+  import type { PanelKind } from '../Panel.svelte'
   import ShootControls from './ShootControls.svelte'
 
   // The compact layout, for phones and tablets: the image (or the target planner) fills the screen, and everything
@@ -44,7 +46,7 @@
     guider: 'Guider',
     setup: 'Getting started',
   }
-  const sheetKinds: Partial<Record<SheetId, string>> = {
+  const sheetKinds: Partial<Record<SheetId, PanelKind>> = {
     mount: 'mount',
     camera: 'camera',
     focuser: 'focuser',
@@ -280,7 +282,7 @@
     <div class="sheet side" class:on={sideOpen} style:--kind={side && sheetKinds[side] ? `var(--kind-${sheetKinds[side]})` : 'var(--accent)'} role="dialog" aria-label={side ? sheetTitles[side] : undefined}>
       <div class="grab"></div>
       <header class="sheet-head">
-        <span class="bar"></span>
+        {#if side && sheetKinds[side]}<KindBadge kind={sheetKinds[side]!} size={24} />{/if}
         <h2>{side ? sheetTitles[side] : ''}</h2>
         {#if side === 'guider' && guider?.backend === 'nova'}
           <button class="link" onclick={() => showView('guiding')}>Guide frame and graph</button>
@@ -300,7 +302,6 @@
     </div>
     <div class="sheet drop" class:on={dropOpen} role="dialog" aria-label={drop ? sheetTitles[drop] : undefined}>
       <header class="sheet-head">
-        <span class="bar"></span>
         <h2>{drop ? sheetTitles[drop] : ''}</h2>
         <button class="icon-btn" onclick={() => (sheet = null)} aria-label="Close"><Icon name="close" size={20} /></button>
       </header>
@@ -724,6 +725,10 @@
       visibility 0s 0.22s;
     pointer-events: auto;
   }
+  /* A panel for a kind of equipment carries a light tint of its colour, as the desktop's boxes do. */
+  .sheet.side {
+    background: color-mix(in srgb, var(--panel) 92%, var(--kind) 8%);
+  }
   .sheet.on {
     transform: none;
     visibility: visible;
@@ -752,12 +757,6 @@
     gap: 10px;
     padding: 8px 8px 8px 14px;
     border-bottom: 1px solid var(--panel-border);
-  }
-  .sheet-head .bar {
-    width: 3px;
-    height: 20px;
-    border-radius: 2px;
-    background: var(--kind);
   }
   .sheet-head h2 {
     flex: 1;

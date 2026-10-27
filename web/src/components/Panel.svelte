@@ -7,6 +7,7 @@
   import { tick, untrack, type Snippet } from 'svelte'
   import { reveal } from '../lib/reveal.svelte'
   import { getPanelHost } from '../lib/panelHost'
+  import KindBadge from './KindBadge.svelte'
 
   let {
     id,
@@ -83,6 +84,7 @@
     <h2>
       <button class="toggle" aria-expanded={!collapsed} onclick={toggle}>
         <span class="chevron" aria-hidden="true">▾</span>
+        {#if kind}<KindBadge {kind} size={20} />{/if}
         {title}
       </button>
       {@render badge?.()}
@@ -94,9 +96,10 @@
 {/if}
 
 <style>
+  /* A kind of equipment: its icon badge in the title, and a light tint of its colour, so where one panel ends and the
+     next begins is clear. */
   .tinted {
-    border-left: 3px solid var(--kind);
-    background: color-mix(in srgb, var(--panel) 90%, var(--kind) 10%);
+    background: color-mix(in srgb, var(--panel) 91%, var(--kind) 9%);
   }
   h2 {
     margin: 0;
@@ -117,9 +120,6 @@
     outline: 2px solid var(--accent);
     outline-offset: 2px;
     border-radius: 4px;
-  }
-  .tinted .toggle {
-    color: color-mix(in srgb, var(--kind) 70%, var(--text) 30%);
   }
   .chevron {
     display: inline-block;

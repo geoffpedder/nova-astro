@@ -383,7 +383,7 @@
     const night = document.documentElement.dataset.theme === 'night'
     const c = night
       ? { meridian: 'rgba(200,60,60,0.7)', figure: 'rgba(170,40,40,0.55)', figureName: 'rgba(200,50,50,0.8)', bg: '#050000', star: '#ff5050', grid: 'rgba(160,30,30,0.35)', horizon: '#a02020', text: '#ff5050', object: '#c03030', frame: '#ff3030', solved: '#ff7070', mount: '#ff2020', below: 0.3 }
-      : { meridian: 'rgba(90,200,170,0.75)', figure: 'rgba(120,150,200,0.45)', figureName: 'rgba(150,175,215,0.75)', bg: '#04060c', star: '#e8ecf5', grid: 'rgba(110,140,190,0.22)', horizon: '#6a8a4a', text: '#c8d0e0', object: '#6ec1ff', frame: '#ffd25a', solved: '#3ccf8e', mount: '#ff5a5a', below: 0.35 }
+      : { meridian: 'rgba(122,170,150,0.75)', figure: 'rgba(120,150,200,0.45)', figureName: 'rgba(150,175,215,0.75)', bg: '#04060c', star: '#e8ecf5', grid: 'rgba(110,140,190,0.22)', horizon: '#6a8a4a', text: '#c8d0e0', object: '#8fb0cf', frame: '#dcbc6e', solved: '#8fc29a', mount: '#d26a5a', below: 0.35 }
     const p = projection
     g.fillStyle = c.bg
     g.fillRect(0, 0, width, height)
@@ -913,7 +913,7 @@
     }
 
     if (solved) boxLabel(polygon(solved, c.solved, [8, 5]), solvedAngle != null ? `Solve ${((Math.round(solvedAngle * 10) / 10) % 360).toFixed(1)}°` : 'Solve', c.solved, 'bottom')
-    const framePoints = frames.flatMap((f) => polygon(f.corners, c.frame, [], 'rgba(255, 210, 90, 0.07)') ?? [])
+    const framePoints = frames.flatMap((f) => polygon(f.corners, c.frame, [], 'rgba(220, 188, 110, 0.07)') ?? [])
     boxLabel(framePoints, frameAngle != null ? `Target ${(Math.round(frameAngle * 10) / 10).toFixed(1)}°` : 'Target', c.frame, 'top-left')
     rotateHandle = null
     if (onrotateframe && frameCentre && framePoints.length >= 4) {

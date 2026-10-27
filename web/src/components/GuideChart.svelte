@@ -77,10 +77,10 @@
     padding: 2px 0;
   }
   .ra {
-    stroke: #60a5fa;
+    stroke: var(--ra);
   }
   .dec {
-    stroke: #f87171;
+    stroke: var(--dec);
   }
   :global(:root[data-theme='night']) .ra {
     stroke: #a01010;

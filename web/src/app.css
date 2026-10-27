@@ -7,11 +7,15 @@
   --header: #1a1a1a;
   --text: #dcdcdc;
   --muted: #a2a2a2;
-  --accent: #5e9fcf;
-  --accent-text: #0d1b26;
-  --ok: #6fcf8a;
-  --warn: #e8b75a;
-  --danger: #ef6b6b;
+  /* Observatory brass: brass, oxidised copper, enamel red, slate and ink blue, rather than a UI kit's stock colours. */
+  --accent: #c9a45c;
+  --accent-text: #1b1508;
+  --ok: #7aa58a;
+  --warn: #d39a4a;
+  --danger: #c2554a;
+  /* Guiding's two axes, in every graph. */
+  --ra: #7f9db8;
+  --dec: #c47a5a;
   --input: #151515;
   --button: #292929;
   --radius: 3px;
@@ -21,13 +25,13 @@
   --font: 'Inter Variable', Inter, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
   --font-mono: 'JetBrains Mono Variable', 'JetBrains Mono', ui-monospace, Consolas, monospace;
   /* One colour per kind of equipment: panel edges/tints and the Equipment list. */
-  --kind-mount: #a78bfa;
-  --kind-camera: #38bdf8;
-  --kind-focuser: #f59e0b;
-  --kind-filterwheel: #34d399;
-  --kind-rotator: #f472b6;
-  --kind-guider: #a3e635;
-  --kind-flatpanel: #fde68a;
+  --kind-mount: #9d8aa8;
+  --kind-camera: #7f9db8;
+  --kind-focuser: #c9a45c;
+  --kind-filterwheel: #6f9f93;
+  --kind-rotator: #b67466;
+  --kind-guider: #93a66b;
+  --kind-flatpanel: #d9c99a;
   color-scheme: dark;
 }
 

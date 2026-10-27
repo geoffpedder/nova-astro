@@ -393,6 +393,10 @@
     text-align: center;
     font: 600 13px var(--font-mono);
     letter-spacing: 0.3em;
+    /* NOVA's logo keeps its blue, as in the desktop layout (red in night mode). */
+    color: #7fb6de;
+  }
+  :global(:root[data-theme='night']) .brand {
     color: var(--accent);
   }
   .compact.edge .brand {

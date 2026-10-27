@@ -68,27 +68,27 @@
     opacity: 0.7;
   }
   circle.ra {
-    fill: #60a5fa;
-    stroke: #60a5fa;
+    fill: var(--ra);
+    stroke: var(--ra);
   }
   circle.dec {
-    fill: #f87171;
-    stroke: #f87171;
+    fill: var(--dec);
+    stroke: var(--dec);
   }
   circle.back {
     fill: none;
   }
   line.ra {
-    stroke: #60a5fa;
+    stroke: var(--ra);
   }
   line.dec {
-    stroke: #f87171;
+    stroke: var(--dec);
   }
   .ra-key {
-    color: #60a5fa;
+    color: var(--ra);
   }
   .dec-key {
-    color: #f87171;
+    color: var(--dec);
   }
   :global(:root[data-theme='night']) circle.ra,
   :global(:root[data-theme='night']) line.ra {

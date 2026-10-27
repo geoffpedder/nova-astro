@@ -51,10 +51,10 @@
     min-height: 0;
   }
   .ra {
-    color: #60a5fa;
+    color: var(--ra);
   }
   .dec {
-    color: #f87171;
+    color: var(--dec);
   }
   :global(:root[data-theme='night']) .ra {
     color: #a01010;

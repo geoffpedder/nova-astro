@@ -508,10 +508,10 @@
     color: var(--warn);
   }
   .ra-key {
-    color: #60a5fa;
+    color: var(--ra);
   }
   .dec-key {
-    color: #f87171;
+    color: var(--dec);
   }
   :global(:root[data-theme='night']) .ra-key {
     color: #a01010;

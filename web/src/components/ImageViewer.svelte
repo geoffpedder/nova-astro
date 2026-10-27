@@ -1037,7 +1037,7 @@
   }
   .stars circle {
     fill: none;
-    stroke: #3ccf8e;
+    stroke: #8fc29a;
     stroke-width: 1.5;
     vector-effect: non-scaling-stroke;
   }
@@ -1063,7 +1063,7 @@
     position: absolute;
     width: 0;
     height: 0;
-    --label: #ffd479;
+    --label: #e0c27e;
   }
   :global(:root[data-theme='night']) .name {
     --label: #ff4040;

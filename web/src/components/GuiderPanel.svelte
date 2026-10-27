@@ -281,13 +281,13 @@
   }
   .ra,
   .ra-key {
-    stroke: #60a5fa;
-    color: #60a5fa;
+    stroke: var(--ra);
+    color: var(--ra);
   }
   .dec,
   .dec-key {
-    stroke: #f87171;
-    color: #f87171;
+    stroke: var(--dec);
+    color: var(--dec);
   }
   :global(:root[data-theme='night']) .ra,
   :global(:root[data-theme='night']) .ra-key {

@@ -33,6 +33,10 @@
     stars: '<circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1"/>',
     stack: '<path d="M12 3l9 5-9 5-9-5z"/><path d="M3 13l9 5 9-5"/>',
     one: '<rect x="4" y="4" width="16" height="16" rx="1"/><path d="M10 9l2-1v8"/>',
+    power: '<path d="M12 3v8"/><path d="M7.5 6.5a7 7 0 1 0 9 0"/>',
+    wifi: '<path d="M2.5 9a14 14 0 0 1 19 0"/><path d="M5.5 12.5a9.5 9.5 0 0 1 13 0"/><path d="M8.7 16a5 5 0 0 1 6.6 0"/><path d="M12 19.5h.01" stroke-width="2.6"/>',
+    hotspot: '<circle cx="12" cy="11" r="1.6"/><path d="M12 12.6V21"/><path d="M8.2 7.2a5.4 5.4 0 0 0 0 7.6M15.8 7.2a5.4 5.4 0 0 1 0 7.6"/><path d="M5.3 4.3a9.5 9.5 0 0 0 0 13.4M18.7 4.3a9.5 9.5 0 0 1 0 13.4"/>',
+    wired: '<rect x="6" y="3" width="12" height="10" rx="1.5"/><path d="M9 3v3M12 3v3M15 3v3"/><path d="M12 13v8"/>',
   } as const
   export type IconName = keyof typeof paths
 </script>

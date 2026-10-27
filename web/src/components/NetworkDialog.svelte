@@ -1,4 +1,5 @@
 <script lang="ts">
+  import Icon from './Icon.svelte'
   import { portal } from '../lib/portal'
   // The header's network badge → Network: how the mini PC is connected, and its Wi-Fi hotspot for when there's no
   // Wi-Fi to join (a dark site): its name and password, when it starts by itself, and starting or stopping it now.
@@ -111,7 +112,7 @@
     {#if hotspot}
       <p class="state small" class:on class:bad={hotspot.state === 'Error'}>
         {#if on}
-          <span class="emoji" aria-hidden="true">📡</span> On{hotspot.reason ? ` (${hotspot.reason.toLowerCase()})` : ''}: {hotspot.stations ?? 0} device{hotspot.stations === 1 ? '' : 's'} joined.
+          <span style="display: inline-block; vertical-align: -3px"><Icon name="hotspot" size={15} /></span> On{hotspot.reason ? ` (${hotspot.reason.toLowerCase()})` : ''}: {hotspot.stations ?? 0} device{hotspot.stations === 1 ? '' : 's'} joined.
           {#if hotspot.manual && !hotspot.stations}Back to Wi-Fi in 3 minutes if nobody joins.{:else if hotspot.retry && !hotspot.stations}Tries Wi-Fi again every 5 minutes while nobody's on it.{/if}
         {:else if hotspot.state === 'Starting'}Starting…
         {:else if hotspot.state === 'Stopping'}Stopping…

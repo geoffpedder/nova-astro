@@ -1,6 +1,7 @@
 <script lang="ts">
   import { nova } from '../lib/state.svelte'
   import NetworkDialog from './NetworkDialog.svelte'
+  import Icon from './Icon.svelte'
 
   // How the mini PC is connected: its Wi-Fi network (and signal), the hotspot it's running, or a cable.
   const network = $derived(nova.status?.network)
@@ -10,17 +11,17 @@
 
   const label = $derived.by(() => {
     // NOVA's own hotspot is on (also the simulator's pretend one).
-    if (hotspot?.state === 'On') return { icon: '📡', text: `Hotspot ${hotspot.ssid}`, address: hotspot.address }
+    if (hotspot?.state === 'On') return { icon: 'hotspot' as const, text: `Hotspot ${hotspot.ssid}`, address: hotspot.address }
     if (!primary) return null
     const address = primary.addresses[0] ?? ''
-    if (primary.mode === 'hotspot') return { icon: '📡', text: `Hotspot ${primary.ssid ?? ''}`.trim(), address }
+    if (primary.mode === 'hotspot') return { icon: 'hotspot' as const, text: `Hotspot ${primary.ssid ?? ''}`.trim(), address }
     if (primary.kind === 'wifi')
       return {
-        icon: '📶',
+        icon: 'wifi' as const,
         text: `${primary.ssid ?? 'Wi-Fi'}${primary.signalPercent != null ? ` ${primary.signalPercent}%` : ''}`,
         address,
       }
-    return { icon: '🔌', text: 'Wired', address }
+    return { icon: 'wired' as const, text: 'Wired', address }
   })
 
   // Weak Wi-Fi is worth noticing at the scope: image downloads and the live view slow down.
@@ -45,7 +46,7 @@
   <button class="network" class:weak title={`${details}
 
 Click for the Wi-Fi hotspot`} onclick={() => (open = true)}>
-    <span class="emoji" aria-hidden="true">{label.icon}</span>
+    <Icon name={label.icon} size={15} />
     <span class="text">{label.text}</span>
     {#if label.address}<span class="address muted">{label.address}</span>{/if}
   </button>

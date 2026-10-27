@@ -104,7 +104,7 @@ public sealed class FileBrowserService
     public async Task<DeleteResult> DeleteAsync(string root, string path, string? password, CancellationToken ct)
     {
         if (!_password.PasswordSet)
-            throw new UnauthorizedAccessException("Deleting needs NOVA's password: set one first (⏻ → Set a password…)");
+            throw new UnauthorizedAccessException("Deleting needs NOVA's password: set one first (the power menu → Set a password…)");
         if (string.IsNullOrEmpty(password) || !await _password.CheckAsync(password, ct))
             throw new UnauthorizedAccessException("That isn't NOVA's password");
         var result = _storage.Delete(root, path);

@@ -64,7 +64,7 @@ public sealed class TerminalService : IAsyncDisposable
     /// <summary>Why the terminal can't be opened, or null.</summary>
     public string? Problem =>
         !OnMiniPc ? "The terminal is on the mini PC only (not on a Windows PC or with the simulator)"
-        : !_password.PasswordSet ? "Set a NOVA password first (⏻ → Set a password…): the terminal is a shell on the mini PC, so it's only offered behind one"
+        : !_password.PasswordSet ? "Set a NOVA password first (the power menu → Set a password…): the terminal is a shell on the mini PC, so it's only offered behind one"
         : TtydPath is null ? "ttyd isn't installed: nova setup (or: sudo apt install ttyd, sudo pacman -S ttyd)"
         : null;
 

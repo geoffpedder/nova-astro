@@ -1,4 +1,5 @@
 <script lang="ts">
+  import Icon from './Icon.svelte'
   import { portal } from '../lib/portal'
   import { api } from '../lib/api'
   import { act, nova, stopHub } from '../lib/state.svelte'
@@ -119,7 +120,7 @@
 
 <div class="power-wrap">
   <button class="secondary power" title="Restart or shut down the mini PC, notifications and the password" aria-haspopup="menu" aria-expanded={open} onclick={() => (open = !open)}
-    >⏻</button
+    ><Icon name="power" size={18} /></button
   >
   {#if open}
     <div class="menu panel" role="menu">
@@ -217,6 +218,8 @@
   }
   .power {
     padding: 4px 10px;
+    display: inline-flex;
+    align-items: center;
   }
   .menu {
     position: absolute;

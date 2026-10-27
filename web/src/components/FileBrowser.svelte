@@ -258,7 +258,7 @@
       </form>
     {:else}
       <p class="warn">
-        Deleting needs NOVA's password, so nobody else on the network can. Set one first: ⏻ → Set a password…
+        Deleting needs NOVA's password, so nobody else on the network can. Set one first: the power menu → Set a password…
       </p>
       <div class="buttons"><button class="secondary" onclick={() => (deleting = null)}>Close</button></div>
     {/if}

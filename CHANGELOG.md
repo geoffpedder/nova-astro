@@ -6,6 +6,8 @@ What changed in each release. The newest is first. A release's section here beco
 
 ### Changed
 
+- **The power and network buttons are drawn icons** instead of the ⏻ and 📶 characters, which some phones'
+  fonts don't have (they showed blank).
 - **The driver server (INDI localhost) has moved from the top bar to the Mini PC box**, shown as *Drivers*
   at the end of the CPU line.
 - **Sequence is now Plan** in the desktop layout's tabs (and the view's title), the same as the compact layout.

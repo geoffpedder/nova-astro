@@ -6,8 +6,8 @@ What changed in each release. The newest is first. A release's section here beco
 
 ### Changed
 
-- **The driver server (INDI localhost) has moved from the top bar to the Mini PC box**, as a *Drivers* row
-  under the disks.
+- **The driver server (INDI localhost) has moved from the top bar to the Mini PC box**, shown as *Drivers*
+  at the end of the CPU line.
 - **Sequence is now Plan** in the desktop layout's tabs (and the view's title), the same as the compact layout.
 - **Mini PC and Activity are separate tabs** in both layouts: Mini PC holds its health, terminal, diagnostics and
   the new file browser; Activity the whole log (the tab's dot still says a warning or error came in).

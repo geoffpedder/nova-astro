@@ -121,6 +121,11 @@
   {/if}
   {#if stats}
     <div class="rows mono">
+      {#if nova.status?.backend}
+        <!-- Beside the CPU line rather than a line of its own. -->
+        <span class="label drivers-label">Drivers</span>
+        <span class="drivers" title="Where NOVA talks to the equipment drivers">{nova.status.backend}{nova.status.serverConnected ? '' : ', offline'}</span>
+      {/if}
       <span class="label">CPU</span>
       {#if stats.cpuPercent != null}
         <span class="bar"><span class={level(stats.cpuPercent)} style:width="{stats.cpuPercent}%"></span></span>
@@ -132,23 +137,17 @@
       <span class="label">Memory</span>
       {#if memPercent != null}
         <span class="bar"><span class={level(memPercent)} style:width="{memPercent}%"></span></span>
-        <span>{gb(stats.memoryUsedBytes!)} of {gb(stats.memoryTotalBytes!)} GB used ({memPercent.toFixed(0)}%), NOVA {mb(stats.novaMemoryBytes)}</span>
+        <span class="span">{gb(stats.memoryUsedBytes!)} of {gb(stats.memoryTotalBytes!)} GB used ({memPercent.toFixed(0)}%), NOVA {mb(stats.novaMemoryBytes)}</span>
       {:else}
-        <span class="bar"></span><span>{stats.memoryTotalBytes ? `${gb(stats.memoryTotalBytes)} GB, ` : ''}NOVA {mb(stats.novaMemoryBytes)}</span>
+        <span class="bar"></span><span class="span">{stats.memoryTotalBytes ? `${gb(stats.memoryTotalBytes)} GB, ` : ''}NOVA {mb(stats.novaMemoryBytes)}</span>
       {/if}
 
       {#each stats.disks as disk (disk.label)}
         {@const used = disk.totalBytes > 0 ? (100 * (disk.totalBytes - disk.freeBytes)) / disk.totalBytes : 0}
         <span class="label" title={disk.path}>{disk.label}</span>
         <span class="bar"><span class={level(used)} style:width="{used}%"></span></span>
-        <span title={disk.path}>{gb(disk.freeBytes)} GB free of {gb(disk.totalBytes)} GB</span>
+        <span class="span" title={disk.path}>{gb(disk.freeBytes)} GB free of {gb(disk.totalBytes)} GB</span>
       {/each}
-
-      {#if nova.status?.backend}
-        <span class="label">Drivers</span>
-        <span></span>
-        <span title="Where NOVA talks to the equipment drivers">{nova.status.backend}{nova.status.serverConnected ? '' : ', offline'}</span>
-      {/if}
     </div>
   {:else}
     <p class="muted small">{failed ? "Couldn't read the mini PC's stats." : 'Reading…'}</p>
@@ -209,10 +208,23 @@
   }
   .rows {
     display: grid;
-    grid-template-columns: auto minmax(60px, 160px) 1fr;
+    grid-template-columns: auto minmax(60px, 160px) 1fr auto auto;
     gap: 4px 10px;
     align-items: center;
     font-size: 12px;
+  }
+  /* The driver server takes the end of the CPU line; the other lines run on under it. */
+  .drivers-label {
+    grid-row: 1;
+    grid-column: 4;
+    padding-left: 12px;
+  }
+  .drivers {
+    grid-row: 1;
+    grid-column: 5;
+  }
+  .span {
+    grid-column: span 3;
   }
   .label {
     color: var(--muted);
@@ -240,6 +252,17 @@
   @media (max-width: 600px) {
     .rows {
       grid-template-columns: auto 1fr;
+    }
+    .drivers-label,
+    .drivers,
+    .span {
+      grid-row: auto;
+      grid-column: auto;
+      padding-left: 0;
+    }
+    .drivers-label,
+    .drivers {
+      order: 1; /* a line of its own at the end */
     }
     .rows .bar {
       display: none;

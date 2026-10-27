@@ -559,11 +559,11 @@ public static class NovaApi
         });
         // The image folders on the mini PC (and a mounted USB drive): browse them (FITS only, or ?all=true for every
         // file), open a FITS file from there, or download any file (?inline=true shows a picture in the browser).
-        api.MapGet("/files", (string? root, string? path, bool? all, StorageService storage) =>
+        api.MapGet("/files", async (string? root, string? path, bool? all, StorageService storage, CancellationToken ct) =>
         {
             try
             {
-                return Results.Ok(storage.Browse(root ?? "local", path, all == true));
+                return Results.Ok(await storage.BrowseAsync(root ?? "local", path, all == true, ct));
             }
             catch (ArgumentException ex)
             {

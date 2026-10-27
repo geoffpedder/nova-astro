@@ -1,9 +1,10 @@
 <script lang="ts">
-  import { onMount } from 'svelte'
+  import { onMount, untrack } from 'svelte'
   import { api } from '../lib/api'
   import { auth } from '../lib/auth.svelte'
   import { mainView } from '../lib/inbox.svelte'
   import { portal } from '../lib/portal'
+  import { nova } from '../lib/state.svelte'
   import type { FileEntry, FolderListing } from '../lib/types'
   import Icon from './Icon.svelte'
 
@@ -28,6 +29,30 @@
     }
   }
   onMount(() => browse('local', ''))
+
+  // A USB drive plugged in, pulled out or ejected: look again, so its tab comes and goes. Browsing a drive that's gone
+  // (or was ejected) goes back to the mini PC's files.
+  const drives = $derived((nova.status?.storage?.drives ?? []).map((d) => `${d.device}:${d.mounted}`).join(','))
+  let seenDrives: string | null = null
+  $effect(() => {
+    const now = drives
+    if (seenDrives === null || now === seenDrives) {
+      seenDrives = now
+      return
+    }
+    seenDrives = now
+    untrack(async () => {
+      if (!listing) return
+      const was = listing
+      await browse(was.root, was.path)
+      if (error && was.root === 'usb') {
+        const why = error
+        await browse('local', '')
+        error = null
+        note = `Back to the mini PC's files: ${why}`
+      }
+    })
+  })
 
   const crumbs = $derived(listing?.path ? listing.path.split('/') : [])
   const join = (...parts: string[]) => parts.filter(Boolean).join('/')
@@ -267,7 +292,8 @@
     display: flex;
   }
   .segmented button {
-    flex: 1;
+    flex: none;
+    white-space: nowrap;
     border-radius: 0;
     color: var(--muted);
     background: transparent;

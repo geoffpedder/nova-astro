@@ -5,7 +5,6 @@
   import type { CameraSettingsUpdate, FrameType } from '../lib/types'
   import DevicePicker from './DevicePicker.svelte'
   import OpticsEditor from './OpticsEditor.svelte'
-  import StorageEditor from './StorageEditor.svelte'
   import Panel from './Panel.svelte'
 
   const camera = $derived(nova.status?.camera)
@@ -70,8 +69,6 @@
 
   {#if !camera}
     <p class="muted">No camera.</p>
-    <!-- Storage stays reachable without a camera: copying a night's frames to a USB drive needs none. -->
-    <StorageEditor />
   {:else}
     {#if controls}
       <div class="settings">
@@ -196,7 +193,6 @@
     {/if}
 
     <OpticsEditor defaultCamera={camera.name} binning={controls?.binning?.value ?? 1} />
-    <StorageEditor />
 
     <div class="row exposure">
       <label>

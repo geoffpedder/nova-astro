@@ -9,6 +9,10 @@ What changed in each release. The newest is first. A release's section here beco
 - **Sequence is now Plan** in the desktop layout's tabs (and the view's title), the same as the compact layout.
 - **Mini PC and Activity are separate tabs** in both layouts: Mini PC holds its health, terminal, diagnostics and
   the new file browser; Activity the whole log (the tab's dot still says a warning or error came in).
+- **Storage has moved to the Mini PC tab** (from the Camera panel), beside the file browser: where frames are saved,
+  ejecting the USB drive and copying a night to it.
+- **The file browser shows a USB drive whenever one is plugged in**, mounting it the first time it's browsed, not only
+  while frames are saved to it. Its tab comes and goes as it's plugged in, pulled out or ejected.
 
 ### Added
 

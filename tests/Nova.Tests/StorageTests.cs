@@ -256,6 +256,32 @@ public class StorageTests : IDisposable
     }
 
     [Fact]
+    public async Task APluggedInDriveCanBeBrowsedWhileFramesAreSavedOnTheMiniPc()
+    {
+        var (storage, drives, _) = Create();
+        Assert.Equal(["local"], storage.BrowseRoots.Select(r => r.Id));
+
+        // Plugged in, frames still saved on the mini PC: offered to the browser, not mounted until it's browsed.
+        drives.Plugged = true;
+        await storage.RefreshAsync(CancellationToken.None);
+        Assert.Equal(["local", "usb"], storage.BrowseRoots.Select(r => r.Id));
+        Assert.Equal(0, drives.Mounts);
+        Directory.CreateDirectory(Path.Combine(Usb, "Nova", "2026-10-01"));
+        var usb = await storage.BrowseAsync("usb", null, all: true, CancellationToken.None);
+        Assert.Equal(1, drives.Mounts);
+        Assert.Contains(usb.Entries, e => e is { Name: "Nova", Folder: true });
+        await storage.BrowseAsync("usb", "Nova", all: true, CancellationToken.None);
+        Assert.Equal(1, drives.Mounts); // mounted once
+        Assert.Equal(Local, storage.ImageRoot()); // and frames still go to the mini PC
+
+        // Ejected: gone from the browser until it's plugged in again.
+        await storage.EjectAsync(CancellationToken.None);
+        await storage.RefreshAsync(CancellationToken.None);
+        Assert.Equal(["local"], storage.BrowseRoots.Select(r => r.Id));
+        await Assert.ThrowsAsync<ArgumentException>(() => storage.BrowseAsync("usb", null, all: true, CancellationToken.None));
+    }
+
+    [Fact]
     public async Task TheFileBrowserListsAndHandsOutEveryFileButNothingOutside()
     {
         var (storage, _, _) = Create();

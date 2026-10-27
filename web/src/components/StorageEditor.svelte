@@ -3,13 +3,12 @@
   import { api } from '../lib/api'
   import { act, nova } from '../lib/state.svelte'
 
-  // Where frames are saved: the mini PC, or a USB drive (mounted when plugged in, ejected from here). A night saved
-  // on the mini PC can be copied to the drive afterwards.
+  // The Mini PC tab's Storage: where frames are saved, the mini PC or a USB drive (mounted when plugged in, ejected
+  // from here). A night saved on the mini PC can be copied to the drive afterwards.
   const storage = $derived(nova.status?.storage ?? null)
   const drive = $derived(storage?.drives.find((d) => d.selected) ?? null)
   const copy = $derived(storage?.copy ?? null)
 
-  let open = $state(false)
   let night = $state<string | null>(null)
   const chosenNight = $derived(night ?? storage?.nights[0]?.night ?? null)
 
@@ -42,13 +41,9 @@
 </script>
 
 {#if storage}
-  <div class="storage">
-    <button class="toggle" aria-expanded={open} onclick={() => (open = !open)}>
-      <span class="chevron" class:closed={!open} aria-hidden="true">▾</span>
-      Storage <span class="muted summary" class:warn={storage.warning}>{summary}</span>
-    </button>
-
-    {#if open}
+  <section class="panel storage" aria-label="Storage">
+    <h2>Storage <span class="muted summary" class:warn={storage.warning}>{summary}</span></h2>
+    <div class="body">
       <div class="segmented" role="group" aria-label="Save frames to">
         <button class:on={storage.target === 'local'} onclick={() => act(() => api.storageTarget('local'))}>Mini PC</button>
         <button
@@ -123,36 +118,19 @@
           {/if}
         {/if}
       {/if}
-    {/if}
-  </div>
+    </div>
+  </section>
 {/if}
 
 <style>
-  .storage {
-    border-top: 1px solid var(--panel-border);
-    padding: 8px 0;
-    margin-bottom: 8px;
-  }
-  .toggle {
-    all: unset;
-    cursor: pointer;
+  .storage h2 {
     display: flex;
     align-items: baseline;
-    gap: 6px;
-    width: 100%;
-    font-size: 13px;
-    font-weight: 600;
+    gap: 8px;
   }
-  .toggle:focus-visible {
-    outline: 2px solid var(--accent);
-    outline-offset: 2px;
-  }
-  .chevron {
-    font-size: 10px;
-    transition: transform 0.15s;
-  }
-  .chevron.closed {
-    transform: rotate(-90deg);
+  .body {
+    display: grid;
+    gap: 8px;
   }
   .summary {
     font-weight: 400;

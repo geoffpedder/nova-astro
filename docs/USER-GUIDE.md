@@ -56,7 +56,9 @@ The checklist goes away once the steps are done. **Setup** in the header brings 
   - **Activity:** the whole log, with *Warnings and errors only* to pick out problems. A dot on the tab means a
     warning or error came in since you last looked. Under every tab, one line shows the latest activity (yellow for
     a warning, red for an error); click it for the Activity tab.
-- **Files** (Mini PC tab): the image folders on the mini PC, and a USB drive when one is mounted, night by night.
+- **Files** (Mini PC tab): the image folders on the mini PC, and a USB drive whenever one is plugged in (mounted
+  the first time you look at it, even while frames are saved on the mini PC; its tab comes and goes as it's plugged
+  in, pulled out or ejected), night by night.
   **Open** a FITS file in the Image tab (to solve it, check its stars or match framing to it), **View** a picture
   (a live stack's PNG, say) in a new browser tab, or download any file to the phone, tablet or laptop you're
   using. Each frame has a thumbnail (made on the mini PC the first time it's shown, then kept; untick
@@ -217,7 +219,7 @@ swapped in) just picks the same preset; each camera remembers its own choice. Ch
 changes it for every camera using it. The active preset is written into the FITS headers and tells the plate
 solver and the Targets tab how big the field is.
 
-**Storage** (in the Camera panel): where frames are saved, on the **Mini PC** (`~/Pictures/Nova`) or a **USB
+**Storage** (Mini PC tab): where frames are saved, on the **Mini PC** (`~/Pictures/Nova`) or a **USB
 drive** plugged into it (in a `Nova` folder on the drive). Each night gets a folder either way
 (`2026-10-10/M 31/...`).
 

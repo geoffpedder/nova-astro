@@ -51,6 +51,7 @@ public sealed class StorageService : BackgroundService
     private readonly string _file;
     private readonly object _sync = new();
     private readonly SemaphoreSlim _writes = new(1, 1);
+    private readonly SemaphoreSlim _mounting = new(1, 1);
     private Settings _settings;
     private IReadOnlyList<RemovableDrive> _drives = [];
     private readonly HashSet<string> _ejected = new(StringComparer.Ordinal);     // devices ejected: not remounted until replugged
@@ -362,16 +363,60 @@ public sealed class StorageService : BackgroundService
 
     private static readonly string[] FitsEndings = [".fits", ".fit", ".fts", ".fits.gz", ".fit.gz", ".fts.gz"];
 
-    /// <summary>Where frames can be opened from: the mini PC's image folder, and the USB drive while it's mounted.</summary>
+    /// <summary>
+    /// What the file browser can show: the mini PC's image folder, and a USB drive whenever one is plugged in (mounted
+    /// when it's first browsed, whether or not frames are saved to it), unless it was ejected or can't be mounted.
+    /// </summary>
     public IReadOnlyList<BrowseRoot> BrowseRoots
     {
         get
         {
             List<BrowseRoot> roots = [new("local", "Mini PC")];
-            RemovableDrive? drive;
-            lock (_sync) drive = Selected(_drives);
-            if (drive?.MountPoint is not null && !_ejected.Contains(drive.Device)) roots.Add(new("usb", $"USB: {drive.Name}"));
+            lock (_sync)
+            {
+                var drive = Selected(_drives);
+                if (drive is not null && !_ejected.Contains(drive.Device) && !_failed.ContainsKey(drive.Device))
+                    roots.Add(new("usb", $"USB: {drive.Name}"));
+            }
             return roots;
+        }
+    }
+
+    /// <summary>Browse, mounting the USB drive first if it's plugged in but not mounted yet (frames saved on the mini PC).</summary>
+    public async Task<FolderListing> BrowseAsync(string root, string? path, bool all, CancellationToken ct)
+    {
+        if (root == "usb") await MountForBrowsingAsync(ct);
+        return Browse(root, path, all);
+    }
+
+    private async Task MountForBrowsingAsync(CancellationToken ct)
+    {
+        await _mounting.WaitAsync(ct);
+        try
+        {
+            RemovableDrive drive;
+            lock (_sync)
+            {
+                drive = Selected(_drives) ?? throw new ArgumentException("No USB drive is plugged in");
+                if (_ejected.Contains(drive.Device)) throw new ArgumentException($"{drive.Name} was ejected: unplug it and plug it in again to use it");
+                if (_failed.TryGetValue(drive.Device, out var why)) throw new ArgumentException($"{drive.Name} {why}");
+                if (drive.MountPoint is not null) return;
+            }
+            try
+            {
+                var at = await _tool.MountAsync(drive, ct);
+                lock (_sync) _drives = _drives.Select(d => d.Device == drive.Device ? d with { MountPoint = at } : d).ToList();
+                _log.Info($"{drive.Name} mounted, to browse its files");
+            }
+            catch (Exception ex) when (ex is not OperationCanceledException)
+            {
+                lock (_sync) _failed[drive.Device] = $"couldn't be mounted ({ex.Message.TrimEnd('.')})";
+                throw new ArgumentException($"Couldn't mount {drive.Name}: {ex.Message}");
+            }
+        }
+        finally
+        {
+            _mounting.Release();
         }
     }
 

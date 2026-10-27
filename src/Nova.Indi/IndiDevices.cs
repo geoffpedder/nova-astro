@@ -37,7 +37,9 @@ public abstract class IndiDevice(IndiClient client, string name) : IDevice
     /// <summary>
     /// A serial device that isn't on the port its driver expects (plugged in after the driver started, or on another
     /// /dev/tty…) fails to connect until someone presses the driver's Scan Ports and picks the right port. This does
-    /// the same: rescans, then tries each port the driver lists. The driver keeps the one that works.
+    /// the same: rescans, then picks each port the driver lists and tries it. The driver keeps the one that works.
+    /// SYSTEM_PORTS' elements are short names ("ttyACM0", or "1a86_USB_Serial" for /dev/serial/by-id/usb-1a86_USB_Serial-
+    /// if00-port0), not paths: picking one is what sets DEVICE_PORT to its path.
     /// </summary>
     private async Task<bool> TryOtherPortsAsync(CancellationToken ct)
     {
@@ -55,14 +57,22 @@ public abstract class IndiDevice(IndiClient client, string name) : IDevice
             // An unchanged list may not be sent again: use what's there.
         }
 
-        var tried = Client.GetProperty(Name, "DEVICE_PORT")?["PORT"]?.Text;
-        var ports = Client.GetProperty(Name, "SYSTEM_PORTS")?.Elements.Keys.Where(p => p != tried).ToList() ?? [];
+        var ports = Client.GetProperty(Name, "SYSTEM_PORTS")?.Elements.Keys.ToList() ?? [];
         foreach (var port in ports)
         {
-            await Client.SetTextsAsync(Name, "DEVICE_PORT", ct, ("PORT", port));
+            await Client.SetSwitchesAsync(Name, "SYSTEM_PORTS", ct, (port, true));
+            try
+            {
+                // The driver sets DEVICE_PORT, then answers with SYSTEM_PORTS.
+                await Client.WaitForAsync(Name, "SYSTEM_PORTS", p => p[port]?.IsOn == true, TimeSpan.FromSeconds(5), ct, checkCurrent: false);
+            }
+            catch (TimeoutException)
+            {
+                continue;
+            }
             if (await TryConnectAsync(checkCurrent: false, ct))
             {
-                PortFound?.Invoke(this, port);
+                PortFound?.Invoke(this, Client.GetProperty(Name, "DEVICE_PORT")?["PORT"]?.Text ?? port);
                 return true;
             }
         }

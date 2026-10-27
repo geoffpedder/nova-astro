@@ -121,7 +121,8 @@ public class IndiClientTests
     public async Task FindsTheMountOnAnotherSerialPortWhenItsOwnFails()
     {
         // The driver expects /dev/ttyUSB0, but the AM3 came up as /dev/ttyACM0 after the driver started: connecting
-        // fails until the ports are scanned and the right one picked, as "Scan Ports" does by hand.
+        // fails until the ports are scanned and the right one picked, as "Scan Ports" does by hand. As in INDI, the
+        // ports are listed by short name, and picking one sets DEVICE_PORT to its path.
         using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(15));
         var port = "/dev/ttyUSB0";
         var scanned = false;
@@ -131,20 +132,24 @@ public class IndiClientTests
             """<defSwitchVector device="ZWO AM5" name="CONNECTION" state="Idle" perm="rw" rule="OneOfMany"><defSwitch name="CONNECT">Off</defSwitch><defSwitch name="DISCONNECT">On</defSwitch></defSwitchVector>""",
             """<defTextVector device="ZWO AM5" name="DEVICE_PORT" state="Idle" perm="rw"><defText name="PORT">/dev/ttyUSB0</defText></defTextVector>""",
             """<defSwitchVector device="ZWO AM5" name="DEVICE_PORT_SCAN" state="Idle" perm="rw" rule="OneOfMany"><defSwitch name="SCAN_PORT">Off</defSwitch></defSwitchVector>""",
-            """<defSwitchVector device="ZWO AM5" name="SYSTEM_PORTS" state="Idle" perm="rw" rule="AtMostOne"><defSwitch name="/dev/ttyS0">Off</defSwitch></defSwitchVector>""",
+            """<defSwitchVector device="ZWO AM5" name="SYSTEM_PORTS" state="Idle" perm="rw" rule="AtMostOne"><defSwitch name="ttyS0">Off</defSwitch></defSwitchVector>""",
         ];
+        var paths = new Dictionary<string, string> { ["ttyS0"] = "/dev/ttyS0", ["1a86_USB_Serial"] = "/dev/ttyACM0" };
         using var server = new FakeIndiServer(definitions, line =>
         {
             if (line.Contains("name=\"DEVICE_PORT_SCAN\""))
             {
                 scanned = true;
-                return ["""<defSwitchVector device="ZWO AM5" name="SYSTEM_PORTS" state="Idle" perm="rw" rule="AtMostOne"><defSwitch name="/dev/ttyS0">Off</defSwitch><defSwitch name="/dev/ttyACM0">Off</defSwitch></defSwitchVector>"""];
+                return ["""<defSwitchVector device="ZWO AM5" name="SYSTEM_PORTS" state="Idle" perm="rw" rule="AtMostOne"><defSwitch name="ttyS0">Off</defSwitch><defSwitch name="1a86_USB_Serial">Off</defSwitch></defSwitchVector>"""];
             }
-            if (line.Contains("name=\"DEVICE_PORT\""))
+            if (line.Contains("name=\"SYSTEM_PORTS\""))
             {
-                port = System.Text.RegularExpressions.Regex.Match(line, @">(/dev/[^<]+)<").Groups[1].Value;
-                return [$"""<setTextVector device="ZWO AM5" name="DEVICE_PORT" state="Ok"><oneText name="PORT">{port}</oneText></setTextVector>"""];
+                var picked = System.Text.RegularExpressions.Regex.Match(line, "name=\"([^\"]+)\">\\s*On").Groups[1].Value;
+                port = paths[picked];
+                return [$"""<setTextVector device="ZWO AM5" name="DEVICE_PORT" state="Ok"><oneText name="PORT">{port}</oneText></setTextVector>""",
+                        $"""<setSwitchVector device="ZWO AM5" name="SYSTEM_PORTS" state="Ok"><oneSwitch name="{picked}">On</oneSwitch></setSwitchVector>"""];
             }
+            // (Writing a port's name into DEVICE_PORT does nothing useful: it isn't a path.)
             if (line.Contains("name=\"CONNECTION\"") && line.Contains(">On<"))
                 return port == "/dev/ttyACM0"
                     ? ["""<setSwitchVector device="ZWO AM5" name="CONNECTION" state="Ok"><oneSwitch name="CONNECT">On</oneSwitch><oneSwitch name="DISCONNECT">Off</oneSwitch></setSwitchVector>"""]

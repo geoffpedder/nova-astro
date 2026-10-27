@@ -74,6 +74,12 @@ What changed in each release. The newest is first. A release's section here beco
   camera on a bad cable or a shared hub, say), the activity log names it and suggests checking its cable and hub.
   The install adds NOVA's user to `systemd-journal` so it can read the kernel log; `nova doctor` checks it.
 
+### Fixed
+
+- **Finding a serial device on another port** (when its driver's own port fails) set the driver's port to the
+  port list's short name (`1a86_USB_Serial`, say) rather than its path, so it never connected, and left the driver
+  pointing nowhere. It now picks the port from the list, as *Scan Ports* and a click do by hand.
+
 ## [0.3.22] - 2026-10-24
 
 ### Changed
@@ -92,6 +98,7 @@ What changed in each release. The newest is first. A release's section here beco
   30°", dashed yellow), the Moon (dashed grey) and now.
 
 ### Fixed
+
 
 - **A guide camera that drops out:** when the guide camera stops sending frames (an ASI120 sharing the ASI2600's
   USB hub kept being reset), NOVA's guider used to stop with "Guiding stopped", or wait up to two minutes for a lost

@@ -25,7 +25,7 @@
   import TargetsView from '../TargetsView.svelte'
   import WebcamView from '../WebcamView.svelte'
   import CompactImage from './CompactImage.svelte'
-  import Icon, { type IconName } from './Icon.svelte'
+  import Icon, { type IconName } from '../Icon.svelte'
   import ShootControls from './ShootControls.svelte'
 
   // The compact layout, for phones and tablets: the image (or the target planner) fills the screen, and everything
@@ -192,8 +192,8 @@
       <span class="dot {equipmentDot}"></span><span class="name">{profileName}</span><Icon name="down" size={15} />
     </button>
     <div class="tabs" role="tablist" aria-label="View">
-      <button role="tab" aria-selected={view === 'image'} class:on={view === 'image'} onclick={() => showView('image')}>Image</button>
-      <button role="tab" aria-selected={view === 'targets'} class:on={view === 'targets'} onclick={() => showView('targets')}>Targets</button>
+      <button role="tab" aria-selected={view === 'image'} class:on={view === 'image'} onclick={() => showView('image')}><Icon name="image" size={16} />Image</button>
+      <button role="tab" aria-selected={view === 'targets'} class:on={view === 'targets'} onclick={() => showView('targets')}><Icon name="targets" size={16} />Targets</button>
     </div>
     <div class="seq wide"><SequenceChip /></div>
     <!-- How the mini PC is connected; tap for the Network window (Wi-Fi, the hotspot). On a phone it's in Mini PC. -->
@@ -435,6 +435,10 @@
   }
   .tabs button {
     all: unset;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
     min-width: 64px;
     padding: 6px 12px;
     text-align: center;
@@ -447,6 +451,9 @@
     background: var(--button);
     color: var(--text);
     box-shadow: inset 0 -2px 0 var(--accent);
+  }
+  .tabs button.on :global(.icon) {
+    color: var(--accent);
   }
   .seq {
     min-width: 0;
@@ -817,6 +824,10 @@
       min-width: 0;
       padding: 5px 10px;
       font-size: 12px;
+    }
+    /* No room for the icons on a phone. */
+    .tabs button :global(.icon) {
+      display: none;
     }
     .wide,
     .power {

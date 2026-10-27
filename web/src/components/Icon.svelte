@@ -1,5 +1,5 @@
 <script lang="ts" module>
-  /** Line icons for the compact layout, drawn in the text colour (so night mode turns them red). */
+  /** Line icons, the same in both layouts, drawn in the text colour (so night mode turns them red). */
   const paths = {
     mount: '<path d="M5 9l10-5 2 4-10 5z"/><path d="M11 12l-4 9M11 12l1 9M11 12l5 8"/>',
     camera: '<rect x="3" y="7" width="18" height="12" rx="2"/><circle cx="12" cy="13" r="3.5"/><path d="M8 7l1.5-3h5L16 7"/>',
@@ -10,6 +10,8 @@
     polar: '<circle cx="12" cy="12" r="9"/><path d="M12 3l2 9-2 9-2-9z"/>',
     webcam: '<circle cx="12" cy="10" r="6"/><circle cx="12" cy="10" r="2"/><path d="M8 21h8M12 16v5"/>',
     minipc: '<rect x="4" y="5" width="16" height="11" rx="1.5"/><path d="M9 20h6M12 16v4"/>',
+    image: '<rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="9" cy="10" r="1.6"/><path d="M3 17l5-4.5 4 3.5 3-2.5 6 5"/>',
+    targets: '<path d="M12 3l2.6 5.5 6 .7-4.4 4.1 1.2 5.9L12 16.3 6.6 19.2l1.2-5.9L3.4 9.2l6-.7z"/>',
     equipment: '<path d="M8 3v5M16 3v5"/><rect x="5" y="8" width="14" height="6" rx="2"/><path d="M12 14v3a4 4 0 0 1-4 4"/>',
     moon: '<path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5z"/>',
     sun: '<circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M2 12h2M20 12h2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/>',

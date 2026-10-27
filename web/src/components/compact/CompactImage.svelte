@@ -6,7 +6,7 @@
   import { act, nova } from '../../lib/state.svelte'
   import GuideChart from '../GuideChart.svelte'
   import ZoomableImage from '../ZoomableImage.svelte'
-  import Icon from './Icon.svelte'
+  import Icon from '../Icon.svelte'
 
   // The compact layout's image: the latest frame (or the live stack) edge to edge, with small floating boxes over it.
   // The boxes sit inside the area the bars leave free (the --in-* insets set by CompactApp).

@@ -5,7 +5,7 @@
   import { liveStack } from '../../lib/liveStack.svelte'
   import { portal } from '../../lib/portal'
   import { nova } from '../../lib/state.svelte'
-  import Icon from './Icon.svelte'
+  import Icon from '../Icon.svelte'
 
   // The compact layout's shutter and what goes with it: the mode, the exposure, Loop and Save (the same settings as the
   // Camera panel's, lib/exposure), and the last few frames.

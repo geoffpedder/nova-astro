@@ -22,6 +22,7 @@
   import ImageFloat from './components/ImageFloat.svelte'
   import GuideFloat from './components/GuideFloat.svelte'
   import SequenceChip from './components/SequenceChip.svelte'
+  import Icon, { type IconName } from './components/Icon.svelte'
   import { mainView } from './lib/inbox.svelte'
   import SetupGuide from './components/SetupGuide.svelte'
   import { layout, setPanels } from './lib/layout.svelte'
@@ -33,6 +34,26 @@
   // The desktop layout: equipment panels down the left, the main views on the right. What it shows and does is
   // shared with the compact layout (lib/session and the components); this file only arranges it.
   const sequencer = $derived(session.sequencer)
+
+  // The pages of the main area, with the same icons as the compact layout. A dot: something there wants a look.
+  type Page = { view: typeof mainView.view; label: string; icon: IconName; title?: string; dot?: boolean }
+  const pages = $derived.by<Page[]>(() => {
+    const guider = nova.status?.guider
+    const list: Page[] = [
+      { view: 'image', label: 'Image', icon: 'image' },
+      { view: 'sequence', label: 'Plan', icon: 'plan', title: "The night's sequence", dot: !!sequencer?.running },
+      { view: 'targets', label: 'Targets', icon: 'targets', title: 'Find and frame targets' },
+      { view: 'polar', label: 'Polar alignment', icon: 'polar', dot: !!nova.status?.polarAlignment?.running },
+    ]
+    if (guider?.screenPort) list.push({ view: 'phd2', label: 'PHD2', icon: 'guider', title: "PHD2's own window" })
+    if (guider?.backend === 'nova')
+      list.push({ view: 'guiding', label: 'Guiding', icon: 'guider', title: "NOVA's guider: the guide frame, its stars and the graph", dot: guider.state === 'LostLock' })
+    list.push(
+      { view: 'webcam', label: 'Webcam', icon: 'webcam', title: 'The webcam on the mini PC: watch the rig from indoors' },
+      { view: 'activity', label: 'Activity', icon: 'minipc', title: 'Everything NOVA has done and reported, and the mini PC', dot: session.unseenProblem },
+    )
+    return list
+  })
 
   // Something points at a panel (the setup guide's buttons): the panel column has to be open to show it.
   $effect(() => {
@@ -108,32 +129,13 @@
   </aside>
   <section class="content">
     <nav class="tabs" aria-label="Main view">
-      <button class:active={mainView.view === 'image'} aria-pressed={mainView.view === 'image'} onclick={() => (mainView.view = 'image')}>Image</button>
-      <button class:active={mainView.view === 'sequence'} aria-pressed={mainView.view === 'sequence'} onclick={() => (mainView.view = 'sequence')}>
-        Plan{#if sequencer?.running}<span class="dot"></span>{/if}
-      </button>
-      <button class:active={mainView.view === 'targets'} aria-pressed={mainView.view === 'targets'} onclick={() => (mainView.view = 'targets')}
-        >Targets</button
-      >
-      <button class:active={mainView.view === 'polar'} aria-pressed={mainView.view === 'polar'} onclick={() => (mainView.view = 'polar')}
-        >Polar alignment{#if nova.status?.polarAlignment?.running}<span class="dot"></span>{/if}</button
-      >
-      {#if nova.status?.guider?.screenPort}
-        <button class:active={mainView.view === 'phd2'} aria-pressed={mainView.view === 'phd2'} onclick={() => (mainView.view = 'phd2')}
-          title="PHD2's own window">PHD2</button
-        >
-      {/if}
-      {#if nova.status?.guider?.backend === 'nova'}
-        <button class:active={mainView.view === 'guiding'} aria-pressed={mainView.view === 'guiding'} onclick={() => (mainView.view = 'guiding')}
-          title="NOVA's guider: the guide frame, its stars and the graph">Guiding{#if nova.status.guider.state === 'LostLock'}<span class="dot"></span>{/if}</button
-        >
-      {/if}
-      <button class:active={mainView.view === 'webcam'} aria-pressed={mainView.view === 'webcam'} onclick={() => (mainView.view = 'webcam')}
-        title="The webcam on the mini PC: watch the rig from indoors">Webcam</button
-      >
-      <button class:active={mainView.view === 'activity'} aria-pressed={mainView.view === 'activity'} onclick={() => (mainView.view = 'activity')}
-        title="Everything NOVA has done and reported">Activity{#if session.unseenProblem}<span class="dot"></span>{/if}</button
-      >
+      {#each pages as page (page.view)}
+        <button class:active={mainView.view === page.view} aria-current={mainView.view === page.view ? 'page' : undefined} title={page.title} onclick={() => (mainView.view = page.view)}>
+          <Icon name={page.icon} size={17} />
+          <span>{page.label}</span>
+          {#if page.dot}<span class="dot"></span>{/if}
+        </button>
+      {/each}
     </nav>
     <div class="view" class:hidden={mainView.view !== 'image'}><ImageViewer /></div>
     <div class="view" class:hidden={mainView.view !== 'sequence'}><SequenceView /></div>
@@ -273,21 +275,40 @@
   .view.hidden {
     display: none;
   }
+  /* The main area's pages: a bar of tabs, the open one lit and underlined. */
   .tabs {
     display: flex;
-    gap: 4px;
+    gap: 2px;
+    padding: 3px;
+    border-radius: 6px;
+    background: var(--input);
+    border: 1px solid var(--panel-border);
+    overflow-x: auto;
+    scrollbar-width: none;
   }
   .tabs button {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    flex: none;
     background: none;
-    border: 1px solid transparent;
+    border: none;
     color: var(--muted);
-    padding: 4px 14px;
-    border-radius: var(--radius);
+    padding: 6px 14px;
+    border-radius: 4px;
+    white-space: nowrap;
+  }
+  .tabs button:hover {
+    color: var(--text);
+    background: rgb(255 255 255 / 0.04);
   }
   .tabs button.active {
     color: var(--text);
-    border-color: var(--panel-border);
-    background: var(--panel);
+    background: var(--button);
+    box-shadow: inset 0 -2px 0 var(--accent);
+  }
+  .tabs button.active :global(.icon) {
+    color: var(--accent);
   }
   .dot {
     display: inline-block;
@@ -295,8 +316,7 @@
     height: 7px;
     border-radius: 50%;
     background: var(--warn);
-    margin-left: 6px;
-    vertical-align: middle;
+    margin-left: -2px;
   }
   @media (max-width: 800px) {
     header {

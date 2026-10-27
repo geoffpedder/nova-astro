@@ -238,7 +238,7 @@
   }
   h4 {
     margin: 10px 0 4px;
-    font-size: 11px;
+    font-size: 12px;
     text-transform: uppercase;
     letter-spacing: 0.08em;
     color: var(--muted);

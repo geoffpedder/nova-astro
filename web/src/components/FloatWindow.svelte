@@ -135,7 +135,7 @@
     border-bottom: 1px solid var(--panel-border);
   }
   .title {
-    font-size: 11px;
+    font-size: 12px;
     letter-spacing: 0.08em;
     text-transform: uppercase;
     color: var(--muted);

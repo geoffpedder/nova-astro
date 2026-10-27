@@ -35,7 +35,7 @@
   .label {
     flex: none;
     font-family: var(--font-mono);
-    font-size: 10.5px;
+    font-size: 12px;
     font-weight: 500;
     letter-spacing: 0.16em;
     text-transform: uppercase;

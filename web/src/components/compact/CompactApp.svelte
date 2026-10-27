@@ -781,7 +781,7 @@
   }
   .more h3 {
     margin: 0 0 8px;
-    font: 500 11px var(--font);
+    font: 500 12px var(--font);
     letter-spacing: 0.08em;
     text-transform: uppercase;
     color: var(--muted);

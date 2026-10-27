@@ -211,7 +211,7 @@
   }
   .controls h4 {
     margin: 6px 0 2px;
-    font-size: 11px;
+    font-size: 12px;
     text-transform: uppercase;
     letter-spacing: 0.06em;
     color: var(--muted);

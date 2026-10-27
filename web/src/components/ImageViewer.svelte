@@ -933,7 +933,7 @@
     box-shadow: 0 8px 24px rgb(0 0 0 / 0.4);
   }
   .menu-title {
-    font-size: 11px;
+    font-size: 12px;
     text-transform: uppercase;
     letter-spacing: 0.06em;
     padding: 4px 6px;

@@ -255,7 +255,7 @@
     margin: 6px 8px 2px;
   }
   .menu-title {
-    font-size: 11px;
+    font-size: 12px;
     text-transform: uppercase;
     letter-spacing: 0.06em;
     padding: 4px 8px;

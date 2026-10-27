@@ -8,7 +8,7 @@ namespace Nova.Server.Services;
 public sealed record DiskStats(string Label, string Path, long TotalBytes, long FreeBytes);
 
 /// <summary>
-/// The mini PC at a glance, for the Activity tab. Null members aren't available here (most come from Linux's /proc and
+/// The mini PC at a glance, for the Mini PC tab. Null members aren't available here (most come from Linux's /proc and
 /// /sys; on another system only memory and disks are shown).
 /// </summary>
 /// <param name="CpuPercent">All cores together, since the previous reading (or over a quarter of a second).</param>

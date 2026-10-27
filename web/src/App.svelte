@@ -50,7 +50,7 @@
       list.push({ view: 'guiding', label: 'Guiding', icon: 'guider', title: "NOVA's guider: the guide frame, its stars and the graph", dot: guider.state === 'LostLock' })
     list.push(
       { view: 'webcam', label: 'Webcam', icon: 'webcam', title: 'The webcam on the mini PC: watch the rig from indoors' },
-      { view: 'activity', label: 'Activity', icon: 'minipc', title: 'Everything NOVA has done and reported, and the mini PC', dot: session.unseenProblem },
+      { view: 'activity', label: 'Mini PC', icon: 'minipc', title: 'The mini PC, and everything NOVA has done and reported', dot: session.unseenProblem },
     )
     return list
   })

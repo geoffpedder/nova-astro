@@ -3,7 +3,7 @@
   import { download } from '../lib/download'
   import type { SystemStats, TerminalStatus } from '../lib/types'
 
-  // The mini PC at a glance (CPU, memory, temperature, disks), read every few seconds while the Activity tab shows.
+  // The mini PC at a glance (CPU, memory, temperature, disks), read every few seconds while the Mini PC tab shows.
   let { active }: { active: boolean } = $props()
   let stats = $state<SystemStats | null>(null)
   let failed = $state(false)

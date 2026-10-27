@@ -49,9 +49,9 @@ The checklist goes away once the steps are done. **Setup** in the header brings 
 - **Left column:** the equipment panels (Equipment, Mount, Camera, Focuser, Filter wheel, Rotator, Flat
   panel, Guider). Click a panel's title to fold it away; NOVA remembers.
 - **Main area:** the **Image**, **Plan**, **Targets**, **Polar alignment**, **PHD2** (or **Guiding**, with NOVA's
-  own guider), **Webcam** and **Activity** tabs.
+  own guider), **Webcam** and **Mini PC** tabs.
   Underneath, one line shows the latest activity (yellow for a warning, red for an error); click it for the
-  **Activity** tab, the whole log, with *Warnings and errors only* to pick out problems. A dot on the tab means a
+  **Mini PC** tab, the whole log, with *Warnings and errors only* to pick out problems. A dot on the tab means a
   warning or error came in since you last looked. Above the log, **Mini PC** shows its CPU use (with load and
   temperature), memory in use (and NOVA's share), free space on the image disk (and the USB drive when frames go
   there) and how long it's been up; the bars turn yellow at 75% and red at 90%.
@@ -672,7 +672,7 @@ the activity log. Your own ntfy server works too: set its address, and an access
   NOVA restarts to finish and the page reloads.
 - **The header** shows its network (wired, Wi-Fi with signal, or its own hotspot) and address. Click it for the
   **Network** dialog and the Wi-Fi hotspot.
-- **Terminal** (the Mini PC box at the top of the Activity tab): a shell on the mini PC in the browser, for `nova
+- **Terminal** (the Mini PC box at the top of the Mini PC tab): a shell on the mini PC in the browser, for `nova
   doctor`, `journalctl`, `sudo apt …` and the like, without an SSH client. It runs as NOVA's user (`sudo` asks for
   your password), with colours, resizing and full-screen programs such as `htop` or `nano`. Drag its bottom edge to
   resize it; ⤢ makes it taller. Because it's a shell, it's only offered **once a NOVA password is set** (⏻ → Set a

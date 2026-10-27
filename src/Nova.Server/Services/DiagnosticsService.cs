@@ -38,7 +38,7 @@ public sealed partial class DiagnosticsService(ActivityLog log, IOptions<NovaOpt
 
         Add("README.txt",
             $"NOVA {StatusReporter.AppVersion} on {Environment.MachineName}, {DateTime.Now:yyyy-MM-dd HH:mm zzz}\n\n" +
-            "activity.txt        what NOVA's Activity tab shows (since NOVA last started)\n" +
+            "activity.txt        NOVA's activity log, as the Mini PC tab shows it (since NOVA last started)\n" +
             "nova.log            NOVA's own log, the last 36 hours\n" +
             "indiserver.log      the INDI drivers' log, the last 36 hours\n" +
             "kernel-usb.log      the kernel's USB messages, this boot and the one before (devices reset or dropped)\n" +

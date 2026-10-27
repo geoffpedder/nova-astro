@@ -7,6 +7,8 @@ What changed in each release. The newest is first. A release's section here beco
 ### Changed
 
 - **Sequence is now Plan** in the desktop layout's tabs (and the view's title), the same as the compact layout.
+- **Activity is now Mini PC** in the desktop layout's tabs, the same as the compact layout. It holds the mini PC's
+  box (health, terminal, diagnostics) and the activity log, as before.
 
 ### Added
 

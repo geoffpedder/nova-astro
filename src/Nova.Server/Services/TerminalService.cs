@@ -16,7 +16,7 @@ public interface ITerminalProcess : IDisposable
 }
 
 /// <summary>
-/// A terminal on the mini PC in the browser (the Activity tab's Mini PC box): ttyd, started when a browser opens it
+/// A terminal on the mini PC in the browser (the Mini PC tab's Mini PC box): ttyd, started when a browser opens it
 /// and stopped a minute after the last one closes, running a login shell as NOVA's user. It listens on a socket file
 /// in a folder only NOVA's user can open (no network port, so nothing else on the mini PC can reach it), and NOVA
 /// relays it through its own port, only to a signed-in browser, and only once a NOVA password is set: it's a shell.

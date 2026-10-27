@@ -3,7 +3,7 @@
   import { nova } from '../lib/state.svelte'
 
   // The activity log's latest entry, on one line under the main view (in its warning colour, so nothing goes
-  // unseen). The whole log is the Activity tab: click the line to open it.
+  // unseen). The whole log is in the Mini PC tab: click the line to open it.
   const latest = $derived(nova.log.length > 0 ? nova.log[nova.log.length - 1] : null)
   const time = (iso: string) => new Date(iso).toLocaleTimeString()
 </script>

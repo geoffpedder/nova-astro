@@ -20,18 +20,23 @@ public abstract class IndiDevice(IndiClient client, string name) : IDevice
 
     public async Task ConnectAsync(CancellationToken ct)
     {
-        if (!IsConnected && !await TryConnectAsync(checkCurrent: true, ct) && !await TryOtherPortsAsync(ct))
+        if (!IsConnected && !await TryConnectAsync(ct) && !await TryOtherPortsAsync(ct))
             throw new InvalidOperationException($"{Name} failed to connect");
         await OnConnectedAsync(ct);
     }
 
-    private async Task<bool> TryConnectAsync(bool checkCurrent, CancellationToken ct)
+    /// <summary>
+    /// Asks the driver to connect and waits for its answer to this request. Only an answer arriving after it counts: the
+    /// property can still be in Alert from an earlier failure, and a driver busy opening a port (a serial device can take
+    /// several seconds to answer once plugged in) sends nothing until it's done.
+    /// </summary>
+    private async Task<bool> TryConnectAsync(CancellationToken ct)
     {
-        await Client.SetSwitchesAsync(Name, "CONNECTION", ct, ("CONNECT", true));
-        var result = await Client.WaitForAsync(Name, "CONNECTION",
+        var answer = Client.WaitForAsync(Name, "CONNECTION",
             p => p.State == IndiState.Alert || (p.State == IndiState.Ok && p["CONNECT"]?.IsOn == true),
-            ConnectTimeout, ct, checkCurrent);
-        return result.State != IndiState.Alert;
+            ConnectTimeout, ct, checkCurrent: false);
+        await Client.SetSwitchesAsync(Name, "CONNECTION", ct, ("CONNECT", true));
+        return (await answer).State != IndiState.Alert;
     }
 
     /// <summary>
@@ -70,7 +75,7 @@ public abstract class IndiDevice(IndiClient client, string name) : IDevice
             {
                 continue;
             }
-            if (await TryConnectAsync(checkCurrent: false, ct))
+            if (await TryConnectAsync(ct))
             {
                 PortFound?.Invoke(this, Client.GetProperty(Name, "DEVICE_PORT")?["PORT"]?.Text ?? port);
                 return true;

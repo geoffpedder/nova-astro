@@ -172,6 +172,37 @@ public class IndiClientTests
     }
 
     [Fact]
+    public async Task WaitsForTheDriversAnswerNotAnEarlierFailure()
+    {
+        // The flat panel failed to connect while unplugged (CONNECTION left in Alert). Plugged in, the driver takes a
+        // while to open the port and answer: that answer is the one that counts, not the old Alert.
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(15));
+        var scanned = false;
+        string[] definitions =
+        [
+            """<defTextVector device="Gemini Flatpanel" name="DRIVER_INFO" state="Idle" perm="ro"><defText name="DRIVER_INTERFACE">1536</defText></defTextVector>""",
+            """<defSwitchVector device="Gemini Flatpanel" name="CONNECTION" state="Alert" perm="rw" rule="OneOfMany"><defSwitch name="CONNECT">Off</defSwitch><defSwitch name="DISCONNECT">On</defSwitch></defSwitchVector>""",
+            """<defTextVector device="Gemini Flatpanel" name="DEVICE_PORT" state="Idle" perm="rw"><defText name="PORT">/dev/ttyUSB0</defText></defTextVector>""",
+            """<defSwitchVector device="Gemini Flatpanel" name="DEVICE_PORT_SCAN" state="Idle" perm="rw" rule="OneOfMany"><defSwitch name="SCAN_PORT">Off</defSwitch></defSwitchVector>""",
+        ];
+        using var server = new FakeIndiServer(definitions, line =>
+        {
+            if (line.Contains("name=\"DEVICE_PORT_SCAN\"")) scanned = true;
+            if (!line.Contains("name=\"CONNECTION\"") || !line.Contains(">On<")) return [];
+            Thread.Sleep(1500); // opening the port and the handshake
+            return ["""<setSwitchVector device="Gemini Flatpanel" name="CONNECTION" state="Ok"><oneSwitch name="CONNECT">On</oneSwitch><oneSwitch name="DISCONNECT">Off</oneSwitch></setSwitchVector>"""];
+        });
+        await using var provider = new IndiEquipmentProvider("127.0.0.1", server.Port);
+        await provider.ConnectAsync(cts.Token);
+        for (var i = 0; i < 40 && provider.GetFlatPanel("Gemini Flatpanel") is null; i++) await Task.Delay(25, cts.Token);
+        var panel = provider.GetFlatPanel("Gemini Flatpanel")!;
+
+        await panel.ConnectAsync(cts.Token);
+        Assert.True(panel.IsConnected);
+        Assert.False(scanned);
+    }
+
+    [Fact]
     public async Task StillFailsWhenNoPortWorks()
     {
         using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(15));

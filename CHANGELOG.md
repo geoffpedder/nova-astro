@@ -79,6 +79,9 @@ What changed in each release. The newest is first. A release's section here beco
 - **Finding a serial device on another port** (when its driver's own port fails) set the driver's port to the
   port list's short name (`1a86_USB_Serial`, say) rather than its path, so it never connected, and left the driver
   pointing nowhere. It now picks the port from the list, as *Scan Ports* and a click do by hand.
+- **A device that had failed to connect gave up on the next try straight away**, taking the old failure for the
+  answer, while its driver was still connecting (a serial device just plugged in takes several seconds). The flat
+  panel showed "Could not connect" and then connected anyway. NOVA now waits for the answer to its own request.
 
 ## [0.3.22] - 2026-10-24
 

@@ -48,7 +48,7 @@ The checklist goes away once the steps are done. **Setup** in the header brings 
 
 - **Left column:** the equipment panels (Equipment, Mount, Camera, Focuser, Filter wheel, Rotator, Flat
   panel, Guider). Click a panel's title to fold it away; NOVA remembers.
-- **Main area:** the **Image**, **Sequence**, **Targets**, **Polar alignment**, **PHD2** (or **Guiding**, with NOVA's
+- **Main area:** the **Image**, **Plan**, **Targets**, **Polar alignment**, **PHD2** (or **Guiding**, with NOVA's
   own guider), **Webcam** and **Activity** tabs.
   Underneath, one line shows the latest activity (yellow for a warning, red for an error); click it for the
   **Activity** tab, the whole log, with *Warnings and errors only* to pick out problems. A dot on the tab means a
@@ -490,9 +490,9 @@ Without imagery the chart draws catalogue stars.
 
 ## Sequences
 
-![The Sequence tab](images/sequence-tab-v2.webp)
+![The Plan tab](images/sequence-tab-v2.webp)
 
-The **Sequence** tab runs a night's imaging unattended, for one target or several in turn:
+The **Plan** tab runs a night's imaging unattended, for one target or several in turn:
 
 1. **Start:** cool the camera. Then for each target: wait for its *start after* time and until it's above
    its *minimum altitude* (or the horizon), slew and centre (plate solving), optionally match the camera's
@@ -507,7 +507,7 @@ The **Sequence** tab runs a night's imaging unattended, for one target or severa
 4. **Meridian flip** (German equatorial mounts): once the target is N minutes past the meridian, stop
    guiding, GoTo the target again so the mount changes sides, re-centre, optionally refocus, and guide again.
    A frame that would run past the latest time isn't started; the sequence waits for the flip. Flips happen between
-   frames, so one due while a frame runs comes when that frame ends: the Sequence tab shows when it will actually be
+   frames, so one due while a frame runs comes when that frame ends: the Plan tab shows when it will actually be
    ("flip ≈ 22:31, after this frame (latest 22:41)"), and the log warns about 5 minutes ahead. If the mount
    stays on the same side (some track past the meridian until their own limit), it retries every few minutes
    and stops after three tries.
@@ -518,7 +518,7 @@ tab, and saves the stack in its `Stacked` folder when the target ends (see [Live
 
 **The night ends** at astronomical dawn unless you choose otherwise (At the end → *Stop the night at*: nautical
 dawn, sunrise, a set time, or never). From then no frame is started that wouldn't finish in time, targets still to
-come are skipped, and the end steps run. The Sequence tab shows when that will be. A sequence started after
+come are skipped, and the end steps run. The Plan tab shows when that will be. A sequence started after
 dawn (testing in morning twilight, say) runs until the next one. Dawn needs your site, set in the Mount panel;
 where the Sun never gets 18° down (short summer nights far north) it uses nautical dawn or sunrise.
 
@@ -531,7 +531,7 @@ what's happening: autofocus, a slew, a dither), the whole sequence's progress, a
 
 ## Flats
 
-**Flats…** in the Sequence tab, for a panel switched on by hand (or a T-shirt or tablet): NOVA asks you to
+**Flats…** in the Plan tab, for a panel switched on by hand (or a T-shirt or tablet): NOVA asks you to
 put the panel on, then finds the exposure for the brightness you want (50% of full scale by default) from a
 few test frames, and remembers it for next time. It takes the flats, checking each one and retaking any that
 are off. Then it asks you to switch the panel off and cover the scope, and takes as many dark flats at the

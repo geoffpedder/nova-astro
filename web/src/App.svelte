@@ -110,7 +110,7 @@
     <nav class="tabs" aria-label="Main view">
       <button class:active={mainView.view === 'image'} aria-pressed={mainView.view === 'image'} onclick={() => (mainView.view = 'image')}>Image</button>
       <button class:active={mainView.view === 'sequence'} aria-pressed={mainView.view === 'sequence'} onclick={() => (mainView.view = 'sequence')}>
-        Sequence{#if sequencer?.running}<span class="dot"></span>{/if}
+        Plan{#if sequencer?.running}<span class="dot"></span>{/if}
       </button>
       <button class:active={mainView.view === 'targets'} aria-pressed={mainView.view === 'targets'} onclick={() => (mainView.view = 'targets')}
         >Targets</button

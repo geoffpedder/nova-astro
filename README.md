@@ -40,7 +40,7 @@ network, with nothing to install there. It's inspired by [N.I.N.A.](https://nigh
 <table>
   <tr>
     <td width="33%"><a href="docs/images/targets-tab-v2.webp"><img src="docs/images/targets-tab-v2.webp" alt="The Targets tab: tonight's best targets, the sky chart with DSS imagery, and the camera's frame on IC 1396, with the panels moved and the altitude chart"></a></td>
-    <td width="33%"><a href="docs/images/sequence-tab-v2.webp"><img src="docs/images/sequence-tab-v2.webp" alt="The Sequence tab: IC 1396 with its frames, dithering, refocusing, meridian flip and end-of-night steps"></a></td>
+    <td width="33%"><a href="docs/images/sequence-tab-v2.webp"><img src="docs/images/sequence-tab-v2.webp" alt="The Plan tab: IC 1396 with its frames, dithering, refocusing, meridian flip and end-of-night steps"></a></td>
     <td width="33%"><a href="docs/images/image-tab-v2.webp"><img src="docs/images/image-tab-v2.webp" alt="The Image tab: the Andromeda Galaxy, with stars, HFR and FWHM, and the image history"></a></td>
   </tr>
   <tr>

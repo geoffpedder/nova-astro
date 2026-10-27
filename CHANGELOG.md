@@ -4,6 +4,10 @@ What changed in each release. The newest is first. A release's section here beco
 
 ## [Unreleased]
 
+### Changed
+
+- **Sequence is now Plan** in the desktop layout's tabs (and the view's title), the same as the compact layout.
+
 ### Added
 
 - **Turn the planned frame on the chart:** the yellow target frame's label shows its rotation (*Target 35.0°*),

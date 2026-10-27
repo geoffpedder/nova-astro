@@ -226,7 +226,7 @@
 
 <div class="panel sequence">
   <div class="top">
-    <h2>Sequence</h2>
+    <h2>Plan</h2>
     <input class="name" placeholder="Sequence name" bind:value={plan.name} aria-label="Sequence name" />
     <select bind:value={selected} onchange={() => open(selected)} aria-label="Open a saved sequence" disabled={running}>
       <option value="">Open…</option>

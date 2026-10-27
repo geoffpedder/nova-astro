@@ -137,7 +137,8 @@ drivers it needs start, the rest are stopped, and the devices are chosen, ready 
 A mount or other serial device that isn't on the port its driver expects (it was plugged in after INDI started,
 say, or came up as `/dev/ttyACM0` rather than `/dev/ttyUSB0`) still connects: when connecting fails, NOVA rescans
 the ports and tries each one, as the driver's *Scan Ports* button does by hand, and the activity log says which
-port it was on.
+port it was on. One plugged in after **Connect equipment** (or not plugged in at the time) connects by itself when
+its USB serial port appears, so there's no need to press *Scan Ports* or Connect again.
 
 **Simulators,** for trying NOVA without hardware: tick INDI's simulator drivers in Drivers… (the telescope,
 CCD, focuser, filter wheel and other simulators) and Apply. To switch between the simulators and real equipment,
@@ -727,9 +728,10 @@ the activity log. Your own ntfy server works too: set its address, and an access
   NOVA's activity log and its own log, the INDI drivers' log and the kernel's USB messages (the last 36 hours), `nova
   doctor`, the system (OS, disks, memory, USB devices) and NOVA's settings. Passwords, tokens, the Bluetooth code and
   your sites' coordinates are blanked, and the password file is left out.
-- **Failing USB devices:** NOVA watches the kernel's messages, and when a device is reset or drops out 5 or more times
-  in a minute (a guide camera with a bad cable, say), the activity log names it and suggests checking its cable and
-  hub, at most every 10 minutes per device.
+- **Failing USB devices:** NOVA watches the kernel's messages, and when a device drops off USB or fails to answer 3
+  or more times in a minute (a guide camera with a bad cable, say), the activity log names it and suggests checking
+  its cable and hub, at most every 10 minutes per device. The kernel's *reset* messages alone aren't counted: ZWO's
+  cameras are reset at the start of every exposure, so a camera looping or guiding has one per frame and is fine.
 
 ### Wi-Fi hotspot (no Wi-Fi at the site)
 

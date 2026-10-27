@@ -431,6 +431,22 @@ public sealed class EquipmentService : IAsyncDisposable
     }
 
     /// <summary>Whether this device is the one in use for any role (explicitly chosen or automatic).</summary>
+    /// <summary>
+    /// A serial port appeared (a USB serial adapter plugged in): connects the chosen devices that aren't connected, as a
+    /// serial device's driver is there whether or not it's plugged in, so it doesn't "appear" itself. Connecting
+    /// rescans the ports when the driver's own one fails, so it finds the new port.
+    /// </summary>
+    public async Task SerialPortsAddedAsync(IReadOnlyCollection<string> ports, CancellationToken ct)
+    {
+        if (!EquipmentConnected) return;
+        foreach (var device in SelectableKinds.Select(DeviceFor).OfType<IDevice>().DistinctBy(d => d.Name).ToList())
+        {
+            if (device.IsConnected) continue;
+            _log.Info($"{string.Join(", ", ports)} appeared, connecting {device.Name}");
+            await ConnectDeviceAsync(device, ct);
+        }
+    }
+
     private bool IsChosen(string name) =>
         SelectableKinds.Any(kind => name == (Chosen(kind) ?? DeviceFor(kind)?.Name));
 

@@ -6,6 +6,12 @@ What changed in each release. The newest is first. A release's section here beco
 
 ### Changed
 
+- **A serial device plugged in after Connect connects by itself** (a flat panel, say): when a new USB serial port
+  appears, NOVA connects the chosen devices that aren't connected, finding the new port, without *Scan Ports*.
+- **"USB link is failing" only for real failures:** it counts a device dropping off USB and the kernel's USB errors,
+  no longer plain resets. ZWO's cameras are reset at the start of every exposure, so a camera taking flats or
+  looping set it off while working perfectly. It now warns at 3 in a minute, and no longer suggests a camera
+  shouldn't share a hub "with the main camera" when it's the main camera.
 - **Phone top bar:** the logo is the star alone and the profile chip its dot and arrow, so the Image | Targets
   tabs no longer overlap them. The profile's name is in the Equipment sheet the chip opens.
 - **Mini PC tab on a phone (or any narrow screen):** the page scrolls as a whole, with Storage at its full height

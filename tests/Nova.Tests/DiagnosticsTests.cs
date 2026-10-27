@@ -14,24 +14,30 @@ public sealed class DiagnosticsTests : IDisposable
         try { Directory.Delete(_folder, recursive: true); } catch (IOException) { }
     }
 
-    // From the night an ASI120 on the ASI2600's hub kept being reset.
+    // A camera exposing (ZWO's cameras are reset at each exposure's start), and a guide camera whose link is failing.
     private const string Resets = """
-        usb 1-2.2: reset high-speed USB device number 4 using xhci_hcd
-        usb 1-2.2: reset high-speed USB device number 4 using xhci_hcd
-        usb 1-2.2: reset high-speed USB device number 4 using xhci_hcd
         usb 2-2: reset SuperSpeed USB device number 2 using xhci_hcd
-        usb 1-2.2: reset high-speed USB device number 4 using xhci_hcd
+        usb 2-2: reset SuperSpeed USB device number 2 using xhci_hcd
+        usb 2-2: reset SuperSpeed USB device number 2 using xhci_hcd
+        usb 2-2: reset SuperSpeed USB device number 2 using xhci_hcd
+        usb 2-2: reset SuperSpeed USB device number 2 using xhci_hcd
+        usb 2-2: reset SuperSpeed USB device number 2 using xhci_hcd
         usb 1-2.2: USB disconnect, device number 4
+        usb 1-2.2: new high-speed USB device number 5 using xhci_hcd
+        usb 1-2.2: device descriptor read/64, error -71
+        usb 1-2-port2: Cannot enable. Maybe the USB cable is bad?
+        usb 1-2-port2: unable to enumerate USB device
+        usb usb1-port6: over-current condition
         usb 1-6: New USB device found, idVendor=0573, idProduct=1573
         """;
 
     [Fact]
-    public void CountsResetsAndDropsPerPort()
+    public void CountsDropsAndErrorsPerPortButNotResets()
     {
         var counts = UsbHealthService.Count(Resets);
-        Assert.Equal(5, counts["1-2.2"]);
-        Assert.Equal(1, counts["2-2"]);
-        Assert.False(counts.ContainsKey("1-6")); // a device appearing isn't trouble
+        Assert.Equal(4, counts["1-2.2"]);       // the drop, and three errors (two against its hub port)
+        Assert.Equal(1, counts["1-6"]);         // over-current on the root hub's port 6
+        Assert.False(counts.ContainsKey("2-2")); // resets at each exposure aren't trouble
     }
 
     [Fact]
@@ -43,7 +49,7 @@ public sealed class DiagnosticsTests : IDisposable
 
         usb.Check(Resets, now);
         var warning = Assert.Single(log.Recent);
-        Assert.Contains("ZWO ASI120MM Mini (USB port 1-2.2) was reset or dropped 5 times", warning.Message);
+        Assert.Contains("ZWO ASI120MM Mini (USB port 1-2.2) dropped off USB or failed to answer 4 times", warning.Message);
         Assert.Contains("its own cable is best", warning.Message);
 
         usb.Check(Resets, now.AddMinutes(1)); // still failing: not every minute

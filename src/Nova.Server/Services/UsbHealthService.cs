@@ -3,15 +3,15 @@ using System.Text.RegularExpressions;
 namespace Nova.Server.Services;
 
 /// <summary>
-/// Watches the kernel's messages for a USB device being reset or dropped over and over, a sign its link is failing
-/// (a guide camera on the main camera's hub was reset every second and a half), and says so in the activity log,
-/// naming the device. Linux only; needs read access to the kernel log (the systemd-journal group, which the install
-/// gives NOVA's user).
+/// Watches the kernel's messages for a USB device dropping off or failing to answer over and over, a sign its link is
+/// failing, and says so in the activity log, naming the device. A plain reset isn't counted: ZWO's cameras are reset
+/// at the start of every exposure, so a camera looping or guiding is "reset" every frame while working perfectly.
+/// Linux only; needs read access to the kernel log (the systemd-journal group, which the install gives NOVA's user).
 /// </summary>
 public sealed partial class UsbHealthService(ActivityLog log) : BackgroundService
 {
-    /// <summary>This many resets or drops in a minute is a failing link, not a one-off.</summary>
-    public const int Threshold = 5;
+    /// <summary>This many drops or errors in a minute is a failing link, not a one-off.</summary>
+    public const int Threshold = 3;
 
     private static readonly TimeSpan Every = TimeSpan.FromMinutes(1);
     private static readonly TimeSpan Quiet = TimeSpan.FromMinutes(10); // between warnings about one device
@@ -55,7 +55,7 @@ public sealed partial class UsbHealthService(ActivityLog log) : BackgroundServic
         }
     }
 
-    /// <summary>Counts resets and drops per USB port in the kernel's messages, and warns about any over the threshold.</summary>
+    /// <summary>Counts drops and errors per USB port in the kernel's messages, and warns about any over the threshold.</summary>
     public void Check(string kernelMessages, DateTime utc)
     {
         foreach (var (port, count) in Count(kernelMessages))
@@ -64,24 +64,32 @@ public sealed partial class UsbHealthService(ActivityLog log) : BackgroundServic
             if (_warned.TryGetValue(port, out var last) && utc - last < Quiet) continue;
             _warned[port] = utc;
             var name = DeviceName(port) is { } n ? $"{n} (USB port {port})" : $"The USB device on port {port}";
-            log.Warn($"{name} was reset or dropped {count} times in the last minute: its USB link is failing. Check its " +
-                     "cable and connectors, and that it isn't sharing a hub with the main camera (its own cable is best).");
+            log.Warn($"{name} dropped off USB or failed to answer {count} times in the last minute: its USB link is failing. " +
+                     "Check its cable and connectors; a hub shared with a camera can do it too (its own cable is best).");
         }
     }
 
-    /// <summary>Resets and disconnects per USB port, e.g. "usb 1-2.2: reset high-speed USB device number 4".</summary>
+    /// <summary>
+    /// Drops and errors per USB port, e.g. "usb 1-2.2: USB disconnect, device number 4" or "usb 1-2.2: device
+    /// descriptor read/64, error -71". Errors the kernel reports against the hub's port ("usb 1-2-port2: Cannot
+    /// enable…", "usb usb1-port2: …") count for the device on it (1-2.2, 1-2). Plain resets aren't counted.
+    /// </summary>
     public static Dictionary<string, int> Count(string kernelMessages)
     {
         var counts = new Dictionary<string, int>();
         foreach (Match m in Event().Matches(kernelMessages))
         {
-            var port = m.Groups["port"].Value;
+            var port = m.Groups["port"].Success ? m.Groups["port"].Value
+                : m.Groups["hub"].Success ? $"{m.Groups["hub"].Value}.{m.Groups["n"].Value}"
+                : $"{m.Groups["bus"].Value}-{m.Groups["n"].Value}";
             counts[port] = counts.GetValueOrDefault(port) + 1;
         }
         return counts;
     }
 
-    [GeneratedRegex(@"usb (?<port>\d+-[\d.]+): (reset \S+ USB device|USB disconnect)")]
+    [GeneratedRegex(@"usb (?:(?<port>\d+-[\d.]+)|(?<hub>\d+-[\d.]+)-port(?<n>\d+)|usb(?<bus>\d+)-port(?<n>\d+)): " +
+                    @"(?:USB disconnect|device descriptor read|device not accepting address|Device not responding|" +
+                    @"unable to enumerate|Cannot enable|over-current|.*error -(?:71|110|32))", RegexOptions.IgnoreCase)]
     private static partial Regex Event();
 
     private static async Task<string> ReadKernelAsync(DateTimeOffset since, CancellationToken ct)

@@ -28,6 +28,7 @@
   import CompactImage from './CompactImage.svelte'
   import Icon, { type IconName } from '../Icon.svelte'
   import KindBadge from '../KindBadge.svelte'
+  import NovaStar from '../NovaStar.svelte'
   import type { PanelKind } from '../Panel.svelte'
   import ShootControls from './ShootControls.svelte'
 
@@ -192,7 +193,7 @@
   class:covering
 >
   <header class="top">
-    <span class="brand">NOVA</span>
+    <span class="brand"><NovaStar size={15} />NOVA</span>
     <button class="profile" onclick={() => openSheet('equipment')} class:on={sheet === 'equipment'} title="Equipment: profiles, devices and drivers">
       <span class="dot {equipmentDot}"></span><span class="name">{profileName}</span><Icon name="down" size={15} />
     </button>
@@ -390,7 +391,10 @@
   .brand {
     width: var(--rail);
     flex: none;
-    text-align: center;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 5px;
     font: 600 13px var(--font-mono);
     letter-spacing: 0.3em;
     /* NOVA's logo keeps its blue, as in the desktop layout (red in night mode). */
@@ -820,12 +824,14 @@
     }
     .brand {
       width: auto;
-      padding-left: 10px;
-      letter-spacing: 0.12em;
+      padding-left: 8px;
+      gap: 4px;
+      letter-spacing: 0.06em;
       font-size: 12px;
     }
     .profile .name {
       max-width: 86px;
+      min-width: 3.5em; /* some of the profile's name always shows */
     }
     .tabs button {
       min-width: 0;

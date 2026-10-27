@@ -23,6 +23,7 @@
   import GuideFloat from './components/GuideFloat.svelte'
   import SequenceChip from './components/SequenceChip.svelte'
   import Icon, { type IconName } from './components/Icon.svelte'
+  import NovaStar from './components/NovaStar.svelte'
   import { mainView } from './lib/inbox.svelte'
   import SetupGuide from './components/SetupGuide.svelte'
   import { layout, setPanels } from './lib/layout.svelte'
@@ -73,7 +74,7 @@
 <!-- The header at its own height, the main area exactly the rest of the window: the page itself never scrolls. -->
 <div class="shell">
 <header>
-  <div class="brand">NOVA</div>
+  <div class="brand"><NovaStar size={17} />NOVA</div>
   {#if nova.status?.version}<span class="version mono muted" title="NOVA version">{nova.status.version === '0.0.0-dev' ? 'dev build' : `v${nova.status.version}`}</span>{/if}
   <span class="muted">{nova.status?.backend ?? '…'}</span>
   {#if nova.hub !== 'connected'}
@@ -171,6 +172,9 @@
     flex-shrink: 0;
   }
   .brand {
+    display: flex;
+    align-items: center;
+    gap: 8px;
     font-family: var(--font-mono);
     font-weight: 600;
     letter-spacing: 0.35em;

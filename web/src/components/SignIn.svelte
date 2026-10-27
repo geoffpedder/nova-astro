@@ -23,11 +23,12 @@
   }
 
   const focus = (node: HTMLInputElement) => node.focus()
+  import NovaStar from './NovaStar.svelte'
 </script>
 
 <main class="sign-in">
   <form class="panel" onsubmit={signIn}>
-    <div class="brand">NOVA</div>
+    <div class="brand"><NovaStar size={20} />NOVA</div>
     <label for="nova-password">Password</label>
     <input id="nova-password" type="password" autocomplete="current-password" bind:value={password} disabled={busy} use:focus />
     {#if error}<p class="bad">{error}</p>{/if}
@@ -51,11 +52,14 @@
     padding: 24px;
   }
   .brand {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 9px;
     font-family: var(--font-mono);
     font-weight: 600;
     letter-spacing: 0.35em;
     color: #7fb6de;
-    text-align: center;
     margin-bottom: 8px;
   }
   :global(:root[data-theme='night']) .brand {

@@ -217,6 +217,8 @@
     flex-direction: column;
     gap: 12px;
     overflow-y: auto;
+    /* Room for the scrollbar kept whether it's there or not, so folding panels away doesn't widen the column. */
+    scrollbar-gutter: stable;
   }
   /* Folded: the panels stay mounted (their state and timers carry on), just out of sight. */
   aside.hidden {

@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { portal } from '../lib/portal'
   /**
    * Offline world map for picking a location, drawn as SVG in a plain longitude/latitude projection. Wheel or
    * buttons to zoom, drag to pan, click to drop the pin. Zoomed out: Natural Earth 1:50m coasts and borders.
@@ -325,8 +326,8 @@
 
 <svelte:window {onkeydown} />
 
-<div class="backdrop" role="presentation" onclick={onclose}></div>
-<div class="dialog panel" role="dialog" aria-modal="true" aria-label="Pick a location on the map">
+<div use:portal class="backdrop" role="presentation" onclick={onclose}></div>
+<div use:portal class="dialog panel" role="dialog" aria-modal="true" aria-label="Pick a location on the map">
   <header>
     <div class="title">Pick a location</div>
     <div class="search">

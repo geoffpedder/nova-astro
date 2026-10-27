@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { portal } from '../lib/portal'
   import { api } from '../lib/api'
   import type { FitsHeaderCard } from '../lib/types'
 
@@ -45,8 +46,8 @@
 
 <svelte:window {onkeydown} />
 
-<div class="backdrop" role="presentation" onclick={onclose}></div>
-<div class="dialog panel" role="dialog" aria-modal="true" aria-label="FITS header">
+<div use:portal class="backdrop" role="presentation" onclick={onclose}></div>
+<div use:portal class="dialog panel" role="dialog" aria-modal="true" aria-label="FITS header">
   <header>
     <div>
       <div class="muted small">FITS header of image #{imageId}</div>

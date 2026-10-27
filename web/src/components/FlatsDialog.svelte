@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { portal } from '../lib/portal'
   // Starting flats by hand: what they're for (the folder name) and how to take them. Once started, FlatsPrompt
   // walks through it (panel on → exposure → flats → cover → dark flats).
   import { untrack } from 'svelte'
@@ -26,8 +27,8 @@
 
 <svelte:window onkeydown={keydown} />
 
-<div class="backdrop" role="presentation" onclick={onclose}></div>
-<div class="dialog panel" role="dialog" aria-modal="true" aria-labelledby="flats-title">
+<div use:portal class="backdrop" role="presentation" onclick={onclose}></div>
+<div use:portal class="dialog panel" role="dialog" aria-modal="true" aria-labelledby="flats-title">
   <h3 id="flats-title">Flats</h3>
   <p class="muted">
     With the camera exactly as it was for your lights (same angle and focus). NOVA asks you to put the panel on, finds the exposure,

@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { portal } from '../lib/portal'
   import { onMount } from 'svelte'
   import { api } from '../lib/api'
   import type { FolderListing } from '../lib/types'
@@ -47,8 +48,8 @@
 </script>
 
 <svelte:window {onkeydown} />
-<div class="backdrop" role="presentation" onclick={() => !opening && onclose()}></div>
-<div class="dialog panel" role="dialog" aria-modal="true" aria-labelledby="files-title">
+<div use:portal class="backdrop" role="presentation" onclick={() => !opening && onclose()}></div>
+<div use:portal class="dialog panel" role="dialog" aria-modal="true" aria-labelledby="files-title">
   <div class="head">
     <h3 id="files-title">Open from the mini PC</h3>
     <button class="secondary small" onclick={onclose} aria-label="Close">✕</button>

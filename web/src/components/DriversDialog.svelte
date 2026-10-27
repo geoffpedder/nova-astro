@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { portal } from '../lib/portal'
   // Which INDI drivers indiserver runs: tick the ones for your equipment and Apply. Saved to indi.env for the next
   // start, and started or stopped now (stopping one disconnects its devices).
   import { api } from '../lib/api'
@@ -103,8 +104,8 @@
 
 <svelte:window onkeydown={keydown} />
 
-<div class="backdrop" role="presentation" onclick={onclose}></div>
-<div class="dialog panel" role="dialog" aria-modal="true" aria-labelledby="drivers-title">
+<div use:portal class="backdrop" role="presentation" onclick={onclose}></div>
+<div use:portal class="dialog panel" role="dialog" aria-modal="true" aria-labelledby="drivers-title">
   <header>
     <h3 id="drivers-title">Drivers</h3>
     <input type="search" placeholder="Search: celestron, eaf, qhy…" bind:value={query} aria-label="Search drivers" />

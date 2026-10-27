@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { portal } from '../lib/portal'
   // Set, change or remove NOVA's password (⏻ → Password…). The current password is needed while one is set.
   import { api } from '../lib/api'
   import { untrack } from 'svelte'
@@ -46,8 +47,8 @@
   }
 </script>
 
-<div class="backdrop" role="presentation" onclick={() => !busy && onclose()}></div>
-<div class="dialog panel" role="dialog" aria-modal="true" aria-labelledby="password-title">
+<div use:portal class="backdrop" role="presentation" onclick={() => !busy && onclose()}></div>
+<div use:portal class="dialog panel" role="dialog" aria-modal="true" aria-labelledby="password-title">
   <h3 id="password-title">{hadPassword ? 'Change the password' : 'Set a password'}</h3>
   {#if done}
     <p>{done}</p>

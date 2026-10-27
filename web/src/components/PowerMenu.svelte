@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { portal } from '../lib/portal'
   import { api } from '../lib/api'
   import { act, nova, stopHub } from '../lib/state.svelte'
   import { auth, checkAuth } from '../lib/auth.svelte'
@@ -160,8 +161,8 @@
 
 <input type="file" accept=".zip,application/zip" hidden bind:this={restoreInput} onchange={restore} />
 {#if backupNote}
-  <div class="backdrop" role="presentation" onclick={() => (backupNote = null)}></div>
-  <div class="panel dialog" role="dialog" aria-modal="true" aria-label="Backup">
+  <div use:portal class="backdrop" role="presentation" onclick={() => (backupNote = null)}></div>
+  <div use:portal class="panel dialog" role="dialog" aria-modal="true" aria-label="Backup">
     <p>{backupNote}</p>
     <div class="actions"><button class="secondary" onclick={() => (backupNote = null)}>Close</button></div>
   </div>
@@ -171,8 +172,8 @@
 {#if notificationsOpen}<NotificationsDialog onclose={() => (notificationsOpen = false)} />{/if}
 
 {#if asking}
-  <div class="backdrop" role="presentation" onclick={() => !busy && (asking = null)}></div>
-  <div class="dialog panel" role="dialog" aria-modal="true" aria-labelledby="power-title">
+  <div use:portal class="backdrop" role="presentation" onclick={() => !busy && (asking = null)}></div>
+  <div use:portal class="dialog panel" role="dialog" aria-modal="true" aria-labelledby="power-title">
     <h3 id="power-title">{asking === 'restart' ? 'Restart the mini PC?' : 'Shut down the mini PC?'}</h3>
     {#if running.length}
       <p class="warn">This stops {running.join(', ')}.</p>
@@ -198,8 +199,8 @@
 {/if}
 
 {#if done}
-  <div class="backdrop solid" role="presentation"></div>
-  <div class="dialog panel" role="alertdialog" aria-live="assertive">
+  <div use:portal class="backdrop solid" role="presentation"></div>
+  <div use:portal class="dialog panel" role="alertdialog" aria-live="assertive">
     <h3>{done === 'restart' ? 'Restarting…' : 'Shutting down…'}</h3>
     <p>
       {done === 'restart'

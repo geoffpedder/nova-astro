@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { portal } from '../lib/portal'
   // The header's network badge → Network: how the mini PC is connected, and its Wi-Fi hotspot for when there's no
   // Wi-Fi to join (a dark site): its name and password, when it starts by itself, and starting or stopping it now.
   import { onMount } from 'svelte'
@@ -87,8 +88,8 @@
         : 'wired'
 </script>
 
-<div class="backdrop" role="presentation" onclick={() => !busy && onclose()}></div>
-<div class="dialog panel" role="dialog" aria-modal="true" aria-labelledby="network-title">
+<div use:portal class="backdrop" role="presentation" onclick={() => !busy && onclose()}></div>
+<div use:portal class="dialog panel" role="dialog" aria-modal="true" aria-labelledby="network-title">
   <h3 id="network-title">Network</h3>
 
   {#if network}

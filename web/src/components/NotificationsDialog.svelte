@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { portal } from '../lib/portal'
   // ⏻ → Notifications…: messages to your phone through ntfy when a sequence needs you or is done.
   import { onMount } from 'svelte'
   import { api } from '../lib/api'
@@ -82,8 +83,8 @@
   }
 </script>
 
-<div class="backdrop" role="presentation" onclick={() => !busy && onclose()}></div>
-<div class="dialog panel" role="dialog" aria-modal="true" aria-labelledby="notifications-title">
+<div use:portal class="backdrop" role="presentation" onclick={() => !busy && onclose()}></div>
+<div use:portal class="dialog panel" role="dialog" aria-modal="true" aria-labelledby="notifications-title">
   <h3 id="notifications-title">Notifications</h3>
   {#if !settings}
     <p class="muted">{error ?? 'Loading…'}</p>

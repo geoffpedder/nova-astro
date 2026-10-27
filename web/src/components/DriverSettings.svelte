@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { portal } from '../lib/portal'
   import { api } from '../lib/api'
   import { act, nick } from '../lib/state.svelte'
   import type { DeviceProperty } from '../lib/types'
@@ -105,8 +106,8 @@
 
 <svelte:window {onkeydown} />
 
-<div class="backdrop" role="presentation" onclick={onclose}></div>
-<div class="drawer panel" role="dialog" aria-modal="true" aria-label="Driver settings for {device}">
+<div use:portal class="backdrop" role="presentation" onclick={onclose}></div>
+<div use:portal class="drawer panel" role="dialog" aria-modal="true" aria-label="Driver settings for {device}">
   <header>
     <div>
       <div class="muted small">Driver settings</div>

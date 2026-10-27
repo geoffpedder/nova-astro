@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { portal } from '../lib/portal'
   import { answer, confirmation } from '../lib/confirm.svelte'
 
   const request = $derived(confirmation.request)
@@ -20,8 +21,8 @@
 <svelte:window onkeydown={keydown} />
 
 {#if request}
-  <div class="backdrop" role="presentation" onclick={() => answer(false)}></div>
-  <div class="dialog panel" role="alertdialog" aria-modal="true" aria-labelledby="confirm-title" aria-describedby="confirm-message">
+  <div use:portal class="backdrop" role="presentation" onclick={() => answer(false)}></div>
+  <div use:portal class="dialog panel" role="alertdialog" aria-modal="true" aria-labelledby="confirm-title" aria-describedby="confirm-message">
     <h3 id="confirm-title">{request.title}</h3>
     {#if request.message}<p id="confirm-message" class="muted">{request.message}</p>{/if}
     <div class="actions">

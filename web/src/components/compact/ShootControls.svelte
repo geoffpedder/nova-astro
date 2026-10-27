@@ -3,6 +3,7 @@
   import { abortExposure, expose, exposure } from '../../lib/exposure.svelte'
   import { mainView } from '../../lib/inbox.svelte'
   import { liveStack } from '../../lib/liveStack.svelte'
+  import { portal } from '../../lib/portal'
   import { nova } from '../../lib/state.svelte'
   import Icon from './Icon.svelte'
 
@@ -113,7 +114,7 @@
 </aside>
 
 {#if menu === 'mode'}
-  <div class="shoot-menu" role="menu" style:left="{menuAt.left}px" style:top="{menuAt.top}px" class:above={innerWidth <= 720}>
+  <div use:portal class="shoot-menu" role="menu" style:left="{menuAt.left}px" style:top="{menuAt.top}px" class:above={innerWidth <= 720}>
     {#each modes as m (m.value)}
       <button role="menuitemradio" aria-checked={mode === m.value} class:on={mode === m.value} onclick={() => chooseMode(m.value)}>
         <b>{m.label}</b><small>{m.note}</small>
@@ -121,7 +122,7 @@
     {/each}
   </div>
 {:else if menu === 'exposure'}
-  <div class="shoot-menu exposure" role="menu" style:left="{menuAt.left}px" style:top="{menuAt.top}px" class:above={innerWidth <= 720}>
+  <div use:portal class="shoot-menu exposure" role="menu" style:left="{menuAt.left}px" style:top="{menuAt.top}px" class:above={innerWidth <= 720}>
     <div class="presets">
       {#each presets as p (p)}
         <button class:on={exposure.duration === p} onclick={() => ((exposure.duration = p), (menu = null))}>{p} s</button>

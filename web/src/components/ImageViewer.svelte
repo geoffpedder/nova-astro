@@ -351,9 +351,9 @@
       <button
         class="danger small shoot"
         onclick={abortExposure}
-        title="Stop the exposure (and Loop)"
+        title="Abort: stop the exposure (and Loop)"
       >
-        Abort {nova.exposure.state === 'Downloading' ? '(downloading)' : `${nova.exposure.elapsedSeconds.toFixed(0)}/${nova.exposure.totalSeconds} s`}
+        ■ {nova.exposure.state === 'Downloading' ? 'Downloading' : `${nova.exposure.elapsedSeconds.toFixed(0)}/${nova.exposure.totalSeconds} s`}
       </button>
     {:else}
       <button
@@ -887,12 +887,14 @@
   .shoot-group .shoot {
     border-radius: 0 var(--radius) var(--radius) 0;
   }
-  /* Abort with the countdown: one width throughout ("Abort 9/300 s", "Abort 120/300 s", "Abort (downloading)"), so the
-     toolbar doesn't shift as it counts. */
-  .shoot-group .shoot.danger {
-    min-width: 11.8em;
+  /* Expose, and Abort with the countdown in its place ("■ 9/300 s", "■ 120/300 s", "■ Downloading"): one width
+     throughout, so the toolbar doesn't shift as it starts and counts. */
+  .shoot-group .shoot {
+    width: 9.5em;
     font-variant-numeric: tabular-nums;
     white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
   .toolbar {
     display: flex;

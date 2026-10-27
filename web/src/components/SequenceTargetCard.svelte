@@ -299,10 +299,12 @@
 </section>
 
 <style>
+  /* A little brighter than the page, so each target reads as one block. */
   .card {
     min-width: 0;
-    border: 1px solid var(--panel-border);
+    border: 1px solid color-mix(in srgb, var(--text) 8%, var(--panel-border));
     border-radius: var(--radius);
+    background: color-mix(in srgb, var(--text) 4%, transparent);
     padding: 10px 12px;
     display: grid;
     gap: 8px;

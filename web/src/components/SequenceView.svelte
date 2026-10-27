@@ -387,6 +387,8 @@
 
     <fieldset>
       <div class="two">
+        <!-- What happens between frames, as one group. -->
+        <div class="group">
         <fieldset class="lock" disabled={running}>
         <section>
           <h3>Dither</h3>
@@ -462,8 +464,9 @@
           {/if}
         </section>
         </fieldset>
+        </div>
 
-        <section>
+        <section class="end">
           <h3>At the end</h3>
           <label class="night-end" title="Every target stops then (no frame is started that would run past it), and the steps below run. Dawn needs your site, in the Mount panel.">
             Stop the night at
@@ -674,9 +677,25 @@
     gap: 8px 18px;
   }
   .two {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    display: flex;
+    flex-wrap: wrap;
     gap: 14px;
+    align-items: start;
+  }
+  /* Dither, refocus and the meridian flip: a shaded box, so they read as one group of between-frames settings. */
+  .group {
+    flex: 3 1 520px;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+    gap: 14px;
+    padding: 10px 12px;
+    border-radius: var(--radius);
+    background: color-mix(in srgb, var(--text) 4%, transparent);
+    border: 1px solid color-mix(in srgb, var(--text) 7%, transparent);
+  }
+  .end {
+    flex: 1 1 200px;
+    padding: 10px 0;
   }
   .two .checks {
     flex-direction: column;

@@ -1084,6 +1084,8 @@ export interface FileEntry {
   folder: boolean
   bytes: number | null
   modifiedUtc: string | null
+  /** A file's kind: 'fits', 'image' (PNG, JPEG, TIFF) or 'other'; null for a folder. */
+  kind: 'fits' | 'image' | 'other' | null
 }
 
 export interface FolderListing {

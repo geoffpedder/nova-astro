@@ -49,12 +49,18 @@ The checklist goes away once the steps are done. **Setup** in the header brings 
 - **Left column:** the equipment panels (Equipment, Mount, Camera, Focuser, Filter wheel, Rotator, Flat
   panel, Guider). Click a panel's title to fold it away; NOVA remembers.
 - **Main area:** the **Image**, **Plan**, **Targets**, **Polar alignment**, **PHD2** (or **Guiding**, with NOVA's
-  own guider), **Webcam** and **Mini PC** tabs.
-  Underneath, one line shows the latest activity (yellow for a warning, red for an error); click it for the
-  **Mini PC** tab, the whole log, with *Warnings and errors only* to pick out problems. A dot on the tab means a
-  warning or error came in since you last looked. Above the log, **Mini PC** shows its CPU use (with load and
-  temperature), memory in use (and NOVA's share), free space on the image disk (and the USB drive when frames go
-  there) and how long it's been up; the bars turn yellow at 75% and red at 90%.
+  own guider), **Webcam**, **Mini PC** and **Activity** tabs.
+  - **Mini PC:** its CPU use (with load and temperature), memory in use (and NOVA's share), free space on the image
+    disk (and the USB drive when frames go there) and how long it's been up; the bars turn yellow at 75% and red at
+    90%. **Terminal** and **Diagnostics** are there too, and **Files** (below).
+  - **Activity:** the whole log, with *Warnings and errors only* to pick out problems. A dot on the tab means a
+    warning or error came in since you last looked. Under every tab, one line shows the latest activity (yellow for
+    a warning, red for an error); click it for the Activity tab.
+- **Files** (Mini PC tab): the image folders on the mini PC, and a USB drive when one is mounted, night by night.
+  **Open** a FITS file in the Image tab (to solve it, check its stars or match framing to it), **View** a picture
+  (a live stack's PNG, say) in a new browser tab, or download any file to the phone, tablet or laptop you're
+  using. Nothing outside the image folders can be listed or downloaded. Image → **Open ▾** → *From the mini PC…*
+  is the same browser, showing just FITS files.
 - **Header:** the connection, the network (click it for the **Network** dialog and the
   [Wi-Fi hotspot](#wi-fi-hotspot-no-wi-fi-at-the-site)), a running sequence's progress (from any tab), **Setup**,
   **Full screen**, **Night** (everything in red, to keep your night vision) and ⏻ (restart or shut down the
@@ -85,7 +91,7 @@ same NOVA (the same panels, settings and live state) arranged differently:
   **Targets** is the full target planner in place of the image.
 - **Icons** (down the left on a tablet, along the bottom on a phone): Mount, Camera, Focus, Filter and Guide each
   open that panel, sliding out from behind the icons (from below on a phone); a dot shows whether it's connected.
-  Plan (the sequence), Polar, Webcam and Mini PC (activity, the mini PC's health, and ⏻ on a phone) cover the image
+  Plan (the sequence), Polar, Webcam, Mini PC (its health and files, and ⏻ on a phone) and Activity cover the image
   until closed with ✕.
 - **The shutter** (down the right on a tablet, a floating pill on a phone): **Mode** (Preview, Live stack, or
   Autorun to open the plan), the exposure (tap for common times or type your own), gain and filter, the shutter

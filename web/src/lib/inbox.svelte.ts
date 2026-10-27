@@ -27,4 +27,4 @@ export const framing = $state<{ request: { imageId: number; name: string } | nul
 export const stellariumPick = $state<{ request: { name: string; ra: number; dec: number } | null }>({ request: null })
 
 /** Which main view is showing; the framing tool switches to the sequence after adding to it. */
-export const mainView = $state<{ view: 'image' | 'sequence' | 'targets' | 'polar' | 'phd2' | 'guiding' | 'webcam' | 'activity' }>({ view: 'image' })
+export const mainView = $state<{ view: 'image' | 'sequence' | 'targets' | 'polar' | 'phd2' | 'guiding' | 'webcam' | 'minipc' | 'activity' }>({ view: 'image' })

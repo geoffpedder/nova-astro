@@ -556,12 +556,25 @@ public static class NovaApi
                 return Results.Problem(ex.Message, statusCode: StatusCodes.Status400BadRequest);
             }
         });
-        // Open… → From the mini PC: browse the image folders (and a mounted USB drive), and open a file from there.
-        api.MapGet("/files", (string? root, string? path, StorageService storage) =>
+        // The image folders on the mini PC (and a mounted USB drive): browse them (FITS only, or ?all=true for every
+        // file), open a FITS file from there, or download any file (?inline=true shows a picture in the browser).
+        api.MapGet("/files", (string? root, string? path, bool? all, StorageService storage) =>
         {
             try
             {
-                return Results.Ok(storage.Browse(root ?? "local", path));
+                return Results.Ok(storage.Browse(root ?? "local", path, all == true));
+            }
+            catch (ArgumentException ex)
+            {
+                return Results.Problem(ex.Message, statusCode: StatusCodes.Status400BadRequest);
+            }
+        });
+        api.MapGet("/files/download", (string? root, string? path, bool? inline, StorageService storage) =>
+        {
+            try
+            {
+                var file = storage.AnyFile(root ?? "local", path ?? "");
+                return Results.File(file.FullName, StorageService.ContentTypeOf(file.Name), inline == true ? null : file.Name, enableRangeProcessing: true);
             }
             catch (ArgumentException ex)
             {

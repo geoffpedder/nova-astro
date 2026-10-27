@@ -6,6 +6,7 @@
   import { refreshSetup, setupGuide } from '../../lib/setup.svelte'
   import { nova } from '../../lib/state.svelte'
   import ActivityView from '../ActivityView.svelte'
+  import MiniPcView from '../MiniPcView.svelte'
   import CameraPanel from '../CameraPanel.svelte'
   import EquipmentPanel from '../EquipmentPanel.svelte'
   import FilterWheelPanel from '../FilterWheelPanel.svelte'
@@ -80,7 +81,8 @@
     guiding: 'Guiding',
     phd2: 'PHD2',
     webcam: 'Webcam',
-    activity: 'Mini PC',
+    minipc: 'Mini PC',
+    activity: 'Activity',
   }
   function showView(next: typeof mainView.view) {
     sheet = null
@@ -158,7 +160,8 @@
       { id: 'sequence', label: 'Plan', icon: 'plan', dot: session.sequencer?.running ? 'warn' : null, open: () => showView('sequence'), on: view === 'sequence' },
       { id: 'polar', label: 'Polar', icon: 'polar', dot: status?.polarAlignment?.running ? 'warn' : null, open: () => showView('polar'), on: view === 'polar' },
       { id: 'webcam', label: 'Webcam', icon: 'webcam', dot: null, open: () => showView('webcam'), on: view === 'webcam' },
-      { id: 'activity', label: 'Mini PC', icon: 'minipc', dot: session.unseenProblem ? 'warn' : null, open: () => showView('activity'), on: view === 'activity' },
+      { id: 'minipc', label: 'Mini PC', icon: 'minipc', dot: null, open: () => showView('minipc'), on: view === 'minipc' },
+      { id: 'activity', label: 'Activity', icon: 'log', dot: session.unseenProblem ? 'warn' : null, open: () => showView('activity'), on: view === 'activity' },
     )
     return items
   })
@@ -252,15 +255,16 @@
     {/if}
     <!-- Kept running out of sight, as the desktop does: their state and timers carry on. -->
     <div class="view-box covered kept" class:hidden={view !== 'sequence'}><div class="view-body"><SequenceView /></div></div>
-    <div class="view-box covered kept activity" class:hidden={view !== 'activity'}>
+    <div class="view-box covered kept minipc" class:hidden={view !== 'minipc'}>
       <header class="view-head phone-only">
         <h2>Mini PC</h2>
         <div class="net"><NetworkBadge /></div>
         <PowerMenu />
         <button class="icon-btn" onclick={() => showView('image')} aria-label="Close"><Icon name="close" size={22} /></button>
       </header>
-      <div class="view-body"><ActivityView active={view === 'activity'} /></div>
+      <div class="view-body"><MiniPcView active={view === 'minipc'} /></div>
     </div>
+    <div class="view-box covered kept" class:hidden={view !== 'activity'}><div class="view-body"><ActivityView /></div></div>
     <div class="view-box covered kept" class:hidden={view !== 'phd2'}><div class="view-body"><Phd2View active={view === 'phd2'} /></div></div>
     <div class="seq-float"><SequenceChip /></div>
     {#if hint}<div class="hint" role="status">Tap the image to hide the controls, double-tap to zoom</div>{/if}
@@ -836,7 +840,7 @@
     .phone-only {
       display: flex;
     }
-    .covered.kept.activity {
+    .covered.kept.minipc {
       grid-template-rows: auto minmax(0, 1fr);
     }
     .seq-float {

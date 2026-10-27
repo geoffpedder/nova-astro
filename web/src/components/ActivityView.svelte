@@ -1,10 +1,7 @@
 <script lang="ts">
   import { nova } from '../lib/state.svelte'
-  import MachineStats from './MachineStats.svelte'
 
-  let { active = true }: { active?: boolean } = $props()
-
-  // The whole activity log: newest at the bottom, kept in view unless you've scrolled up to read older entries.
+  // The Activity tab: the whole activity log: newest at the bottom, kept in view unless you've scrolled up to read older entries.
   let list: HTMLElement | undefined = $state()
   let problemsOnly = $state(false)
   let following = true
@@ -23,8 +20,6 @@
   const time = (iso: string) => new Date(iso).toLocaleTimeString()
 </script>
 
-<div class="page">
-<MachineStats {active} />
 <div class="panel activity">
   <div class="head">
     <h2>Activity</h2>
@@ -38,15 +33,8 @@
     {/each}
   </ol>
 </div>
-</div>
 
 <style>
-  .page {
-    display: grid;
-    grid-template-rows: auto minmax(0, 1fr);
-    gap: 12px;
-    min-height: 0;
-  }
   .activity {
     display: flex;
     flex-direction: column;

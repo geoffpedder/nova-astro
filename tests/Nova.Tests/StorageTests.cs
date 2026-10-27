@@ -256,6 +256,46 @@ public class StorageTests : IDisposable
     }
 
     [Fact]
+    public async Task TheFileBrowserListsAndHandsOutEveryFileButNothingOutside()
+    {
+        var (storage, _, _) = Create();
+        var night = Path.Combine(Local, "2026-10-09", "M 31");
+        Directory.CreateDirectory(Path.Combine(night, "Stacked"));
+        await File.WriteAllBytesAsync(Path.Combine(night, "a.fits"), new byte[100]);
+        await File.WriteAllTextAsync(Path.Combine(night, "notes.txt"), "a note");
+        await File.WriteAllBytesAsync(Path.Combine(night, "Stacked", "Stack_L_120s_10x.png"), new byte[50]);
+        await File.WriteAllTextAsync(Path.Combine(night, ".hidden"), "x");
+
+        // Every file (not hidden ones), each with its kind; the FITS-only listing is unchanged.
+        var all = storage.Browse("local", "2026-10-09/M 31", all: true);
+        Assert.Equal([("Stacked", null), ("a.fits", "fits"), ("notes.txt", "other")], all.Entries.Select(e => (e.Name, e.Kind)));
+        Assert.Equal(["Stacked", "a.fits"], storage.Browse("local", "2026-10-09/M 31").Entries.Select(e => e.Name));
+        Assert.Equal("image", storage.Browse("local", "2026-10-09/M 31/Stacked", all: true).Entries.Single().Kind);
+
+        Assert.Equal("a note", await File.ReadAllTextAsync(storage.AnyFile("local", "2026-10-09/M 31/notes.txt").FullName));
+        Assert.Equal("image/png", StorageService.ContentTypeOf("Stack_L_120s_10x.png"));
+        Assert.Equal("application/fits", StorageService.ContentTypeOf("a.fits"));
+        Assert.Throws<ArgumentException>(() => storage.AnyFile("local", "2026-10-09/M 31")); // a folder
+        Assert.Throws<ArgumentException>(() => storage.AnyFile("local", "2026-10-09/M 31/missing.txt"));
+        Assert.Throws<ArgumentException>(() => storage.AnyFile("local", "../config/storage.json"));
+
+        // A link inside the image folders that leads out of them is refused (where the machine allows making one).
+        var outside = Path.Combine(_dir, "outside");
+        Directory.CreateDirectory(outside);
+        await File.WriteAllTextAsync(Path.Combine(outside, "secret.txt"), "private");
+        try
+        {
+            Directory.CreateSymbolicLink(Path.Combine(night, "away"), outside);
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            return; // Windows without the right to make links
+        }
+        Assert.Throws<ArgumentException>(() => storage.AnyFile("local", "2026-10-09/M 31/away/secret.txt"));
+        Assert.Throws<ArgumentException>(() => storage.Browse("local", "2026-10-09/M 31/away", all: true));
+    }
+
+    [Fact]
     public void FindsUsbDrivesInLsblksOutput()
     {
         // An internal NVMe system disk, a USB stick with one exFAT partition (mounted), and a USB card reader's

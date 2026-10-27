@@ -27,6 +27,7 @@
   import SetupGuide from './components/SetupGuide.svelte'
   import { layout, setPanels } from './lib/layout.svelte'
   import ActivityView from './components/ActivityView.svelte'
+  import MiniPcView from './components/MiniPcView.svelte'
   import { reveal } from './lib/reveal.svelte'
   import { refreshSetup, setupGuide } from './lib/setup.svelte'
   import { screenMode, session, theme, toggleFullscreen, toggleNight } from './lib/session.svelte'
@@ -50,7 +51,8 @@
       list.push({ view: 'guiding', label: 'Guiding', icon: 'guider', title: "NOVA's guider: the guide frame, its stars and the graph", dot: guider.state === 'LostLock' })
     list.push(
       { view: 'webcam', label: 'Webcam', icon: 'webcam', title: 'The webcam on the mini PC: watch the rig from indoors' },
-      { view: 'activity', label: 'Mini PC', icon: 'minipc', title: 'The mini PC, and everything NOVA has done and reported', dot: session.unseenProblem },
+      { view: 'minipc', label: 'Mini PC', icon: 'minipc', title: "The mini PC: its health, a terminal, diagnostics, and the files in its image folders" },
+      { view: 'activity', label: 'Activity', icon: 'log', title: 'Everything NOVA has done and reported', dot: session.unseenProblem },
     )
     return list
   })
@@ -144,7 +146,8 @@
     <div class="view" class:hidden={mainView.view !== 'phd2'}><Phd2View active={mainView.view === 'phd2'} /></div>
     {#if mainView.view === 'guiding'}<div class="view"><GuidingView /></div>{/if}
     {#if mainView.view === 'webcam'}<div class="view"><WebcamView active={true} /></div>{/if}
-    <div class="view" class:hidden={mainView.view !== 'activity'}><ActivityView active={mainView.view === 'activity'} /></div>
+    <div class="view" class:hidden={mainView.view !== 'minipc'}><MiniPcView active={mainView.view === 'minipc'} /></div>
+    <div class="view" class:hidden={mainView.view !== 'activity'}><ActivityView /></div>
     <LogPanel />
   </section>
 </main>

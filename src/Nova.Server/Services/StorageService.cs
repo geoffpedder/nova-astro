@@ -15,7 +15,8 @@ public sealed record CopyStatus(
     string Night, bool Running, int FilesDone, int FilesTotal, long BytesDone, long BytesTotal, string? Error, int Skipped);
 
 /// <summary>A folder or FITS file in the image folders (Open… → From the mini PC).</summary>
-public sealed record FileEntry(string Name, bool Folder, long? Bytes, DateTime? ModifiedUtc);
+/// <param name="Kind">For a file: "fits", "image" (PNG, JPEG, TIFF) or "other"; null for a folder.</param>
+public sealed record FileEntry(string Name, bool Folder, long? Bytes, DateTime? ModifiedUtc, string? Kind = null);
 
 /// <param name="Id">"local" (the mini PC's image folder) or "usb" (the mounted USB drive).</param>
 public sealed record BrowseRoot(string Id, string Label);
@@ -400,10 +401,41 @@ public sealed class StorageService : BackgroundService
         return full;
     }
 
-    /// <summary>The folders and FITS files in a folder of a root: nights newest first, then names in order.</summary>
-    public FolderListing Browse(string root, string? path)
+    private static readonly string[] PictureEndings = [".png", ".jpg", ".jpeg", ".tif", ".tiff"];
+
+    /// <summary>A file's kind, for the browser: a FITS frame, a picture (a stack's PNG, say), or anything else.</summary>
+    public static string KindOf(string name) =>
+        FitsEndings.Any(e => name.EndsWith(e, StringComparison.OrdinalIgnoreCase)) ? "fits"
+        : PictureEndings.Any(e => name.EndsWith(e, StringComparison.OrdinalIgnoreCase)) ? "image"
+        : "other";
+
+    /// <summary>
+    /// Whether something on the way from the root to <paramref name="full"/> is a link that leads out of the root
+    /// (a folder or file symlinked to /etc, say). The path itself is already checked to be inside; this checks where
+    /// it really goes.
+    /// </summary>
+    private bool EscapesByLink(string root, string full)
+    {
+        var top = Path.GetFullPath(RootFolder(root)!).TrimEnd(Path.DirectorySeparatorChar);
+        bool Inside(string p) => p == top || p.StartsWith(top + Path.DirectorySeparatorChar, StringComparison.Ordinal);
+        for (var at = full; at.Length > top.Length && Inside(at); at = Path.GetDirectoryName(at) ?? top)
+        {
+            FileSystemInfo info = Directory.Exists(at) ? new DirectoryInfo(at) : new FileInfo(at);
+            if (info.LinkTarget is null) continue;
+            var target = info.ResolveLinkTarget(returnFinalTarget: true)?.FullName;
+            if (target is null || !Inside(Path.GetFullPath(target).TrimEnd(Path.DirectorySeparatorChar))) return true;
+        }
+        return false;
+    }
+
+    /// <summary>
+    /// The folders and files in a folder of a root: nights newest first, then names in order. Only FITS files unless
+    /// <paramref name="all"/> (the Mini PC tab's file browser shows everything, to download).
+    /// </summary>
+    public FolderListing Browse(string root, string? path, bool all = false)
     {
         var folder = Resolve(root, path);
+        if (EscapesByLink(root, folder)) throw new ArgumentException("Not inside the image folders");
         if (!Directory.Exists(folder))
         {
             // The mini PC's image folder before the first frame is saved.
@@ -419,9 +451,9 @@ public sealed class StorageService : BackgroundService
             .ThenBy(d => d.Name, StringComparer.OrdinalIgnoreCase)
             .Select(d => new FileEntry(d.Name, true, null, d.LastWriteTimeUtc));
         var files = info.EnumerateFiles()
-            .Where(f => FitsEndings.Any(e => f.Name.EndsWith(e, StringComparison.OrdinalIgnoreCase)))
+            .Where(f => all ? !f.Name.StartsWith('.') && !f.Attributes.HasFlag(FileAttributes.Hidden) : KindOf(f.Name) == "fits")
             .OrderBy(f => f.Name, StringComparer.OrdinalIgnoreCase)
-            .Select(f => new FileEntry(f.Name, false, f.Length, f.LastWriteTimeUtc));
+            .Select(f => new FileEntry(f.Name, false, f.Length, f.LastWriteTimeUtc, KindOf(f.Name)));
         var relative = Path.GetRelativePath(Path.GetFullPath(RootFolder(root)!), folder).Replace('\\', '/');
         return new FolderListing(root, relative == "." ? "" : relative, [.. folders, .. files], BrowseRoots);
     }
@@ -429,10 +461,31 @@ public sealed class StorageService : BackgroundService
     /// <summary>A FITS file inside a root, to open.</summary>
     public FileInfo FitsFile(string root, string path)
     {
+        var file = AnyFile(root, path);
+        return KindOf(file.Name) == "fits" ? file : throw new ArgumentException("Not a FITS file");
+    }
+
+    /// <summary>Any file inside a root (not a folder), to download: refused if it, or a folder on the way, leads out.</summary>
+    public FileInfo AnyFile(string root, string path)
+    {
         var full = Resolve(root, path);
-        if (!FitsEndings.Any(e => full.EndsWith(e, StringComparison.OrdinalIgnoreCase))) throw new ArgumentException("Not a FITS file");
         var file = new FileInfo(full);
-        return file.Exists ? file : throw new ArgumentException("That file isn't there");
+        if (!file.Exists) throw new ArgumentException("That file isn't there");
+        if (EscapesByLink(root, full)) throw new ArgumentException("Not inside the image folders");
+        return file;
+    }
+
+    /// <summary>The content type a downloaded file is sent with.</summary>
+    public static string ContentTypeOf(string name)
+    {
+        var lower = name.ToLowerInvariant();
+        if (KindOf(lower) == "fits") return lower.EndsWith(".gz") ? "application/gzip" : "application/fits";
+        if (lower.EndsWith(".png")) return "image/png";
+        if (lower.EndsWith(".jpg") || lower.EndsWith(".jpeg")) return "image/jpeg";
+        if (lower.EndsWith(".tif") || lower.EndsWith(".tiff")) return "image/tiff";
+        if (lower.EndsWith(".txt") || lower.EndsWith(".log") || lower.EndsWith(".csv")) return "text/plain; charset=utf-8";
+        if (lower.EndsWith(".json")) return "application/json";
+        return "application/octet-stream";
     }
 
     /// <summary>A warning if the frames still to take won't fit on the drive (null when they will, or saving locally).</summary>

@@ -299,7 +299,10 @@ export const api = {
     return response.json()
   },
   /** The image folders on the mini PC (or its USB drive): folders and FITS files in one of them. */
-  browseFiles: (root: string, path: string) => get<FolderListing>(`/api/files?${query({ root, path })}`),
+  /** all: every file (the Mini PC tab), not just FITS files (Open…). */
+  browseFiles: (root: string, path: string, all = false) => get<FolderListing>(`/api/files?${query({ root, path, all: all ? 'true' : null })}`),
+  /** A file in the image folders, to download; inline shows a picture in the browser instead. */
+  fileUrl: (root: string, path: string, inline = false) => `/api/files/download?${query({ root, path, inline: inline ? 'true' : null })}`,
   /** Opens a FITS file saved on the mini PC (or its USB drive) in the viewer. */
   openMiniPcFile: (root: string, path: string) => post('/api/images/open-file', { root, path }),
   /** Sends a FITS file from this computer to become the viewer's image (solve it, measure its stars…). */

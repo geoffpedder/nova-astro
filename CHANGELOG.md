@@ -6,6 +6,10 @@ What changed in each release. The newest is first. A release's section here beco
 
 ### Changed
 
+- **Phone top bar:** the logo is the star alone and the profile chip its dot and arrow, so the Image | Targets
+  tabs no longer overlap them. The profile's name is in the Equipment sheet the chip opens.
+- **Mini PC tab on a phone (or any narrow screen):** the page scrolls as a whole, with Storage at its full height
+  instead of in a small box of its own to scroll.
 - **The power and network buttons are drawn icons** instead of the ⏻ and 📶 characters, which some phones'
   fonts don't have (they showed blank).
 - **The driver server (INDI localhost) has moved from the top bar to the Mini PC box**, shown as *Drivers*

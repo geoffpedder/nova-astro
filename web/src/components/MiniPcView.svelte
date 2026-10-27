@@ -43,9 +43,18 @@
     min-height: 0;
   }
   @media (max-width: 900px) {
+    /* One column that scrolls as a whole: storage at its full height (not squeezed into a box of its own to scroll),
+       then the files, whose list scrolls in a box most of the screen high. */
+    .page {
+      grid-template-rows: auto auto;
+    }
     .two {
       grid-template-columns: minmax(0, 1fr);
-      grid-template-rows: auto minmax(360px, 1fr);
+      grid-template-rows: auto max(360px, 70dvh);
+    }
+    .side {
+      min-height: auto;
+      overflow: clip visible;
     }
   }
 </style>

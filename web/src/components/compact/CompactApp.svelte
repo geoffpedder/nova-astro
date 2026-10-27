@@ -193,7 +193,7 @@
   class:covering
 >
   <header class="top">
-    <span class="brand"><NovaStar size={15} />NOVA</span>
+    <span class="brand"><NovaStar size={15} /><span class="word">NOVA</span></span>
     <button class="profile" onclick={() => openSheet('equipment')} class:on={sheet === 'equipment'} title="Equipment: profiles, devices and drivers">
       <span class="dot {equipmentDot}"></span><span class="name">{profileName}</span><Icon name="down" size={15} />
     </button>
@@ -829,9 +829,15 @@
       letter-spacing: 0.06em;
       font-size: 12px;
     }
+    /* No room on a phone for the logo's name or the profile's: the star, and the profile's dot and arrow (its name is
+       at the top of the Equipment sheet it opens). Neither shrinks under its contents, so nothing overlaps. */
+    .brand .word,
     .profile .name {
-      max-width: 86px;
-      min-width: 3.5em; /* some of the profile's name always shows */
+      display: none;
+    }
+    .profile {
+      flex: none;
+      padding: 5px 4px 5px 8px;
     }
     .tabs button {
       min-width: 0;

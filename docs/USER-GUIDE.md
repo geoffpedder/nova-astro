@@ -179,6 +179,12 @@ world map. The active site, and the mini PC's clock, are sent to the mount whene
 only (in the Site line, the setup guide and the activity log), so a screenshot doesn't give your location away; the
 coordinates show only while the Site section is open.
 
+**Away from home, another time zone included:** choose (or add) the site you're at, and that's all the sky needs.
+Targets' altitudes, twilight and what's up tonight come from the site and the mini PC's clock in UTC, never from a
+time zone, and times on the page show in the time zone of the phone, tablet or computer you're looking at. The mini
+PC's own time zone only decides when a night's folder of frames rolls over to the next date (noon, its time) and the
+times in guide logs. What must be right is the mini PC's clock: see *The mini PC's clock* under the Mini PC tab.
+
 **Settle after slews** (Mount panel, 3 s by default): after every GoTo (Slew, each centring attempt, a sequence's
 next target, a meridian flip) NOVA leaves the mount this long before it exposes, solves or moves on, so a mount
 still ringing from the slew doesn't trail the stars in a solve frame. The time counts from when the mount has
@@ -728,6 +734,14 @@ the activity log. Your own ntfy server works too: set its address, and an access
   NOVA's activity log and its own log, the INDI drivers' log and the kernel's USB messages (the last 36 hours), `nova
   doctor`, the system (OS, disks, memory, USB devices) and NOVA's settings. Passwords, tokens, the Bluetooth code and
   your sites' coordinates are blanked, and the password file is left out.
+- **The mini PC's clock:** the sky NOVA works out, and the time it gives the mount, come from the mini PC's clock.
+  With internet it's kept right by itself; at a site with none (on the hotspot, say) nothing corrects it, and a clock
+  that's out puts targets and GoTos out with it. So the page compares it with the clock of the device it's open on
+  (when it opens, and every 10 minutes), and when they're more than a minute apart it says by how much and offers
+  **Set it from this device**: the mini PC's clock is set to that device's, and a connected mount is sent the new
+  time. A phone's clock comes from the mobile network, so it's a good one to set from; check a laptop's first. While
+  the mini PC's clock is being set from the internet it's trusted and nothing is offered (then it's the device that's
+  out), and it isn't changed while a sequence runs. *Not now* hides it until the page is next opened.
 - **Failing USB devices:** NOVA watches the kernel's messages, and when a device drops off USB or fails to answer 3
   or more times in a minute (a guide camera with a bad cable, say), the activity log names it and suggests checking
   its cable and hub, at most every 10 minutes per device. The kernel's *reset* messages alone aren't counted: ZWO's

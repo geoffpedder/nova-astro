@@ -109,6 +109,7 @@ public sealed record SequenceNameRequest(string Name);
 
 /// <summary>Restart or shut down the mini PC; optionally park the mount and turn the cooler off first.</summary>
 public sealed record PowerRequest(bool Park = true, bool CoolerOff = true);
+public sealed record ClockRequest(DateTimeOffset Utc);
 public sealed record SequenceCountRequest(int Row, int Count, int Target = 0);
 
 /// <summary>
@@ -875,6 +876,12 @@ public static class NovaApi
             await power.ShutdownAsync(reboot: false, request.Park, request.CoolerOff, ct) is { } problem
                 ? Results.Problem(problem, statusCode: StatusCodes.Status409Conflict)
                 : Results.Accepted());
+        // The mini PC's clock, which the page compares with its own device's, and setting it from that (no internet).
+        api.MapGet("/system/clock", (ClockService clock, CancellationToken ct) => clock.StatusAsync(ct));
+        api.MapPost("/system/clock", async (ClockRequest request, ClockService clock, CancellationToken ct) =>
+            await clock.SetAsync(request.Utc, ct) is { } problem
+                ? Results.Problem(problem, statusCode: StatusCodes.Status409Conflict)
+                : Results.NoContent());
         // The Wi-Fi hotspot fallback: its name and password (for the signed-in page only), and starting or stopping it.
         api.MapGet("/hotspot", (HotspotService hotspot) => new { status = hotspot.Status, settings = hotspot.Settings });
         api.MapPost("/hotspot/settings", (HotspotSettings settings, HotspotService hotspot) =>

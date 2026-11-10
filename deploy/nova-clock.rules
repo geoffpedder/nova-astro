@@ -1,0 +1,11 @@
+// Lets NOVA (running as NOVA_USER) set the mini PC's clock from its web page, for nights with no internet to set it
+// from — and nothing else. Installed to /etc/polkit-1/rules.d/49-nova-clock.rules by deploy/install.sh.
+polkit.addRule(function (action, subject) {
+    var clock = [
+        "org.freedesktop.timedate1.set-time",
+        "org.freedesktop.timedate1.set-ntp",
+    ];
+    if (subject.user == "NOVA_USER" && clock.indexOf(action.id) >= 0) {
+        return polkit.Result.YES;
+    }
+});

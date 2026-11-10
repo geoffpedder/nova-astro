@@ -1,4 +1,4 @@
-import type { TerminalStatus, HotspotSettings, HotspotStatus, WebcamControls, WebcamSettings, WebcamStatus, SystemStats, GuideLogFile, AltitudeCurve, SkyField, SolvedFrame, TargetInfo, TonightFilters, TonightResult, Annotations, AutofocusSettings, MotionDirection, PolarAlignmentSettings, Sequence, CameraSettingsUpdate, DeviceKind, DeviceProperty, FitsHeaderCard, PreviewMode, StarOverlay, FlatsSettings, SolveInfo, DriverSetup, SetupCheck, NotificationSettings, NotificationSettingsView, FolderListing, NovaGuiderSettings } from './types'
+import type { ClockStatus, TerminalStatus, HotspotSettings, HotspotStatus, WebcamControls, WebcamSettings, WebcamStatus, SystemStats, GuideLogFile, AltitudeCurve, SkyField, SolvedFrame, TargetInfo, TonightFilters, TonightResult, Annotations, AutofocusSettings, MotionDirection, PolarAlignmentSettings, Sequence, CameraSettingsUpdate, DeviceKind, DeviceProperty, FitsHeaderCard, PreviewMode, StarOverlay, FlatsSettings, SolveInfo, DriverSetup, SetupCheck, NotificationSettings, NotificationSettingsView, FolderListing, NovaGuiderSettings } from './types'
 
 import { signedOut } from './auth.svelte'
 
@@ -247,6 +247,9 @@ export const api = {
   clearGuideDarks: () => post('/api/guider/darks/clear'),
   guideLogs: () => get<GuideLogFile[]>('/api/guider/logs'),
   systemStats: () => get<SystemStats>('/api/system/stats'),
+  clock: () => get<ClockStatus>('/api/system/clock'),
+  /** Sets the mini PC's clock to this device's. */
+  setClock: (utc: string) => post('/api/system/clock', { utc }),
   webcam: () => get<WebcamStatus>('/api/webcam'),
   webcamSettings: (settings: WebcamSettings) => post('/api/webcam/settings', settings),
   webcamControls: () => get<WebcamControls>('/api/webcam/controls'),

@@ -74,6 +74,7 @@ builder.Services.AddSingleton<DriverSetupService>();
 builder.Services.AddSingleton<SequencerService>();
 builder.Services.AddSingleton<MountMotionService>();
 builder.Services.AddSingleton<PowerService>();
+builder.Services.AddSingleton<ClockService>();
 builder.Services.AddSingleton<NetworkService>();
 builder.Services.AddSingleton<SkyTileService>();
 builder.Services.AddSingleton<NicknameService>();
@@ -135,6 +136,8 @@ solver.Solved += () =>
         && latest.Id == last.ImageId)
         app.Services.GetRequiredService<NovaGuider>().CameraSolved(angle);
 };
+app.Services.GetRequiredService<ClockService>().Busy = () =>
+    app.Services.GetRequiredService<SequencerService>().Running ? "A sequence is running: stop it before changing the clock" : null;
 storage.FellBack += (_, why) => notifications.Notify(NotificationKind.Storage, "Frames are going to the mini PC", why);
 // A new password (or none) drops every live connection; each reconnects only if still signed in.
 app.Services.GetRequiredService<PasswordService>().Changed += Nova.Server.Hubs.NovaHub.DisconnectAll;

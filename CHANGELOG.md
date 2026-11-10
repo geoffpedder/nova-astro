@@ -6,6 +6,12 @@ What changed in each release. The newest is first. A release's section here beco
 
 ### Changed
 
+- **A wrong clock on the mini PC is caught, and can be set from your device:** with no internet (a dark site, the
+  hotspot) nothing corrects the mini PC's clock, and targets' positions, twilight and the mount's GoTos all come from
+  it. The page now compares it with the clock of the phone, tablet or computer it's open on, and when they're more
+  than a minute apart says by how much and offers *Set it from this device* (a connected mount is sent the new time
+  too). A clock that's set from the internet is left alone. Needs the install run again (it adds the permission);
+  `nova doctor` checks it.
 - **A serial device plugged in after Connect connects by itself** (a flat panel, say): when a new USB serial port
   appears, NOVA connects the chosen devices that aren't connected, finding the new port, without *Scan Ports*.
 - **"USB link is failing" only for real failures:** it counts a device dropping off USB and the kernel's USB errors,

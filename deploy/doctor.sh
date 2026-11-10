@@ -221,6 +221,14 @@ elif pkcheck --action-id org.freedesktop.login1.power-off --process $$ >/dev/nul
 elif ! systemctl is-active --quiet polkit 2>/dev/null; then note "polkit isn't running, so it can't say whether NOVA may restart the mini PC" "sudo systemctl start polkit   (journalctl -u polkit if it won't start)"
 else note "NOVA isn't allowed to restart or shut down the mini PC yet" "$reinstall   (check: sudo ls -l /etc/polkit-1/rules.d/)"; fi
 
+section "Setting the clock from the web page (no internet)"
+if ! has timedatectl; then note "timedatectl isn't there: NOVA can't set the mini PC's clock" "it comes with systemd"
+elif ! has pkcheck; then note "polkit isn't installed: NOVA can't set the mini PC's clock" "sudo pacman -S polkit && $reinstall"
+elif pkcheck --action-id org.freedesktop.timedate1.set-time --process $$ >/dev/null 2>&1; then
+  if [ "$(timedatectl show -p NTPSynchronized --value 2>/dev/null)" = yes ]; then pass "allowed (polkit); the clock is set from the internet now"
+  else pass "allowed (polkit); no internet time now, so the clock runs on its own"; fi
+else note "NOVA isn't allowed to set the mini PC's clock yet" "$reinstall   (check: sudo ls -l /etc/polkit-1/rules.d/)"; fi
+
 section "USB drives (saving frames to one)"
 if ! has udisksctl; then note "udisks2 isn't installed: frames can only be saved on the mini PC" "$setup   (or: sudo pacman -S udisks2, sudo apt install udisks2)"
 elif pkcheck --action-id org.freedesktop.udisks2.filesystem-mount-other-seat --process $$ >/dev/null 2>&1; then pass "NOVA may mount and eject USB drives (udisks2)"

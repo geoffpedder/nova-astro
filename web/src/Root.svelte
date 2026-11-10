@@ -2,6 +2,7 @@
   import { onMount } from 'svelte'
   import App from './App.svelte'
   import CompactApp from './components/compact/CompactApp.svelte'
+  import ClockPrompt from './components/ClockPrompt.svelte'
   import ConfirmDialog from './components/ConfirmDialog.svelte'
   import DriverSettings from './components/DriverSettings.svelte'
   import ErrorToast from './components/ErrorToast.svelte'
@@ -30,5 +31,6 @@
   <ConfirmDialog />
   <RotationPrompt />
   <FlatsPrompt />
+  <ClockPrompt />
   <ErrorToast />
 {/if}

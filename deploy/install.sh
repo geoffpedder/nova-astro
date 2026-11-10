@@ -82,11 +82,13 @@ for group in uucp dialout video bluetooth systemd-journal; do
   fi
 done
 
-# Let NOVA restart and shut down the mini PC from its web page, and mount and eject USB drives to save frames to
-# (and nothing more), through polkit.
+# Let NOVA restart and shut down the mini PC from its web page, set its clock (from the browser's device, when there's
+# no internet), and mount and eject USB drives to save frames to (and nothing more), through polkit.
 if [ -d /etc/polkit-1/rules.d ]; then
   sed "s/NOVA_USER/$NOVA_USER/" "$HERE/nova-power.rules" > /etc/polkit-1/rules.d/49-nova-power.rules
   chmod 644 /etc/polkit-1/rules.d/49-nova-power.rules
+  sed "s/NOVA_USER/$NOVA_USER/" "$HERE/nova-clock.rules" > /etc/polkit-1/rules.d/49-nova-clock.rules
+  chmod 644 /etc/polkit-1/rules.d/49-nova-clock.rules
   sed "s/NOVA_USER/$NOVA_USER/" "$HERE/nova-storage.rules" > /etc/polkit-1/rules.d/49-nova-storage.rules
   chmod 644 /etc/polkit-1/rules.d/49-nova-storage.rules
   # And start and stop its Wi-Fi hotspot (nova-hotspot.service), no other service.

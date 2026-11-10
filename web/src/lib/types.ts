@@ -741,6 +741,15 @@ export interface WebcamStatus {
   note: string | null
 }
 
+/** The mini PC's clock. */
+export interface ClockStatus {
+  utc: string
+  /** Set from the internet (NTP); null when that can't be told. */
+  synchronized: boolean | null
+  canSet: boolean
+  problem: string | null
+}
+
 /** The mini PC at a glance (null members aren't available on this system). */
 export interface SystemStats {
   /** All cores together, 0–100. */

@@ -88,6 +88,11 @@ What changed in each release. The newest is first. A release's section here beco
 - **A device that had failed to connect gave up on the next try straight away**, taking the old failure for the
   answer, while its driver was still connecting (a serial device just plugged in takes several seconds). The flat
   panel showed "Could not connect" and then connected anyway. NOVA now waits for the answer to its own request.
+- **Guiding settings changed in quick succession undid each other:** the second change was built on settings up to
+  a second old, so it put the first one back. Each change now builds on the last, and they're saved in order.
+- **A driver's refusal says why:** when a driver refuses a command (the Gemini flat panel's cover before its open
+  and closed positions are set, say) the error now carries the driver's own reason ("Flatpanel not ready. Click the
+  configure button to start configuration.") instead of only "reported an error for CAP_PARK".
 
 ## [0.3.22] - 2026-10-24
 

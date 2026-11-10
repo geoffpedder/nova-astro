@@ -203,6 +203,32 @@ public class IndiClientTests
     }
 
     [Fact]
+    public async Task ARefusedCommandsErrorSaysWhatTheDriverSaid()
+    {
+        // The Gemini panel refuses to move its cover until its open and closed positions are set: the property only
+        // goes to Alert, and the reason is a warning beside it.
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(15));
+        string[] definitions =
+        [
+            """<defTextVector device="Gemini Flatpanel" name="DRIVER_INFO" state="Idle" perm="ro"><defText name="DRIVER_INTERFACE">1536</defText></defTextVector>""",
+            """<defSwitchVector device="Gemini Flatpanel" name="CONNECTION" state="Ok" perm="rw" rule="OneOfMany"><defSwitch name="CONNECT">On</defSwitch><defSwitch name="DISCONNECT">Off</defSwitch></defSwitchVector>""",
+            """<defSwitchVector device="Gemini Flatpanel" name="CAP_PARK" state="Ok" perm="rw" rule="OneOfMany"><defSwitch name="PARK">Off</defSwitch><defSwitch name="UNPARK">On</defSwitch></defSwitchVector>""",
+        ];
+        using var server = new FakeIndiServer(definitions, line => line.Contains("name=\"CAP_PARK\"")
+            ? ["""<message device="Gemini Flatpanel" timestamp="2026-10-27T21:03:40" message="[INFO] Something else."/>""",
+               """<message device="Gemini Flatpanel" timestamp="2026-10-27T21:03:40" message="[WARNING] Flatpanel not ready. Click the configure button to start configuration."/>""",
+               """<setSwitchVector device="Gemini Flatpanel" name="CAP_PARK" state="Alert"><oneSwitch name="PARK">Off</oneSwitch><oneSwitch name="UNPARK">On</oneSwitch></setSwitchVector>"""]
+            : []);
+        await using var provider = new IndiEquipmentProvider("127.0.0.1", server.Port);
+        await provider.ConnectAsync(cts.Token);
+        for (var i = 0; i < 40 && provider.GetFlatPanel("Gemini Flatpanel") is null; i++) await Task.Delay(25, cts.Token);
+        var panel = provider.GetFlatPanel("Gemini Flatpanel")!;
+
+        var error = await Assert.ThrowsAsync<InvalidOperationException>(() => panel.SetCoverAsync(true, cts.Token));
+        Assert.Equal("Gemini Flatpanel reported an error for CAP_PARK: Flatpanel not ready. Click the configure button to start configuration.", error.Message);
+    }
+
+    [Fact]
     public async Task StillFailsWhenNoPortWorks()
     {
         using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(15));

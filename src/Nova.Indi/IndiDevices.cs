@@ -143,6 +143,7 @@ public abstract class IndiDevice(IndiClient client, string name) : IDevice
     /// </summary>
     protected async Task SendAndWaitAsync(string property, Func<Task> send, Func<Task> abort, TimeSpan timeout, CancellationToken ct)
     {
+        using var said = new Complaints(Client, Name);
         var busy = Client.WaitForAsync(Name, property, p => p.State is IndiState.Busy or IndiState.Alert,
             TimeSpan.FromSeconds(5), ct, checkCurrent: false);
         await send();
@@ -158,13 +159,56 @@ public abstract class IndiDevice(IndiClient client, string name) : IDevice
         try
         {
             var done = await Client.WaitForAsync(Name, property, p => p.State != IndiState.Busy, timeout, ct);
-            if (done.State == IndiState.Alert) throw new InvalidOperationException($"{Name} reported an error for {property}");
+            if (done.State == IndiState.Alert) throw await said.ErrorAsync(property);
         }
         catch (OperationCanceledException)
         {
             await abort();
             throw;
         }
+    }
+
+    /// <summary>
+    /// What the driver complains of while a command runs. A driver refusing a command only sets the property to Alert;
+    /// why ("Flatpanel not ready. Click the configure button to start configuration.") comes as a warning or error
+    /// message beside it, which belongs in the error NOVA reports.
+    /// </summary>
+    protected sealed class Complaints : IDisposable
+    {
+        private readonly IndiClient _client;
+        private readonly string _device;
+        private readonly List<string> _said = [];
+
+        public Complaints(IndiClient client, string device)
+        {
+            (_client, _device) = (client, device);
+            _client.MessageReceived += Heard;
+        }
+
+        private void Heard(object? sender, IndiMessage m)
+        {
+            if (m.Device != _device || m.Message is not { } text) return;
+            var at = text.IndexOf("[WARNING]", StringComparison.Ordinal) is >= 0 and var w ? w + "[WARNING]".Length
+                : text.IndexOf("[ERROR]", StringComparison.Ordinal) is >= 0 and var e ? e + "[ERROR]".Length : -1;
+            if (at < 0) return;
+            lock (_said) _said.Add(text[at..].Trim());
+        }
+
+        /// <summary>The error for a property left in Alert: with the driver's last complaint, when it made one.</summary>
+        public async Task<InvalidOperationException> ErrorAsync(string property)
+        {
+            string? Last()
+            {
+                lock (_said) return _said.Count > 0 ? _said[^1] : null;
+            }
+            // The message usually comes first, but nothing says it must.
+            if (Last() is null) await Task.Delay(150);
+            return new InvalidOperationException(Last() is { } why
+                ? $"{_device} reported an error for {property}: {why}"
+                : $"{_device} reported an error for {property}");
+        }
+
+        public void Dispose() => _client.MessageReceived -= Heard;
     }
 }
 
@@ -1024,10 +1068,11 @@ public sealed class IndiFlatPanel(IndiClient client, string name) : IndiDevice(c
     /// <summary>Lights usually answer at once without going Busy: wait for the reply rather than for Busy.</summary>
     private async Task SendAndSettleAsync(string property, Func<Task> send, CancellationToken ct)
     {
+        using var said = new Complaints(Client, Name);
         var reply = Client.WaitForAsync(Name, property, p => p.State != IndiState.Busy, TimeSpan.FromSeconds(10), ct, checkCurrent: false);
         await send();
         var settled = await reply;
-        if (settled.State == IndiState.Alert) throw new InvalidOperationException($"{Name} reported an error for {property}");
+        if (settled.State == IndiState.Alert) throw await said.ErrorAsync(property);
     }
 }
 

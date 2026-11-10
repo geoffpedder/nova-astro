@@ -16,13 +16,31 @@
   const running = $derived(guider ? ['Guiding', 'Calibrating', 'Looping', 'LostLock'].includes(guider.state) : false)
   const calibration = $derived(n?.calibration)
 
+  // The settings are saved whole, and the status they come from is up to a second behind: a second change made
+  // before it catches up builds on the first (not on the stale status, which would undo it), and they go out in order.
+  let pending: NovaGuiderSettings | null = null
+  let sending: Promise<unknown> = Promise.resolve()
+  let unsent = 0
   function save(patch: Partial<NovaGuiderSettings>) {
     if (!s) return
-    act(() => api.novaGuiderSettings({ ...s, ...patch }))
+    const next = { ...(pending ?? s), ...patch }
+    pending = next
+    unsent++
+    sending = sending.then(async () => {
+      const saved = await act(() => api.novaGuiderSettings(next))
+      unsent--
+      if (!saved) {
+        if (pending === next) pending = null // refused: back to what the status says
+      } else if (unsent === 0) {
+        setTimeout(() => {
+          if (pending === next) pending = null // the status has it by now
+        }, 2500)
+      }
+    })
   }
   function saveAlgorithms(patch: Partial<GuideAlgorithmSettings>) {
     if (!s) return
-    save({ algorithms: { ...s.algorithms, ...patch } })
+    save({ algorithms: { ...(pending ?? s).algorithms, ...patch } })
   }
   const num = (e: Event) => Number((e.currentTarget as HTMLInputElement).value)
 

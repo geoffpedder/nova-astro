@@ -22,7 +22,7 @@ export interface MountScene {
   setAxes(axes: Pick<MountAxes, 'a' | 'b'>): void
   /** Whether it's pointing below the horizon (the pointing line turns red). */
   setBelowHorizon(below: boolean): void
-  /** Where it's looked at from: round it (radians, from north through east), up from level, and how far (m). */
+  /** Where the telescope (over the mount) is looked at from: round it (radians, from north through east), up from level, and how far (m). */
   look: { azimuth: number; elevation: number; distance: number }
   render(): void
   dispose(): void
@@ -293,8 +293,9 @@ export function createMountScene(canvas: HTMLCanvasElement): MountScene {
   pole.position.set(0, 1.04, 0)
   polar.add(pole)
 
-  const look = { azimuth: rad(215), elevation: rad(14), distance: 3.1 }
-  const centre = new Vector3(0, 0.92, 0)
+  const look = { azimuth: rad(215), elevation: rad(14), distance: 3.3 }
+  // The view turns about the telescope where it sits over the mount, wherever the mount has put it.
+  const centre = new Vector3()
 
   return {
     look,
@@ -316,6 +317,8 @@ export function createMountScene(canvas: HTMLCanvasElement): MountScene {
       rayMaterial.color.set(below ? 0xd06a5a : 0xc9a45c)
     },
     render() {
+      ota.updateWorldMatrix(true, false)
+      ota.getWorldPosition(centre)
       camera.position.set(
         centre.x + look.distance * Math.cos(look.elevation) * Math.sin(look.azimuth),
         centre.y + look.distance * Math.sin(look.elevation),

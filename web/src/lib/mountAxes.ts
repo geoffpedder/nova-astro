@@ -22,8 +22,8 @@ const deg = (r: number) => (r * 180) / Math.PI
  * @param hourAngle hours from the meridian (negative east of it)
  * @param declination degrees
  * @param latitude degrees, south negative
- * @param side the side of the pier the telescope is on, as the mount reports it; null picks the usual one (telescope
- * above the Dec axis's other end)
+ * @param side the mount's side of the pier (which way round it is: see below); null picks the way that has the
+ * telescope above the Dec axis's other end
  */
 export function mountAxes(hourAngle: number, declination: number, latitude: number, side: 'East' | 'West' | null): MountAxes {
   const H = rad(hourAngle * 15), D = rad(declination), L = rad(latitude)
@@ -54,9 +54,15 @@ export function mountAxes(hourAngle: number, declination: number, latitude: numb
     const up = Math.cos(rad(w.a)) * Math.sin(tilt)
     return { ...w, eastward, up }
   })
-  const chosen =
-    side && Math.abs(ways[0].eastward) > 0.02
-      ? ways.find((w) => w.eastward > 0 === (side === 'East'))!
-      : ways[0].up >= ways[1].up ? ways[0] : ways[1]
+  // A mount's "side of the pier" says which of the two ways round it is, not where the telescope physically sits: East
+  // is the way it is while looking west of the meridian above the pole, and it stays East on round under the pole,
+  // where the telescope is then on the west side. (Taking it for the physical side hung the telescope under the mount
+  // for targets below the pole.)
+  const normal = ways[south ? 1 : 0]
+  const flipped = ways[south ? 0 : 1]
+  let chosen = side === 'East' ? normal : side === 'West' ? flipped : ways[0].up >= ways[1].up ? ways[0] : ways[1]
+  // Hanging well under the mount can't be right, whatever the mount says (a driver with another convention, or its
+  // side and position out of step for a moment during a slew): the other way round is the one it's in.
+  if (Math.cos(rad(chosen.a)) < -0.5) chosen = chosen === normal ? flipped : normal
   return { a: chosen.a, b: chosen.b, east: chosen.eastward > 0, altitude }
 }

@@ -19,6 +19,7 @@
   import GuidingView from './components/GuidingView.svelte'
   import WebcamView from './components/WebcamView.svelte'
   import WebcamFloat from './components/WebcamFloat.svelte'
+  import MountFloat from './components/MountFloat.svelte'
   import ImageFloat from './components/ImageFloat.svelte'
   import GuideFloat from './components/GuideFloat.svelte'
   import SequenceChip from './components/SequenceChip.svelte'
@@ -153,6 +154,7 @@
 </main>
 </div>
 <WebcamFloat />
+<MountFloat />
 <ImageFloat />
 <GuideFloat />
 

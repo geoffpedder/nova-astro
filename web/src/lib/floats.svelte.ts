@@ -44,6 +44,29 @@ export const imageFloat = createFloatLayout('nova.imageFloat', { right: 312, bot
 /** The guiding graph popped out; it starts above the webcam's. */
 export const guideFloat = createFloatLayout('nova.guideFloat', { right: 16, bottom: 300, width: 360 })
 
+/** The mount's 3D view popped out; it starts beside the guiding graph's. */
+export const mountFloat = createFloatLayout('nova.mountFloat', { right: 392, bottom: 300, width: 340 })
+
+/** Whether the Mount panel's 3D view is open; remembered per browser. */
+export const mountView = $state<{ open: boolean }>({ open: loadFlag('nova.mountView') })
+
+function loadFlag(key: string): boolean {
+  try {
+    return localStorage.getItem(key) === '1'
+  } catch {
+    return false
+  }
+}
+
+export function setMountViewOpen(open: boolean): void {
+  mountView.open = open
+  try {
+    localStorage.setItem('nova.mountView', open ? '1' : '0')
+  } catch {
+    // just for this visit
+  }
+}
+
 /** The Image tab (and its pop-out) shows the live stack rather than the latest frame; remembered per browser. */
 export const imageView = $state<{ stack: boolean }>({ stack: loadStackView() })
 

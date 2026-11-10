@@ -148,7 +148,17 @@ devices, so the real-equipment profile, without the simulator drivers, leaves th
 ## Mount and site
 
 The Mount panel shows where the mount points (J2000; hover for the mount's own JNow), its pier side and time
-past the meridian. **Unpark**, **Park** and **Stop**; the arrow pad moves it by hand at the chosen speed
+past the meridian.
+
+**3D view** (in the Mount panel): the mount and telescope drawn where they are now, on their tripod, with the polar
+axis tilted to your site's latitude and both axes turned as the mount reports them (its hour angle, declination and
+side of the pier), so you can see at a glance which side the telescope is on, how near the meridian it is, and watch
+a slew or a meridian flip. A dashed brass line shows where it points (red below the horizon), a dotted one the polar
+axis, and the ground is marked N, E, S, W. Drag to look round it; scroll or pinch to zoom. **Pop out** puts it in a
+small window that stays over every tab (move it by its title, resize it from its corner). It's a likeness, not your
+exact kit: a ZWO AM3-style mount with a small refractor, camera and guide scope. Before the mount is connected, or
+with no site set, it's shown at home. It's drawn in red in night mode, and loads only when opened.
+ **Unpark**, **Park** and **Stop**; the arrow pad moves it by hand at the chosen speed
 (■ stops). Until you choose one, that's the fastest up to 720x (also in ZWO's Heavy Duty Mode), set as soon as
 the mount connects; a speed you choose is remembered. The mount moves only while the button is held: if the
 browser stops saying so for 2 s (a dropped Wi-Fi link, a closed tab), NOVA stops it. Every hand move ends with a full

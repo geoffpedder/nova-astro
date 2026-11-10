@@ -3,7 +3,7 @@
   import type { FloatLayout } from '../lib/floats.svelte'
 
   // A small window over every tab: moved by its title bar, resized from its bottom-right corner (the content keeps its
-  // shape), ⤢ to open its tab and ✕ to close. Where it sits is kept in `layout`; `save` remembers it.
+  // shape), ⤢ to open its tab (when it has one) and ✕ to close. Where it sits is kept in `layout`; `save` remembers it.
   let {
     title,
     layout,
@@ -16,8 +16,8 @@
     title: string
     layout: FloatLayout
     save: () => void
-    expandTitle: string
-    onexpand: () => void
+    expandTitle?: string
+    onexpand?: () => void
     closeTitle?: string
     children: Snippet
   } = $props()
@@ -91,7 +91,7 @@
   <div class="bar" role="presentation" onpointerdown={down} onpointermove={move} onpointerup={up} onpointercancel={up}>
     <span class="title">{title}</span>
     <span class="gap"></span>
-    <button class="icon" onclick={onexpand} title={expandTitle} aria-label={expandTitle}>⤢</button>
+    {#if onexpand}<button class="icon" onclick={onexpand} title={expandTitle} aria-label={expandTitle}>⤢</button>{/if}
     <button class="icon" onclick={close} title={closeTitle} aria-label={`Close the ${title.toLowerCase()} window`}>✕</button>
   </div>
   <div class="content">{@render children()}</div>

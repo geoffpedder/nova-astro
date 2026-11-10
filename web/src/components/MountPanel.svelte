@@ -6,6 +6,9 @@
   import SiteEditor from './SiteEditor.svelte'
   import ManualMotion from './ManualMotion.svelte'
   import MountConnection from './MountConnection.svelte'
+  import MountModel from './MountModel.svelte'
+  import { mountFloat, mountView, setMountViewOpen } from '../lib/floats.svelte'
+  import { isCompact } from '../lib/uiLayout.svelte'
   import { formatDec, formatRa, fromStellarium, type PlanetariumTarget } from '../lib/stellarium'
   import { saveStellariumSettings, stellariumSettings } from '../lib/stellariumSettings.svelte'
   import { planner, stellariumPick } from '../lib/inbox.svelte'
@@ -110,6 +113,28 @@
             : ''}pier {mount.sideOfPier}{/if}
       </p>
     {/if}
+
+    <!-- The mount in 3D, where it is now: here, or popped out into a window over every tab (not on a phone). -->
+    <div class="model">
+      <div class="model-head">
+        <button class="toggle" aria-expanded={mountView.open} onclick={() => setMountViewOpen(!mountView.open)}
+          title="The mount and telescope in 3D, turned as the mount is now">
+          <span class="chevron" class:closed={!mountView.open} aria-hidden="true">▾</span>
+          3D view
+        </button>
+        {#if !isCompact()}
+          <button class="link" onclick={() => ((mountFloat.layout.popped = !mountFloat.layout.popped), mountFloat.save())}
+            title="The 3D view in a small window that stays on screen whichever tab is showing">{mountFloat.layout.popped ? 'Close pop-out' : 'Pop out'}</button>
+        {/if}
+      </div>
+      {#if mountView.open}
+        {#if mountFloat.layout.popped && !isCompact()}
+          <p class="muted small">It's in its own window.</p>
+        {:else}
+          <MountModel />
+        {/if}
+      {/if}
+    </div>
 
     <ManualMotion />
 
@@ -222,6 +247,50 @@
   }
   .pier.due {
     color: var(--warn);
+  }
+  .model {
+    display: grid;
+    gap: 6px;
+    margin-bottom: 10px;
+  }
+  .model-head {
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+  }
+  .toggle {
+    all: unset;
+    cursor: pointer;
+    display: flex;
+    align-items: baseline;
+    gap: 6px;
+    flex: 1;
+    font-size: 13px;
+    font-weight: 600;
+  }
+  .toggle:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+  }
+  .chevron {
+    font-size: 10px;
+    transition: transform 0.15s;
+  }
+  .chevron.closed {
+    transform: rotate(-90deg);
+  }
+  .link {
+    all: unset;
+    cursor: pointer;
+    font-size: 12px;
+    color: var(--accent);
+  }
+  .link:hover {
+    text-decoration: underline;
+  }
+  .small {
+    font-size: 12px;
+    margin: 0;
   }
   .centering {
     font-size: 12px;

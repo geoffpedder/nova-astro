@@ -39,6 +39,12 @@ What changed in each release. The newest is first. A release's section here beco
 
 ### Added
 
+- **The mount in 3D** (Mount panel, *3D view*): the mount and telescope drawn where they are now, on their tripod:
+  the polar axis at your latitude and both axes turned as the mount reports, so the side of the pier and how near
+  the meridian it is show at a glance, and a slew or meridian flip can be watched. Drag to look round it, scroll or
+  pinch to zoom; *Pop out* keeps it in a small window over every tab. A likeness (a ZWO AM3-style mount with a small
+  refractor), in red in night mode, and loaded only when opened.
+
 - **NOVA's guider has more of what other guiders have** (all in Guiding settings):
   - **Auto exposure**: chooses the guide exposure, between a shortest and longest, to keep the star near a target SNR,
     longer when it fades or is lost.

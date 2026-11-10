@@ -83,6 +83,7 @@ Svelte                 MIT licence, Copyright (c) 2016-2025 Svelte Contributors
 @microsoft/signalr     MIT licence, Copyright (c) .NET Foundation and Contributors
 topojson-client        ISC licence, Copyright 2012-2019 Michael Bostock
 world-atlas            ISC licence, Copyright 2013-2019 Michael Bostock (Natural Earth data)
+three.js               MIT licence, Copyright (c) 2010-2024 three.js authors (the Mount panel's 3D view)
 
 
 THE SERVER

@@ -636,10 +636,10 @@ public class GuidingEngineTests(Xunit.Abstractions.ITestOutputHelper output)
         Assert.InRange(p.Status.Periods[0], 117, 123);
         Assert.Equal(Gear(402) - Gear(400), p.Predict(400, 2)!.Value, 0.05);
 
-        // A fixed period works from the same data.
-        var fixedPeriod = new PeriodicErrorPredictor { PeriodOverride = 120 };
-        for (var t = 0.0; t < 260; t += 2) fixedPeriod.Add(t, Gear(t));
-        Assert.Equal([120.0], fixedPeriod.Status.Periods);
+        // A hinted period is used as given until two cycles have been seen.
+        var hinted = new PeriodicErrorPredictor { PeriodHint = 120 };
+        for (var t = 0.0; t < 200; t += 2) hinted.Add(t, Gear(t));
+        Assert.Equal([120.0], hinted.Status.Periods);
 
         // A long gap starts it over.
         string? why = null;
@@ -649,6 +649,38 @@ public class GuidingEngineTests(Xunit.Abstractions.ITestOutputHelper output)
         Assert.Equal(PecState.Learning, p.Status.State);
         p.Reset();
         Assert.Equal(0, p.Status.Minutes);
+    }
+
+    [Fact]
+    public void APecPeriodIsAHintLookedForNearby()
+    {
+        static PeriodicErrorPredictor Learn(double? hint, Func<double, double> gear, double seconds)
+        {
+            var p = new PeriodicErrorPredictor { PeriodHint = hint };
+            for (var t = 0.0; t < seconds; t += 2) p.Add(t, gear(t));
+            return p;
+        }
+        double Gear(double t) => 5 * Math.Sin(2 * Math.PI * t / 288) + 1.2 * Math.Sin(4 * Math.PI * t / 288 + 1);
+
+        // "About 300 s" for a mount whose period is 288 s: the real one is found, and predicted from.
+        var rough = Learn(300, Gear, 1500);
+        Assert.Equal(PecState.Predicting, rough.Status.State);
+        Assert.InRange(Assert.Single(rough.Status.Periods), 284, 292);
+        Assert.True(rough.Status.Quality > 0.9, $"quality {rough.Status.Quality}");
+        Assert.Equal(Gear(1502) - Gear(1500), rough.Predict(1500, 2)!.Value, 0.05);
+
+        // The search stays within 10% of the hint: a stronger period further off is found as well, not instead.
+        double Two(double t) => 5 * Math.Sin(2 * Math.PI * t / 288) + 4 * Math.Sin(2 * Math.PI * t / 130);
+        var two = Learn(300, Two, 1800).Status.Periods;
+        Assert.Equal(2, two.Count);
+        Assert.InRange(two[0], 284, 292);
+        Assert.InRange(two[1], 127, 133);
+
+        // A hint the data plainly contradicts (nothing near it, a strong period elsewhere) is dropped.
+        double Elsewhere(double t) => 5 * Math.Sin(2 * Math.PI * t / 430);
+        var wrong = Learn(120, Elsewhere, 2400);
+        Assert.InRange(Assert.Single(wrong.Status.Periods), 422, 438);
+        Assert.Equal(PecState.Predicting, wrong.Status.State);
     }
 
     [Fact]

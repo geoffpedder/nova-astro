@@ -278,7 +278,7 @@
       {#if s.algorithms.raAlgorithm === 'PredictivePec'}
         <label for="ng-pec-period">PE period</label>
         <div class="pair"><input id="ng-pec-period" class="mono" type="number" min="0" max="1500" step="1" value={s.algorithms.pecPeriodSeconds}
-          onchange={(e) => saveAlgorithms({ pecPeriodSeconds: num(e) })} title="0: found while guiding (the guiding assistant reports it too)" /> <span class="muted">s (0 = find)</span></div>
+          onchange={(e) => saveAlgorithms({ pecPeriodSeconds: num(e) })} title="Roughly the period, if you know it: the real one is looked for within 10% of it. 0: found while guiding (the guiding assistant reports it too)" /> <span class="muted">s, about (0 = find)</span></div>
         <label for="ng-pec-gain">Prediction gain</label>
         <div class="pair"><input id="ng-pec-gain" class="mono" type="number" min="0" max="150" step="5" value={Math.round(s.algorithms.pecPredictionGain * 100)}
           onchange={(e) => saveAlgorithms({ pecPredictionGain: num(e) / 100 })} title="How much of the predicted periodic error to correct ahead of time" /> <span class="muted">%</span></div>

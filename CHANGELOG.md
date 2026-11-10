@@ -6,6 +6,9 @@ What changed in each release. The newest is first. A release's section here beco
 
 ### Changed
 
+- **Predictive PEC's *PE period* is a hint:** a period you enter was used exactly, so a figure a few percent out
+  left the model drifting out of step with the mount. Now the real period is looked for within 10% of it once two
+  cycles have been seen; a second period elsewhere is still found, and a hint with nothing near it is dropped.
 - **A wrong clock on the mini PC is caught, and can be set from your device:** with no internet (a dark site, the
   hotspot) nothing corrects the mini PC's clock, and targets' positions, twilight and the mount's GoTos all come from
   it. The page now compares it with the clock of the phone, tablet or computer it's open on, and when they're more

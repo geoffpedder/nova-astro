@@ -1360,7 +1360,7 @@ public sealed class NovaGuider : IAsyncDisposable
                 ? FormattableString.Invariant($"Mount = {output.Name}, connected, guiding enabled, xAngle = {Deg(c.RaAngle):0.0}, xRate = {c.RaRate:0.000}, yAngle = {Deg(c.DecAngle):0.0}, yRate = {c.DecRate:0.000}, parity = +/+")
                 : $"Mount = {output.Name}, connected, guiding enabled",
             a.RaAlgorithm == RaAlgorithm.PredictivePec
-                ? FormattableString.Invariant($"X guide algorithm = Predictive PEC, Period = {(a.PecPeriodSeconds > 0 ? $"{a.PecPeriodSeconds:0.0} s" : "auto")}, Prediction gain = {a.PecPredictionGain:0.000}, Reactive aggression = {a.PecReactiveAggressiveness:0.000}, Hysteresis = {a.RaHysteresis:0.000}, Minimum move = {a.RaMinMove:0.000}")
+                ? FormattableString.Invariant($"X guide algorithm = Predictive PEC, Period = {(a.PecPeriodSeconds > 0 ? $"near {a.PecPeriodSeconds:0.0} s" : "auto")}, Prediction gain = {a.PecPredictionGain:0.000}, Reactive aggression = {a.PecReactiveAggressiveness:0.000}, Hysteresis = {a.RaHysteresis:0.000}, Minimum move = {a.RaMinMove:0.000}")
                 : FormattableString.Invariant($"X guide algorithm = Hysteresis, Hysteresis = {a.RaHysteresis:0.000}, Aggression = {a.RaAggressiveness:0.000}, Minimum move = {a.RaMinMove:0.000}"),
             a.DecAlgorithm == DecAlgorithm.Lowpass2
                 ? FormattableString.Invariant($"Y guide algorithm = Lowpass2, Aggressiveness = {a.DecAggressiveness * 100:0.000}, Minimum move = {a.DecMinMove:0.000}")

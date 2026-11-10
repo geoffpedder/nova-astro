@@ -35,11 +35,22 @@ public static class Periodogram
         {
             if (result.Count >= max || p.Power < 0.25 * peaks[0].Power) break;
             // Not a harmonic (or near) of one already taken: those are part of its shape, fitted anyway.
-            var harmonic = result.Any(r => Enumerable.Range(1, 4).Any(h =>
-                Math.Abs(p.Seconds - r.Seconds / h) / (r.Seconds / h) < 0.06 || Math.Abs(p.Seconds - r.Seconds * h) / (r.Seconds * h) < 0.06));
-            if (!harmonic) result.Add(p);
+            if (!result.Any(r => IsHarmonic(p.Seconds, r.Seconds))) result.Add(p);
         }
         return result;
+    }
+
+    /// <summary>Whether a period is (nearly) another, or one of its first harmonics or multiples.</summary>
+    public static bool IsHarmonic(double period, double of) => Enumerable.Range(1, 4).Any(h =>
+        Math.Abs(period - of / h) / (of / h) < 0.06 || Math.Abs(period - of * h) / (of * h) < 0.06);
+
+    /// <summary>The strongest period within a fraction (0.1 = ±10%) of a guess, and how much it explains.</summary>
+    public static PeriodPeak? Near(IReadOnlyList<double> t, IReadOnlyList<double> y, double period, double fraction)
+    {
+        if (t.Count < 20) return null;
+        var residual = Detrend(t, y);
+        var total = residual.Sum(v => v * v);
+        return total <= 0 ? null : Refine(t, residual, total, period * (1 - fraction), period * (1 + fraction));
     }
 
     private static PeriodPeak Refine(IReadOnlyList<double> t, double[] residual, double total, double from, double to)
@@ -107,6 +118,8 @@ public sealed record PecStatus(
 public sealed class PeriodicErrorPredictor
 {
     public const double MinPeriod = 20, MaxPeriod = 1500, WindowSeconds = 3600, GapSeconds = 60, MinQuality = 0.3;
+    /// <summary>How far from a hinted period the real one is looked for (±10%).</summary>
+    public const double HintRange = 0.1;
     private const int Harmonics = 3;
 
     private readonly List<(double T, double Gear, bool Steady)> _samples = [];
@@ -118,8 +131,13 @@ public sealed class PeriodicErrorPredictor
     private double _t0;
     private double _quality;
 
-    /// <summary>A fixed period (seconds) instead of searching for it; null searches.</summary>
-    public double? PeriodOverride { get; set; }
+    /// <summary>
+    /// Roughly what the period is (seconds), when the user knows; null searches everywhere. A hint, not the answer: the
+    /// period is used as given until two cycles have been seen, then looked for within <see cref="HintRange"/> of it, so
+    /// a figure a few percent out doesn't leave the model drifting out of step with the mount. A second period is
+    /// still found, and a hint the data plainly contradicts (something far stronger elsewhere) is dropped.
+    /// </summary>
+    public double? PeriodHint { get; set; }
 
     /// <summary>It started learning again by itself (a long gap): why, for the guide log.</summary>
     public event Action<string>? Restarted;
@@ -156,15 +174,15 @@ public sealed class PeriodicErrorPredictor
         var times = steadySamples.Select(s => s.T).ToList();
         var gear = steadySamples.Select(s => s.Gear).ToList();
 
-        // Periods: the override, or a search every 20 frames over what the data can show (two cycles at least).
-        if (PeriodOverride is { } fixedPeriod) _periods = [fixedPeriod];
-        else if (_periods.Count == 0 || ++_sinceSearch >= 20)
+        // Periods: a search every 20 frames over what the data can show (two cycles at least), near the hint if any.
+        if (_periods.Count == 0 || ++_sinceSearch >= 20)
         {
             _sinceSearch = 0;
             var interval = MedianInterval(times);
             var max = Math.Min(MaxPeriod, Span / 2);
             var min = Math.Max(MinPeriod, 4 * interval);
-            _periods = max > min ? Periodogram.Peaks(times, gear, min, max).Select(p => p.Seconds).ToList() : [];
+            var found = max > min ? Periodogram.Peaks(times, gear, min, max) : [];
+            _periods = PeriodHint is { } hint ? Hinted(hint, times, gear, found) : found.Select(p => p.Seconds).ToList();
         }
         if (_periods.Count == 0)
         {
@@ -172,6 +190,19 @@ public sealed class PeriodicErrorPredictor
             return;
         }
         Fit(times, gear);
+    }
+
+    /// <summary>The period(s) with a hint: the strongest near it, plus another the search found elsewhere.</summary>
+    private IReadOnlyList<double> Hinted(double hint, List<double> times, List<double> gear, IReadOnlyList<PeriodPeak> found)
+    {
+        // Under two cycles the data can't place the period better than the hint does.
+        if (Span < 2 * hint || Periodogram.Near(times, gear, hint, HintRange) is not { } near) return [hint];
+        var others = found.Where(p => !Periodogram.IsHarmonic(p.Seconds, near.Seconds)).ToList();
+        // Something far stronger somewhere else: the hint was for another mount, or wrong. Go by what's there.
+        if (others.Count > 0 && near.Power < 0.25 * others[0].Power) return found.Select(p => p.Seconds).ToList();
+        var periods = new List<double> { near.Seconds };
+        if (others.Count > 0 && others[0].Power >= 0.25 * near.Power) periods.Add(others[0].Seconds);
+        return periods;
     }
 
     /// <summary>

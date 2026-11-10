@@ -420,7 +420,10 @@ error plus every correction sent, so the mount's own motion), finds its period, 
 wander ahead of time, with a gentler reactive part (*Reactive*, 50%) for the rest. It needs two cycles of the
 period before it predicts (often 10–20 minutes), guiding as Hysteresis until then; the Guiding tab shows *learning*
 or *predicting* with the period, how much of the motion it explains and its size. *PE period* 0 finds it; the
-guiding assistant reports it from a long enough run if you want to set it. It starts learning again when guiding
+guiding assistant reports it from a long enough run if you want to set it. A period you enter is a hint, not the
+answer: it's used as given until two cycles have been seen, then the real one is looked for within 10% of it (the
+Guiding tab shows the one in use), so a rough figure is fine and keeps it from settling on something unrelated. A
+second period elsewhere is still picked up, and a hint with nothing near it is dropped for what the data shows. It starts learning again when guiding
 starts (after a slew), after a meridian flip and after a minute without frames; dithers don't disturb it. The
 built-in profile *ZWO AM mount + PEC* turns it on with the AM settings.
 

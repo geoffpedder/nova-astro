@@ -12,7 +12,7 @@ public enum RaAlgorithm { Hysteresis, PredictivePec }
 public enum DecAlgorithm { ResistSwitch, Lowpass2 }
 
 /// <summary>The guiding algorithms' settings, with PHD2-like defaults suited to a strain-wave mount (ZWO AM3/AM5).</summary>
-/// <param name="PecPeriodSeconds">Predictive PEC: the periodic error's period if known (seconds); 0 finds it.</param>
+/// <param name="PecPeriodSeconds">Predictive PEC: roughly the periodic error's period if known (seconds), looked for within 10% of it; 0 finds it.</param>
 /// <param name="PecPredictionGain">Predictive PEC: how much of the predicted motion to correct ahead (0–1).</param>
 /// <param name="PecReactiveAggressiveness">Predictive PEC: the reactive part's aggressiveness, gentler as the prediction does most of the work.</param>
 /// <param name="DecBacklashCompensation">When a Dec correction reverses, add a pulse to take up the backlash measured at calibration (adjusted as it guides).</param>
@@ -144,7 +144,7 @@ public sealed class GuideController
             field = value;
             (_ra.Hysteresis, _ra.Aggressiveness, _ra.MinMove) = (value.RaHysteresis, value.RaAggressiveness, value.RaMinMove);
             (_raReactive.Hysteresis, _raReactive.Aggressiveness, _raReactive.MinMove) = (value.RaHysteresis, value.PecReactiveAggressiveness, value.RaMinMove);
-            Pec.PeriodOverride = value.PecPeriodSeconds > 0 ? value.PecPeriodSeconds : null;
+            Pec.PeriodHint = value.PecPeriodSeconds > 0 ? value.PecPeriodSeconds : null;
             (_dec.Aggressiveness, _dec.MinMove, _dec.FastSwitch) = (value.DecAggressiveness, value.DecMinMove, value.DecFastSwitch);
             (_decLowpass.Aggressiveness, _decLowpass.MinMove) = (value.DecAggressiveness, value.DecMinMove);
         }

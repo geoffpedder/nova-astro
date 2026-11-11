@@ -41,7 +41,8 @@ What changed in each release. The newest is first. A release's section here beco
 
 - **Plan ahead on the Targets page:** *Time* in the chart's toolbar shows the sky at another moment (tonight
   before it's dark, or another night): type a time, drag along the night, or jump to sunset, dark, the middle or
-  dawn. The chart, Sun, Moon and planets, the target's altitude, the Tonight list and the altitude chart follow it.
+  dawn. The chart, Sun, Moon and planets, the target's altitude, the Tonight list and the altitude chart follow it,
+  and the chart stays on the target as the sky turns.
   It can't be mistaken for now: a *Planning view* bar, a dashed border round the chart, the mount not drawn, and
   Slew, Centre and Match rotation off until *Back to now*. Add to sequence still works.
 - **`nova stop` and `nova start`:** stop NOVA, INDI and PHD2 to use the equipment with another program (KStars,

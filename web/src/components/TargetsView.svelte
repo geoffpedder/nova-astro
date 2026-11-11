@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { tick } from 'svelte'
+  import { tick, untrack } from 'svelte'
   import { api } from '../lib/api'
   import { framing, mainView, planner, sequenceInbox, stellariumPick } from '../lib/inbox.svelte'
   import { formatDec, formatRa, mosaic, positionAngle, separation, type Sky } from '../lib/sky'
@@ -265,6 +265,19 @@
     return planAt > clock ? `in ${text}` : `${text} ago`
   })
   const planLock = $derived(planning ? `The chart shows ${planLabel}, not the sky now: go back to now to move the mount` : null)
+
+  // Changing the time keeps the target in the middle: in Horizon view the sky turns under the chart, and the target
+  // would slide out of it. Once the chart has the new time, so it's put where it is then.
+  let centredFor: number | null = null
+  $effect(() => {
+    const at = planAt
+    if (at === centredFor) return
+    centredFor = at
+    const c = untrack(() => centre ?? (s.target ? { ra: s.target.ra, dec: s.target.dec } : null))
+    if (!c) return
+    s.follow = false
+    void tick().then(() => chart?.goto(c.ra, c.dec))
+  })
 
   // Where the selected target is at the time shown.
   const targetAltAz = $derived.by(() => {

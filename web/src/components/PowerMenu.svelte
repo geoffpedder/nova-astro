@@ -123,7 +123,7 @@
     ><Icon name="power" size={18} /></button
   >
   {#if open}
-    <div class="menu panel" role="menu">
+    <div class="menu panel over" role="menu">
       <button role="menuitem" class="item" disabled={!power?.available} title={power?.problem ?? ''} onclick={() => ask('restart')}
         >Restart the mini PC…</button
       >

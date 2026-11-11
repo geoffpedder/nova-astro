@@ -414,7 +414,7 @@
         {opening !== null ? 'Opening…' : 'Open ▾'}
       </button>
       {#if openMenu}
-        <div class="menu panel open-menu" role="menu">
+        <div class="menu panel over open-menu" role="menu">
           <button role="menuitem" class="item" onclick={() => ((openMenu = false), fileInput?.click())}>From this computer…</button>
           <button role="menuitem" class="item" onclick={() => ((openMenu = false), (browsing = true))} title="A frame saved on the mini PC or its USB drive, e.g. from an earlier night">
             From the mini PC…
@@ -488,7 +488,7 @@
         onclick={() => (menuOpen = !menuOpen)}>⚙</button
       >
       {#if menuOpen}
-        <div class="menu panel" role="menu">
+        <div class="menu panel over" role="menu">
           <div class="menu-title muted">Preview resolution</div>
           {#each sizes as s (s.value)}
             <button role="menuitemradio" aria-checked={size === s.value} class="item" onclick={() => setSize(s.value)}>

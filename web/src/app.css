@@ -264,11 +264,14 @@ select {
   pointer-events: none;
 }
 /* A dialog sits over the dimmed page, not the page's colour, so its corner is clipped off (see-through) instead, with
-   just the line along the cut. (Nothing in a dialog reaches past its edges.) */
+   just the line along the cut. (Nothing in a dialog reaches past its edges.) The same for a menu that drops down
+   over something else (the sky chart, an image): class "over". */
+.panel.over,
 .panel[role='dialog'],
 .panel[role='alertdialog'] {
   clip-path: polygon(0 0, calc(100% - var(--cut)) 0, 100% var(--cut), 100% 100%, 0 100%);
 }
+.panel.over::after,
 .panel[role='dialog']::after,
 .panel[role='alertdialog']::after {
   /* Inside the box, not 1 px over its edge as on a panel: the corner is clipped off anyway, and a dialog that scrolls

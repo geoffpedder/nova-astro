@@ -66,7 +66,7 @@
     {running && status?.download ? `⤓ ${Math.floor((100 * status.download.done) / status.download.total)}%` : '⤓ Offline sky'}
   </button>
   {#if open}
-    <div class="pop panel">
+    <div class="pop panel over">
       <b>Offline sky survey (DSS colour)</b>
       <p class="muted small">
         The mini PC keeps every sky tile it shows. Download whole levels in advance (with internet) so the chart has imagery

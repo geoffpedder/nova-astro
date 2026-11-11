@@ -606,7 +606,7 @@
           <button class="secondary time-button" class:planning aria-expanded={timeOpen} onclick={() => (timeOpen = !timeOpen)}
             title="Show the sky at another time, to plan the night before it's dark">Time: {planLabel} ▾</button>
           {#if timeOpen}
-            <div class="layers-menu time-menu panel" role="group" aria-label="The time the chart shows">
+            <div class="layers-menu time-menu panel over" role="group" aria-label="The time the chart shows">
               <label class="stack">
                 Show the sky at
                 <input type="datetime-local" value={localInput(viewTime)} onchange={(e) => setPlan(new Date(e.currentTarget.value).getTime())} />
@@ -644,7 +644,7 @@
         <div class="layers">
           <button class="secondary" aria-expanded={layersOpen} onclick={() => (layersOpen = !layersOpen)} title="What the chart draws">Layers ▾</button>
           {#if layersOpen}
-            <div class="layers-menu panel" role="group" aria-label="Chart layers">
+            <div class="layers-menu panel over" role="group" aria-label="Chart layers">
               <button class="secondary reset-boxes" disabled={!Object.keys(s.boxes).length} onclick={() => (s.boxes = {})}
                 title="The Targets, Framing and Altitude panels back where they started, at their usual size">Put panels back</button>
               <hr />

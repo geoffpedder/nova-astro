@@ -83,7 +83,7 @@ public sealed class ClockService(EquipmentService equipment, ActivityLog log)
             try
             {
                 var was = DateTime.UtcNow;
-                (int ExitCode, string Output) set = default;
+                (int ExitCode, string Output) set = (0, "");
                 // Network time takes a moment to stop, and until it has, the clock can't be set.
                 for (var attempt = 0; attempt < 10; attempt++)
                 {

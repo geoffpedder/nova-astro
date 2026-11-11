@@ -14,9 +14,22 @@ Usage: nova <command>
   status                      version, services and the web address
   logs [service]              follow a service's log (nova, indiserver, phd2, ...; default nova)
   restart                     restart INDI and NOVA (and PHD2's screen)
+  stop [--boot]               stop NOVA, INDI and PHD2, to use the equipment with another program; --boot: and
+                              leave them stopped when the computer starts
+  start                       start them again (and at every start of the computer)
   password [--clear]          set NOVA's password (asked twice), or remove it, e.g. when it's forgotten
+  uninstall [--purge]         remove NOVA (--purge: and its settings); never your pictures
   version                     the installed version
 EOF
+}
+
+# The PHD2 services set up here, as install.sh decides: only with PHD2 and its virtual screen installed.
+phd2_units() {
+  command -v phd2 >/dev/null && command -v Xvfb >/dev/null || return 0
+  echo nova-display
+  if command -v icewm >/dev/null || command -v openbox >/dev/null; then echo nova-wm; fi
+  echo phd2
+  if command -v x11vnc >/dev/null && command -v websockify >/dev/null; then echo nova-screen; fi
 }
 
 version() { cat /opt/nova/VERSION 2>/dev/null || echo "built here (no release version)"; }
@@ -27,17 +40,28 @@ case "$command" in
   update) exec bash "$SCRIPTS/update.sh" "$@" ;;
   doctor) exec bash "$SCRIPTS/doctor.sh" "$@" ;;
   setup) exec bash "$SCRIPTS/setup.sh" "$@" ;;
+  uninstall) exec bash "$SCRIPTS/uninstall.sh" "$@" ;;
   version|--version|-v) version ;;
   status)
     echo "NOVA $(version)"
+    wanted=" indiserver nova $(phd2_units | tr '\n' ' ')"
+    stopped=no
     for unit in indiserver nova nova-display nova-wm phd2 nova-screen; do
       systemctl cat "$unit" >/dev/null 2>&1 || continue
       state="$(systemctl is-active "$unit" 2>/dev/null || true)"
-      # The PHD2 services are only switched on once PHD2 is installed.
-      [ "$state" != active ] && ! systemctl is-enabled --quiet "$unit" 2>/dev/null && state="not set up"
+      if [ "$state" != active ]; then
+        # The PHD2 services are only switched on once PHD2 is installed.
+        case "$wanted" in
+          *" $unit "*)
+            [ "$state" = inactive ] && { state="stopped"; stopped=yes; }
+            systemctl is-enabled --quiet "$unit" 2>/dev/null || state="$state, and not started with the computer" ;;
+          *) state="not set up" ;;
+        esac
+      fi
       printf '  %-13s %s\n' "$unit" "$state"
     done
-    echo "http://$(hostname).local:5000"
+    if [ "$stopped" = yes ]; then echo "Start them with: nova start"
+    else echo "http://$(hostname).local:5000"; fi
     ;;
   logs)
     unit="${1:-nova}"
@@ -47,6 +71,39 @@ case "$command" in
     # PHD2's screen picks up a password change (its own page on port 6080 closes or opens to match).
     systemctl is-active --quiet nova-screen && sudo systemctl restart nova-screen
     echo "Restarted INDI and NOVA." ;;
+  stop)
+    boot=no
+    case "${1:-}" in
+      --boot) boot=yes ;;
+      "") ;;
+      *) echo "nova stop takes only --boot (leave them stopped when the computer starts)" >&2; exit 1 ;;
+    esac
+    units=""
+    for unit in phd2 nova-screen nova-wm nova-display indiserver nova; do
+      if systemctl cat "$unit" >/dev/null 2>&1; then units="$units $unit"; fi
+    done
+    [ -n "$units" ] || { echo "NOVA's services aren't installed." >&2; exit 1; }
+    # shellcheck disable=SC2086
+    [ "$boot" = yes ] && sudo systemctl disable $units >/dev/null
+    if grep -qs 'nova\.service' /proc/self/cgroup; then
+      # NOVA's own terminal (Activity tab) is part of NOVA, so it goes too: don't wait for the stop.
+      echo "Stopping NOVA, INDI and PHD2: this terminal closes with NOVA. Start them again over SSH: nova start"
+      # shellcheck disable=SC2086
+      sudo systemctl --no-block stop $units
+      exit 0
+    fi
+    # shellcheck disable=SC2086
+    sudo systemctl stop $units
+    if [ "$boot" = yes ]; then echo "Stopped NOVA, INDI and PHD2, until: nova start"
+    else echo "Stopped NOVA, INDI and PHD2. They start again with the computer, or with: nova start   (nova stop --boot keeps them stopped)"; fi ;;
+  start)
+    systemctl cat nova >/dev/null 2>&1 || { echo "NOVA's services aren't installed." >&2; exit 1; }
+    units="indiserver nova $(phd2_units | tr '\n' ' ')"
+    # shellcheck disable=SC2086
+    sudo systemctl enable $units >/dev/null 2>&1 || true
+    # shellcheck disable=SC2086
+    sudo systemctl start $units
+    echo "Started NOVA: http://$(hostname).local:5000" ;;
   password)
     # NOVA keeps the password (hashed) in its user's config folder, so run as that user, with NOVA's settings.
     user="$(systemctl show -p User --value nova 2>/dev/null || true)"

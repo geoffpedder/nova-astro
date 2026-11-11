@@ -64,5 +64,19 @@ problems=0
 as_user 'nova doctor' || problems=$?
 if [ "$problems" -ne 0 ]; then echo "nova doctor found $problems problem(s)" >&2; exit 1; fi
 
+step "nova stop, nova start"
+as_user 'nova stop'
+in_box '! systemctl is-active --quiet nova && ! systemctl is-active --quiet indiserver' || { echo "nova stop left services running" >&2; exit 1; }
+as_user 'nova start'
+sleep 10
+in_box 'curl -fsS -o /dev/null localhost:5000/api/status' || { echo "NOVA didn't answer after nova start" >&2; exit 1; }
+
+step "nova uninstall"
+as_user 'nova uninstall --yes </dev/null'
+in_box '[ ! -e /opt/nova ] && [ ! -e /usr/local/bin/nova ] && [ ! -e /etc/systemd/system/nova.service ] && ! ls /etc/polkit-1/rules.d/49-nova-* >/dev/null 2>&1' \
+  || { echo "nova uninstall left parts of NOVA behind" >&2; exit 1; }
+in_box '! systemctl is-active --quiet nova && ! systemctl is-active --quiet indiserver' || { echo "nova uninstall left services running" >&2; exit 1; }
+in_box '[ -f /etc/nova/nova.env ] && [ -d /home/tester/.config/nova ]' || { echo "nova uninstall removed the settings without --purge" >&2; exit 1; }
+
 passed=yes
 step "Passed: $image"

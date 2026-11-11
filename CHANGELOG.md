@@ -39,6 +39,11 @@ What changed in each release. The newest is first. A release's section here beco
 
 ### Added
 
+- **`nova stop` and `nova start`:** stop NOVA, INDI and PHD2 to use the equipment with another program (KStars,
+  say), and start them again. They come back when the computer starts unless stopped with `nova stop --boot`.
+- **`nova uninstall`** removes NOVA: its services, program, permissions and firewall openings. Settings are kept
+  unless you add `--purge`; your pictures and the programs installed alongside (INDI, ASTAP, PHD2) are never touched.
+
 - **The mount in 3D** (Mount panel, *3D view*): the mount and telescope drawn where they are now, on their tripod:
   the polar axis at your latitude and both axes turned as the mount reports, so the side of the pier and how near
   the meridian it is show at a glance, and a slew or meridian flip can be watched. Drag to look round it, scroll or

@@ -291,6 +291,7 @@ for unit in $units; do
   state=$(systemctl is-active "$unit" 2>/dev/null)
   enabled=$(systemctl is-enabled "$unit" 2>/dev/null)
   if [ "$state" = active ]; then pass "$unit ($enabled)"
+  elif [ "$state" = inactive ]; then fail "$unit is stopped ($enabled)" "nova start"
   else fail "$unit is $state ($enabled)" "journalctl -u $unit -n 30   then: sudo systemctl restart $unit"; fi
 done
 

@@ -53,7 +53,7 @@ install -m 644 "$HERE"/icewm/* /opt/nova/icewm/
 # The maintenance scripts and the "nova" command (nova update, nova doctor, ...), so they work without a copy of the
 # source. install(1) replaces files rather than writing into them, so a running "nova update" isn't disturbed.
 install -d /opt/nova/scripts
-for script in update.sh doctor.sh setup.sh; do
+for script in update.sh doctor.sh setup.sh uninstall.sh; do
   install -m 755 "$HERE/$script" "/opt/nova/scripts/$script"
 done
 install -D -m 755 "$HERE/nova" /usr/local/bin/nova
@@ -145,4 +145,4 @@ fi
 
 echo "NOVA $(cat /opt/nova/VERSION 2>/dev/null || echo '(built here)') running: http://$(hostname).local:5000"
 echo "Choose drivers in NOVA (Equipment → Drivers…), or edit /etc/nova/indi.env and: nova restart"
-echo "Later: nova update (newest release), nova doctor (checks everything), nova help"
+echo "Later: nova update (newest release), nova doctor (checks everything), nova stop and nova start, nova help"

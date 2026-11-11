@@ -182,6 +182,9 @@ Installing NOVA also installs a `nova` command on the mini PC:
 | `nova status` | the version, the services and the web address |
 | `nova logs [service]` | follows a service's log (`nova` by default; also `indiserver`, `phd2`, …) |
 | `nova restart` | restarts INDI and NOVA (and PHD2's screen) |
+| `nova stop` | stops NOVA, INDI and PHD2, so another program (KStars, N.I.N.A. over INDI, …) can use the equipment; they start again with the computer unless you add `--boot` |
+| `nova start` | starts them again, and at every start of the computer |
+| `nova uninstall` | removes NOVA (asks first); `--purge` removes its settings too |
 | `nova password` | sets NOVA's password (asked twice); `nova password --clear` removes it |
 
 `nova update` downloads the build for the computer (x64 or arm64), checks its checksum, and installs it.
@@ -344,13 +347,19 @@ Once, in that tab: create a PHD2 profile with *INDI Camera* (your guide camera) 
 ## Uninstalling
 
 ```bash
-sudo systemctl disable --now nova indiserver nova-display nova-wm phd2 nova-screen
-sudo rm -f /etc/systemd/system/{nova,indiserver,nova-display,nova-wm,phd2,nova-screen}.service
-sudo rm -f /etc/polkit-1/rules.d/49-nova-*.rules /usr/local/bin/nova
-sudo rm -rf /opt/nova
-sudo systemctl daemon-reload
+nova uninstall
 ```
 
-That leaves your settings and images. To remove those too: `/etc/nova` (driver choice and settings),
-`~/.config/nova` (sites, optics, sequences, the sky survey cache) and `~/Pictures/Nova` (images). INDI,
-ASTAP and PHD2 stay installed; remove them with the system's package manager if you like.
+It asks first, then removes NOVA's services, `/opt/nova`, the `nova` command, the permissions (polkit rules) and
+firewall openings its install added, and the time-server fallback setup added on Ubuntu. Your settings are kept, so
+installing again picks up where it left off: `nova uninstall --purge` removes them too (`/etc/nova`, the driver
+choice and settings, and `~/.config/nova`: sites, optics, sequences, the password, the sky survey cache).
+
+Never removed: your pictures (`~/Pictures/Nova`), and the programs setup installed alongside (INDI, ASTAP, PHD2 and
+the rest), which other programs may use. It lists them when it finishes; remove them with the system's package
+manager if you like.
+
+To set NOVA aside without removing it (to use the equipment with KStars, say), `nova stop` is enough, or
+`nova stop --boot` to keep it stopped when the computer starts; `nova start` brings it back. A program installed
+separately, such as KStars from Flatpak, isn't touched by installing or removing NOVA, but only one of them can
+hold the equipment at a time.

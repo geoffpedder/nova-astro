@@ -59,7 +59,8 @@ async function post(path: string, body?: unknown): Promise<void> {
 export const api = {
   // Targets and framing
   searchTargets: (q: string, limit = 20) => get<TargetInfo[]>(`/api/targets/search?${query({ q, limit })}`),
-  tonight: (f: TonightFilters, limit = 150) =>
+  /** at: the night then (planning ahead), in ms; tonight when not given. */
+  tonight: (f: TonightFilters, limit = 150, at: number | null = null) =>
     get<TonightResult>(
       `/api/targets/tonight?${query({
         groups: f.groups.join(','),
@@ -71,9 +72,11 @@ export const api = {
         minMoonDistance: f.minMoonDistance,
         sort: f.sort,
         limit,
+        at: at == null ? null : new Date(at).toISOString(),
       })}`,
     ),
-  altitudeCurve: (ra: string, dec: string) => get<AltitudeCurve>(`/api/targets/altitude?${query({ ra, dec })}`),
+  altitudeCurve: (ra: string, dec: string, at: number | null = null) =>
+    get<AltitudeCurve>(`/api/targets/altitude?${query({ ra, dec, at: at == null ? null : new Date(at).toISOString() })}`),
   skyField: (ra: string, dec: string, radius: number, more: { magnitude?: number; maxStars?: number; objects?: 'famous'; maxObjects?: number } = {}) =>
     get<SkyField>(`/api/sky/field?${query({ ra, dec, radius, ...more })}`),
   /** id: an image in the history (the latest when not given). */

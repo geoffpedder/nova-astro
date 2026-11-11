@@ -207,13 +207,13 @@ sign in first with `POST /api/auth/login` and send the `nova.session` cookie it 
 | GET | `/api/stellarium/selection?port=8090` | The object selected in Stellarium's Remote Control plugin on the PC making the request (fallback when the browser can't reach Stellarium directly because CORS is off) |
 | POST | `/api/stellarium/rotation` | `{ angle, port }`: set the Oculars sensor-frame rotation in the requesting PC's Stellarium |
 | GET | `/api/targets/search?q=heart&limit=20` | Deep-sky objects by name or designation, best first |
-| GET | `/api/targets/tonight?groups=galaxy,nebula&minSize=10&minAltitude=30&minHours=2&sort=best&limit=100` | Tonight's well-placed objects with `visibility { maxAltitude, bestUtc, hoursAbove, moonSeparation }`, plus `night` |
-| GET | `/api/targets/night` · `/api/targets/altitude?ra=&dec=` | Tonight's sunset, twilight, sunrise and Moon · a target's altitude through the night (with the Sun and Moon) |
+| GET | `/api/targets/tonight?groups=galaxy,nebula&minSize=10&minAltitude=30&minHours=2&sort=best&limit=100` | (`&at=` an ISO time: that night instead, for planning ahead) Tonight's well-placed objects with `visibility { maxAltitude, bestUtc, hoursAbove, moonSeparation }`, plus `night` |
+| GET | `/api/targets/night` · `/api/targets/altitude?ra=&dec=` | Tonight's sunset, twilight, sunrise and Moon · a target's altitude through the night (with the Sun and Moon; `&at=` for another night) |
 | GET | `/api/sky/field?ra=&dec=&radius=2&magnitude=&maxStars=&objects=famous&maxObjects=` | Stars and objects around a point (radius 180 = the whole sky; `objects=famous`: Messier, Caldwell and named only) |
 | GET | `/api/sky/survey?ra=&dec=&fov=&survey=CDS/P/DSS2/color&projection=STG` | A square, north-up survey image, `TAN` or `STG` projection (cached) |
 | GET | `/api/sky/tiles/{order}/{npix}.jpg` · `/api/sky/tiles/allsky.jpg` | The stored survey's HiPS tiles (fetched from CDS and kept, the first time) |
 | GET · POST | `/api/sky/tiles/status` · `/api/sky/tiles/download` `{ "maxOrder": 5 }` · `/api/sky/tiles/cancel` | How much of the survey is stored; download whole levels for offline use |
-| GET | `/api/sky/bodies` | The Sun and Moon now (J2000), with the Moon's illumination |
+| GET | `/api/sky/bodies` | The Sun, Moon and planets now (J2000), with the Moon's illumination; `?at=` an ISO time for another moment |
 | GET | `/api/images/latest/frame` | The latest image's outline on the sky (J2000 corners), once solved |
 | GET/POST | `/api/sequences` · `/api/sequences/{name}` · `/api/sequences/delete` | Saved sequences: list, load, save (the sequence JSON), delete `{ name }` |
 | POST | `/api/sequence/start` · `/pause` · `/resume` · `/skip` · `/skip-target` · `/abort` · `/count` | Run a sequence (body: the sequence JSON) and control it; progress in the status under `sequencer` |

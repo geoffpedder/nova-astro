@@ -31,6 +31,7 @@
     ground = true,
     calibration = false,
     sunZone = null,
+    time = null,
     selected = null,
     onselect,
   }: {
@@ -64,6 +65,8 @@
     calibration?: boolean
     /** Sun protection: its radius (degrees) and whether it's in force now (the Sun is up). */
     sunZone?: { degrees: number; active: boolean } | null
+    /** The sky at this moment (ms) instead of now, for planning ahead: it doesn't move on. */
+    time?: number | null
     selected?: { ra: number; dec: number } | null
     onselect: (target: TargetInfo) => void
   } = $props()
@@ -104,10 +107,24 @@
         famous = f.objects
       })
       .catch(() => {})
-    const loadBodies = () =>
-      fetch('/api/sky/bodies')
+    // Day/night theme: the chart's colours change with it.
+    const themeWatch = new MutationObserver(() => themeTick++)
+    themeWatch.observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] })
+    const clock = setInterval(() => (now = Date.now()), 5_000)
+    return () => {
+      clearInterval(clock)
+      themeWatch.disconnect()
+    }
+  })
+
+  // The Sun, Moon and planets: where they are now (asked again every minute), or at the planned time.
+  let bodiesAsked = 0
+  function loadBodies(at: number | null) {
+    const asked = ++bodiesAsked
+    return fetch(at == null ? '/api/sky/bodies' : `/api/sky/bodies?at=${encodeURIComponent(new Date(at).toISOString())}`)
         .then((r) => r.json())
         .then((b) => {
+          if (asked !== bodiesAsked) return // an answer for a time since moved on from
           bodies = {
             sun: { ra: b.sun.raHours, dec: b.sun.decDegrees },
             moon: { ra: b.moon.raHours, dec: b.moon.decDegrees },
@@ -122,27 +139,28 @@
           }
         })
         .catch(() => {})
-    loadBodies()
-    const bodiesTimer = setInterval(loadBodies, 60_000)
-    const clock = setInterval(() => (now = Date.now()), 5_000)
-    // Day/night theme: the chart's colours change with it.
-    const themeWatch = new MutationObserver(() => themeTick++)
-    themeWatch.observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] })
+  }
+  $effect(() => {
+    const at = time
+    // A time being dragged along: ask once it rests.
+    const first = setTimeout(() => loadBodies(at), at == null ? 0 : 150)
+    const again = at == null ? setInterval(() => loadBodies(null), 60_000) : undefined
     return () => {
-      clearInterval(bodiesTimer)
-      clearInterval(clock)
-      themeWatch.disconnect()
+      clearTimeout(first)
+      clearInterval(again)
     }
   })
 
   // ---- The projection for this frame ----
   let now = $state(Date.now())
+  // The moment drawn: now, unless a time was given.
+  const at = $derived(time ?? now)
   let themeTick = $state(0)
   let width = $state(800)
   let height = $state(600)
   const horizonOk = $derived(site !== null)
   const mode = $derived<Mode>(view.mode === 'horizon' && horizonOk ? 'horizon' : 'equatorial')
-  const lst = $derived(site ? lstDegrees(new Date(now), site.longitude) : 0)
+  const lst = $derived(site ? lstDegrees(new Date(at), site.longitude) : 0)
   const latitude = $derived(site?.latitude ?? 0)
   const centreVec = $derived<Vec>(mode === 'horizon' ? altAzVec(view.lat, view.lon) : eqVec(view.lon, view.lat))
   const projection = $derived(new Projection(mode, centreVec, view.fov, width, height, lst, latitude))
@@ -150,7 +168,7 @@
   const ready = $derived(width > 20 && height > 20)
   // What's being looked at; in horizon mode the sky turns underneath, so it also changes every 2 minutes.
   const lookKey = $derived(
-    `${mode}|${view.lon.toFixed(4)}|${view.lat.toFixed(4)}|${view.fov.toFixed(4)}|${width}|${height}|${mode === 'horizon' ? Math.floor(now / 120_000) : 0}`,
+    `${mode}|${view.lon.toFixed(4)}|${view.lat.toFixed(4)}|${view.fov.toFixed(4)}|${width}|${height}|${mode === 'horizon' ? Math.floor(at / 120_000) : 0}`,
   )
 
   /** Puts the view centre on an equatorial position (and optionally zooms). */
@@ -279,7 +297,7 @@
   let frameRequest = 0
   $effect(() => {
     // Everything drawn is read here, so any change redraws (once per animation frame).
-    void [projection, bright, famous, deepStars, deepObjects, bodies, frames, solved, mount, mountFrame, selected, surveyShown, now, tilesLoaded, useTiles, constellations, sunZone, themeTick, atmosphere, ground, width, height]
+    void [projection, bright, famous, deepStars, deepObjects, bodies, frames, solved, mount, mountFrame, selected, surveyShown, at, tilesLoaded, useTiles, constellations, sunZone, themeTick, atmosphere, ground, width, height]
     cancelAnimationFrame(frameRequest)
     // A new size (the window resized, or the tab shown again after one) is drawn straight away, before the browser
     // paints: waiting a frame would show the old picture stretched to the new shape.
@@ -692,6 +710,8 @@
     // Sun protection: the circle the telescope is kept out of (filled while it's in force).
     if (bodies && sunZone && sunZone.degrees > 0) {
       const centre = eqVec(bodies.sun.ra, bodies.sun.dec)
+      // In force while the Sun is up: as the mount says now, or worked out for a planned time.
+      const zoneActive = time == null || !site ? sunZone.active : vecToAltAz(eqToHor(centre, lst, latitude)).alt > -3
       // Two directions at right angles to the Sun, to walk round it.
       const helper: Vec = Math.abs(centre[2]) < 0.9 ? [0, 0, 1] : [1, 0, 0]
       const u = norm([
@@ -708,24 +728,24 @@
         ring.push(p.frame(p.toFrame([k(0), k(1), k(2)])))
       }
       const whole = ring.every(Boolean)
-      if (sunZone.active && whole) {
+      if (zoneActive && whole) {
         g.beginPath()
         ring.forEach((pt, i) => (i ? g.lineTo(pt!.x, pt!.y) : g.moveTo(pt!.x, pt!.y)))
         g.closePath()
         g.fillStyle = night ? 'rgba(160,0,0,0.12)' : 'rgba(255,70,50,0.10)'
         g.fill()
       }
-      g.strokeStyle = sunZone.active ? 'rgba(255,80,60,0.9)' : 'rgba(255,80,60,0.35)'
-      g.lineWidth = sunZone.active ? 2 : 1
-      g.setLineDash(sunZone.active ? [] : [6, 6])
+      g.strokeStyle = zoneActive ? 'rgba(255,80,60,0.9)' : 'rgba(255,80,60,0.35)'
+      g.lineWidth = zoneActive ? 2 : 1
+      g.setLineDash(zoneActive ? [] : [6, 6])
       polyline(ring)
       g.setLineDash([])
       const top = p.sky(bodies.sun.ra, Math.min(89.9, bodies.sun.dec + sunZone.degrees * 0.7))
       if (visible(top, -10)) {
-        g.fillStyle = sunZone.active ? 'rgba(255,90,70,0.95)' : 'rgba(255,90,70,0.5)'
+        g.fillStyle = zoneActive ? 'rgba(255,90,70,0.95)' : 'rgba(255,90,70,0.5)'
         g.font = '12px system-ui, sans-serif'
         g.textAlign = 'center'
-        g.fillText(sunZone.active ? `Sun protection, ${sunZone.degrees}°` : 'Sun protection (Sun down)', top.x, top.y)
+        g.fillText(zoneActive ? `Sun protection, ${sunZone.degrees}°` : 'Sun protection (Sun down)', top.x, top.y)
       }
     }
 

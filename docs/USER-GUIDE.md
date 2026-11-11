@@ -519,6 +519,14 @@ The **Targets** tab finds and frames what to image:
   point of sky, to target it. The mount's position is shown live with its camera frame, and *Follow*
   keeps it centred while it slews. **Layers** turns the target, mount and solve boxes on and off, and can shade
   the best patch of sky for calibrating guiding.
+- **Time** (in the chart's toolbar) shows the sky at another moment, to plan the night before it's dark or a night
+  to come: type a date and time, drag along the night, or jump to sunset, dark, the middle of the night or dawn. The
+  chart, the Sun, Moon and planets, the target's altitude, the Tonight list and the altitude chart (which marks the
+  time shown) all follow it. While it isn't now, the page says so: a **Planning view** bar across the top with the
+  time and how far off it is, a dashed border round the chart, and the Time button lit. The mount isn't drawn, and
+  **Slew**, **Centre** and **Match rotation** are off, so a target that's up in the plan can't be slewed to as
+  though it were up now; **Add to sequence** still works. **Back to now** returns to the present. The time isn't
+  remembered: the page always opens on now.
 - **Framing:** the camera's field (sensor size and active optics preset) on the chart, dragged into place,
   rotated (position angle of the frame's top, north through east) and optionally split into a mosaic. Its
   label shows the rotation (*Target 35.0°*); drag the small right angle just outside its bottom-right corner to

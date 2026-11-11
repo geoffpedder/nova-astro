@@ -44,6 +44,18 @@ public static class TargetsApi
     private static readonly HashSet<string> Surveys = ["CDS/P/DSS2/color", "CDS/P/DSS2/red", "CDS/P/Mellinger/color"];
     private static readonly HashSet<string> Projections = ["TAN", "STG"];
 
+    /// <summary>
+    /// The time a request asks about (planning ahead on the Targets page), or now. Kept within a century of now:
+    /// beyond that the positions aren't worth having.
+    /// </summary>
+    internal static DateTime When(DateTimeOffset? at)
+    {
+        var now = DateTime.UtcNow;
+        if (at is not { } asked) return now;
+        var utc = asked.UtcDateTime;
+        return utc < now.AddYears(-100) ? now.AddYears(-100) : utc > now.AddYears(100) ? now.AddYears(100) : utc;
+    }
+
     public static void MapTargets(this RouteGroupBuilder api)
     {
         // Deep-sky objects and stars together: exact matches (of either) first, then the rest in catalog order.
@@ -76,11 +88,12 @@ public static class TargetsApi
         // What's well placed tonight: hours of darkness above minAltitude, within the size and type limits.
         api.MapGet("/targets/tonight", (SiteService sites, EquipmentService equipment, string? groups, double? minSize,
             double? maxSize, double? maxMagnitude, double? minAltitude, double? minHours, double? minMoonDistance,
-            string? sort, int? limit) =>
+            string? sort, int? limit, DateTimeOffset? at) =>
         {
             if (Site(sites, equipment) is not { } site) return NoSite();
-            if (Night.Around(DateTime.UtcNow, site) is not { } night)
-                return Results.Problem("The Sun doesn't set (or rise) here today", statusCode: StatusCodes.Status409Conflict);
+            // at: the night in progress then (or the next one), for planning ahead; the one now otherwise.
+            if (Night.Around(When(at), site) is not { } night)
+                return Results.Problem("The Sun doesn't set (or rise) here that day", statusCode: StatusCodes.Status409Conflict);
             var wanted = (groups ?? "galaxy,nebula,cluster,planetary").Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries).ToHashSet();
             var step = TimeSpan.FromMinutes(15);
             var samples = TargetVisibility.Samples(night, site, step);
@@ -122,12 +135,12 @@ public static class TargetsApi
         });
 
         // A target's altitude through the night (sunset to sunrise, with an hour either side), and the Moon's.
-        api.MapGet("/targets/altitude", (SiteService sites, EquipmentService equipment, string ra, string dec) =>
+        api.MapGet("/targets/altitude", (SiteService sites, EquipmentService equipment, string ra, string dec, DateTimeOffset? at) =>
         {
             if (Site(sites, equipment) is not { } site) return NoSite();
             if (!TryParse(ra, dec, out var target, out var problem)) return problem;
-            if (Night.Around(DateTime.UtcNow, site) is not { } night)
-                return Results.Problem("The Sun doesn't set (or rise) here today", statusCode: StatusCodes.Status409Conflict);
+            if (Night.Around(When(at), site) is not { } night)
+                return Results.Problem("The Sun doesn't set (or rise) here that day", statusCode: StatusCodes.Status409Conflict);
             var points = new List<AltitudePoint>();
             for (var t = night.Sunset.AddHours(-1); t <= night.Sunrise.AddHours(1); t = t.AddMinutes(10))
             {
@@ -178,10 +191,10 @@ public static class TargetsApi
             return Results.NoContent();
         });
 
-        // The Sun and Moon now (J2000), for the sky chart.
-        api.MapGet("/sky/bodies", () =>
+        // The Sun, Moon and planets now, or at another time (J2000), for the sky chart.
+        api.MapGet("/sky/bodies", (DateTimeOffset? at) =>
         {
-            var now = DateTime.UtcNow;
+            var now = When(at);
             var sun = Precession.JNowToJ2000(SolarSystem.Sun(now), now);
             var moon = Precession.JNowToJ2000(SolarSystem.Moon(now), now);
             return Results.Ok(new

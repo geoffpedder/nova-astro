@@ -217,15 +217,59 @@
     const m = nova.status?.mount
     return m?.connected ? { ra: m.raHours, dec: m.decDegrees, slewing: m.state === 'Slewing', name: nick(m.name) } : null
   })
-  // Where the selected target is right now.
   let clock = $state(Date.now())
   $effect(() => {
     const timer = setInterval(() => (clock = Date.now()), 30_000)
     return () => clearInterval(timer)
   })
+
+  // ---- Another time, to plan ahead ----
+  // The page can show the sky at a chosen moment (tonight before it's dark, another night). It's never remembered:
+  // the page opens on now. While it's set the page says so plainly, the mount isn't drawn and nothing here moves it,
+  // so a target that's up in the plan can't be slewed to as if it were up now.
+  let planAt = $state<number | null>(null)
+  let timeOpen = $state(false)
+  const planning = $derived(planAt != null)
+  const viewTime = $derived(planAt ?? clock)
+  function setPlan(ms: number) {
+    if (!Number.isFinite(ms)) return
+    // Within a minute of now is now.
+    planAt = Math.abs(ms - Date.now()) < 60_000 ? null : ms
+  }
+  function backToNow() {
+    planAt = null
+    timeOpen = false
+  }
+  const pad = (n: number) => String(n).padStart(2, '0')
+  /** For a datetime-local input: the device's own time. */
+  const localInput = (ms: number) => {
+    const d = new Date(ms)
+    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`
+  }
+  const sameDay = (a: number, b: number) => new Date(a).toDateString() === new Date(b).toDateString()
+  const planLabel = $derived.by(() => {
+    if (planAt == null) return 'now'
+    const d = new Date(planAt)
+    const clockTime = d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+    return sameDay(planAt, clock) ? `${clockTime} today` : `${d.toLocaleDateString([], { weekday: 'short', day: 'numeric', month: 'short' })}, ${clockTime}`
+  })
+  const planAway = $derived.by(() => {
+    if (planAt == null) return ''
+    const minutes = Math.round(Math.abs(planAt - clock) / 60_000)
+    const text =
+      minutes < 60
+        ? `${minutes} min`
+        : minutes < 48 * 60
+          ? `${Math.floor(minutes / 60)} h${minutes % 60 ? ` ${minutes % 60} min` : ''}`
+          : `${Math.round(minutes / 1440)} days`
+    return planAt > clock ? `in ${text}` : `${text} ago`
+  })
+  const planLock = $derived(planning ? `The chart shows ${planLabel}, not the sky now: go back to now to move the mount` : null)
+
+  // Where the selected target is at the time shown.
   const targetAltAz = $derived.by(() => {
     if (!site || !s.target) return null
-    return vecToAltAz(eqToHor(eqVec(s.target.ra, s.target.dec), lstDegrees(new Date(clock), site.longitude), site.latitude))
+    return vecToAltAz(eqToHor(eqVec(s.target.ra, s.target.dec), lstDegrees(new Date(viewTime), site.longitude), site.latitude))
   })
   const compass = (az: number) => ['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW'][Math.round(az / 45) % 8]
 
@@ -264,13 +308,14 @@
   })
   $effect(() => {
     const filters = $state.snapshot(s.filters)
+    const at = planAt
     void siteKey
     void refresh
     clearTimeout(tonightTimer)
     tonightTimer = setTimeout(async () => {
       loading = true
       try {
-        const r = await api.tonight(filters as TonightFilters)
+        const r = await api.tonight(filters as TonightFilters, 150, at)
         tonight = r.targets
         tonightCount = r.count
         night = r.night
@@ -287,6 +332,27 @@
     (s.filters.groups = s.filters.groups.includes(g) ? s.filters.groups.filter((x) => x !== g) : [...s.filters.groups, g])
   const optional = (v: string) => (v.trim() === '' ? null : Number(v))
 
+  // The night the time slider runs along: an hour before sunset to sunrise (past sunrise is the next night's).
+  const nightSpan = $derived.by(() => {
+    if (!night) return null
+    const from = new Date(night.sunset).getTime() - 3600_000
+    const to = new Date(night.sunrise).getTime() - 60_000
+    return to > from ? { from, to } : null
+  })
+  const nightMarks = $derived.by(() => {
+    if (!night) return []
+    const dark = [new Date(night.darkStart).getTime(), new Date(night.darkEnd).getTime()]
+    return [
+      { text: 'Sunset', at: new Date(night.sunset).getTime() },
+      { text: 'Dark', at: dark[0] },
+      { text: 'Middle', at: (dark[0] + dark[1]) / 2 },
+      { text: 'Dawn', at: dark[1] },
+    ]
+  })
+  const nightName = $derived(
+    planning && night ? `Night of ${new Date(night.sunset).toLocaleDateString([], { weekday: 'short', day: 'numeric', month: 'short' })}` : 'Tonight',
+  )
+
   const time = (iso: string | null | undefined) => (iso ? new Date(iso).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '–')
   const size = (t: TargetInfo) =>
     t.majorArcmin == null
@@ -302,11 +368,12 @@
   let curveTimer: ReturnType<typeof setTimeout> | undefined
   $effect(() => {
     const c = centre
+    const at = planAt
     clearTimeout(curveTimer)
     if (!c) return
     curveTimer = setTimeout(async () => {
       try {
-        curve = await api.altitudeCurve(formatRa(c.ra), formatDec(c.dec))
+        curve = await api.altitudeCurve(formatRa(c.ra), formatDec(c.dec), at)
       } catch {
         curve = null
       }
@@ -459,7 +526,7 @@
       {/if}
       {#if targetAltAz}
         <span class="muted small" class:bad={targetAltAz.alt < 0}
-          >{targetAltAz.alt.toFixed(0)}° up in the {compass(targetAltAz.az)}{targetAltAz.alt < 0 ? ' (below the horizon)' : ''}</span
+          >{targetAltAz.alt.toFixed(0)}° up in the {compass(targetAltAz.az)}{targetAltAz.alt < 0 ? ' (below the horizon)' : ''}{planning ? ` at ${planLabel}` : ''}</span
         >
       {/if}
       <span class="mono muted small">frame centre {centreRa} {centreDec}</span>
@@ -468,8 +535,17 @@
     {/if}
   </div>
 
-  <div class="canvas">
+  {#if planning}
+    <div class="plan-bar" role="status">
+      <b>Planning view</b>
+      <span>The sky at {planLabel} ({planAway}), not as it is now. The mount isn't shown and can't be moved from here.</span>
+      <button onclick={backToNow}>Back to now</button>
+    </div>
+  {/if}
+
+  <div class="canvas" class:planning>
     <SkyChart
+      time={planAt}
       bind:this={chart}
       bind:view={s.chart}
       bind:follow={s.follow}
@@ -489,8 +565,8 @@
       onrotateframe={(pa) => (s.pa = pa)}
       solved={s.layers.solve ? solvedCorners : null}
       solvedAngle={solvedInfo?.pa ?? null}
-      showMount={s.layers.mount}
-      mount={mountInfo}
+      showMount={s.layers.mount && !planning}
+      mount={planning ? null : mountInfo}
       mountFrame={camera ? { width: fieldW, height: fieldH, pa: solvedInfo?.pa ?? s.pa } : null}
       selected={s.target && s.layers.target ? { ra: s.target.ra, dec: s.target.dec } : null}
       onselect={(t) => select(t, false)}
@@ -513,6 +589,45 @@
         <button class="secondary" onclick={() => chart?.zoomAt(null, 1 / 1.5)} title="Zoom in">＋</button>
         <button class="secondary" onclick={() => chart?.zoomAt(null, 1.5)} title="Zoom out">－</button>
         <button class="secondary" disabled={!centre} onclick={() => fit()} title="Turn to the target and frame it">Target</button>
+        <div class="layers">
+          <button class="secondary time-button" class:planning aria-expanded={timeOpen} onclick={() => (timeOpen = !timeOpen)}
+            title="Show the sky at another time, to plan the night before it's dark">Time: {planLabel} ▾</button>
+          {#if timeOpen}
+            <div class="layers-menu time-menu panel" role="group" aria-label="The time the chart shows">
+              <label class="stack">
+                Show the sky at
+                <input type="datetime-local" value={localInput(viewTime)} onchange={(e) => setPlan(new Date(e.currentTarget.value).getTime())} />
+              </label>
+              {#if nightSpan}
+                <label class="stack">
+                  {nightName}
+                  <input
+                    type="range"
+                    min={nightSpan.from}
+                    max={nightSpan.to}
+                    step={300_000}
+                    value={Math.max(nightSpan.from, Math.min(nightSpan.to, viewTime))}
+                    oninput={(e) => setPlan(Number(e.currentTarget.value))}
+                    aria-label="Time through the night"
+                  />
+                </label>
+                <div class="quick">
+                  {#each nightMarks as m (m.text)}
+                    <button class="secondary" onclick={() => setPlan(m.at)} title={time(new Date(m.at).toISOString())}>{m.text}</button>
+                  {/each}
+                </div>
+              {/if}
+              <div class="quick">
+                <button class="secondary" onclick={() => setPlan(viewTime - 3600_000)}>−1 h</button>
+                <button class="secondary" onclick={() => setPlan(viewTime + 3600_000)}>+1 h</button>
+                <button class="secondary" onclick={() => setPlan(viewTime - 86400_000)}>−1 day</button>
+                <button class="secondary" onclick={() => setPlan(viewTime + 86400_000)}>+1 day</button>
+              </div>
+              <hr />
+              <button class="secondary" disabled={!planning} onclick={backToNow}>Back to now</button>
+            </div>
+          {/if}
+        </div>
         <div class="layers">
           <button class="secondary" aria-expanded={layersOpen} onclick={() => (layersOpen = !layersOpen)} title="What the chart draws">Layers ▾</button>
           {#if layersOpen}
@@ -546,7 +661,7 @@
           {/if}
         </div>
         <label class="check follow" title="Keep the mount in the middle of the chart">
-          <input type="checkbox" bind:checked={s.follow} disabled={!mountInfo} /> Follow
+          <input type="checkbox" bind:checked={s.follow} disabled={!mountInfo || planning} /> Follow
         </label>
         <select class="survey" bind:value={s.survey} title="Sky imagery: the stored survey is instant (and offline once downloaded); the high-res images are rendered for each view, online only">
           <option value="tiles">Sky: DSS (stored, fast)</option>
@@ -594,7 +709,7 @@
               </div>
             {:else}
               <div class="tonight-head">
-                <b>Tonight</b>
+                <b>{nightName}</b>
                 {#if night}
                   <span class="muted small">
                     Dark {time(night.darkStart)}–{time(night.darkEnd)}, Moon {Math.round(night.moonIllumination * 100)}%
@@ -657,7 +772,7 @@
               </div>
             {/if}
             <div class="row">
-              <button class="secondary" disabled={!mountReady} onclick={frameMount} title="Frame wherever the mount points now">Frame the mount position</button>
+              <button class="secondary" disabled={!mountReady || planning} onclick={frameMount} title={planLock ?? 'Frame wherever the mount points now'}>Frame the mount position</button>
             </div>
             <div class="grip" role="presentation" title="Drag to resize" onpointerdown={(e) => grab(e, 'picker', true)}></div>
           </section>
@@ -668,7 +783,7 @@
           <div class="altitude floating" class:free={!!s.boxes.altitude} class:front={front === 'altitude'} style={boxStyle('altitude')} role="presentation"
             title="Drag to move, double-click to put back" onpointerdown={(e) => grab(e, 'altitude', false)} ondblclick={() => placeBack('altitude')}>
             <button class="collapse" title="Hide (the Altitude button brings it back)" aria-label="Hide the altitude chart" onclick={() => (s.show.altitude = false)}>✕</button>
-            <AltitudeChart {curve} minAltitude={s.filters.minAltitude} label={s.target?.name} fill={!!s.boxes.altitude} />
+            <AltitudeChart {curve} plan={planAt} minAltitude={s.filters.minAltitude} label={s.target?.name} fill={!!s.boxes.altitude} />
             <div class="grip" role="presentation" title="Drag to resize" onpointerdown={(e) => grab(e, 'altitude', true)}></div>
           </div>
         {/if}
@@ -741,22 +856,29 @@
               </div>
             {/if}
 
+            {#if planning}
+              <p class="plan-note small">
+                Showing {planLabel}, not now, so Slew, Centre and Match rotation are off.
+                <button class="link" onclick={backToNow}>Back to now</button>
+              </p>
+            {/if}
             <div class="actions">
               <button
-                disabled={!mountReady || !!mountLock()}
-                onclick={() => act(() => api.slew(centreRa, centreDec))}
-                title={mountLock() ?? 'GoTo the frame centre'}>Slew</button
+                disabled={!mountReady || !!mountLock() || planning}
+                onclick={() => !planning && act(() => api.slew(centreRa, centreDec))}
+                title={planLock ?? mountLock() ?? 'GoTo the frame centre'}>Slew</button
               >
               <button
-                disabled={!mountReady || !!mountLock()}
-                onclick={() => act(() => api.center(centreRa, centreDec))}
-                title={mountLock() ?? 'GoTo, then plate solve and correct until the frame centre is centred'}>Centre</button
+                disabled={!mountReady || !!mountLock() || planning}
+                onclick={() => !planning && act(() => api.center(centreRa, centreDec))}
+                title={planLock ?? mountLock() ?? 'GoTo, then plate solve and correct until the frame centre is centred'}>Centre</button
               >
               <button
                 class="secondary"
-                disabled={!cameraReady || rotating || !!mountLock()}
-                onclick={() => act(() => api.matchRotation(centreRa, centreDec, s.pa))}
-                title={mountLock() ??
+                disabled={!cameraReady || rotating || !!mountLock() || planning}
+                onclick={() => !planning && act(() => api.matchRotation(centreRa, centreDec, s.pa))}
+                title={planLock ??
+                  mountLock() ??
                   `Take a frame and measure the camera's angle, then turn it to ${s.pa.toFixed(1)}°: with the rotator if one is connected, otherwise it tells you which way to turn the camera. Checks again after each turn`}
                 >Match rotation</button
               >
@@ -778,10 +900,81 @@
 <style>
   /* The chart fills the tab; the target list, framing controls and altitude chart float over it. */
   .targets {
-    display: grid;
-    grid-template-rows: auto minmax(0, 1fr);
+    /* The title, the planning bar when it's there, then the chart with what's left. */
+    display: flex;
+    flex-direction: column;
     gap: 8px;
     min-height: 0;
+  }
+  .targets > .canvas {
+    flex: 1;
+  }
+  /* Another time than now: said across the top, and the chart ringed, so it can't be taken for the sky now. */
+  .plan-bar {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    flex-wrap: wrap;
+    padding: 6px 10px;
+    font-size: 13px;
+    color: var(--text);
+    background: color-mix(in srgb, var(--warn) 22%, var(--panel));
+    border: 1px solid var(--warn);
+    border-left-width: 5px;
+  }
+  .plan-bar b {
+    color: var(--warn);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    font-size: 12px;
+  }
+  .plan-bar span {
+    flex: 1;
+    min-width: 200px;
+  }
+  .canvas.planning::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border: 3px dashed var(--warn);
+    pointer-events: none;
+    z-index: 5;
+  }
+  .time-button.planning {
+    color: var(--accent-text);
+    background: var(--warn) !important;
+    border-color: var(--warn);
+    font-weight: 600;
+  }
+  .time-menu {
+    min-width: 230px;
+  }
+  .time-menu .stack {
+    display: grid;
+    gap: 4px;
+    white-space: normal;
+    cursor: default;
+  }
+  .time-menu input[type='range'],
+  .time-menu input[type='datetime-local'] {
+    width: 100%;
+  }
+  .quick {
+    display: flex;
+    gap: 4px;
+    flex-wrap: wrap;
+  }
+  .quick button {
+    flex: 1;
+    padding: 3px 4px;
+    white-space: nowrap;
+  }
+  .plan-note {
+    margin: 0;
+    padding: 5px 7px;
+    border: 1px solid var(--warn);
+    color: var(--text);
+    background: color-mix(in srgb, var(--warn) 16%, transparent);
   }
   section {
     display: flex;

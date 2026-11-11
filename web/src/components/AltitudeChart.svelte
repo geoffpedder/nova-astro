@@ -2,13 +2,22 @@
   import type { AltitudeCurve } from '../lib/types'
 
   // A target's altitude through the night: daylight and twilight shaded, the Moon dashed, the
-  // minimum altitude as a line, and "now".
+  // minimum altitude as a line, "now", and the planned time when the page shows another one.
   let {
     curve,
     minAltitude = 30,
     label = '',
     fill = false,
-  }: { curve: AltitudeCurve; minAltitude?: number; label?: string; /** As tall as its box, rather than a fixed height. */ fill?: boolean } = $props()
+    plan = null,
+  }: {
+    curve: AltitudeCurve
+    minAltitude?: number
+    label?: string
+    /** As tall as its box, rather than a fixed height. */
+    fill?: boolean
+    /** The time the page is showing instead of now (ms), marked on the chart. */
+    plan?: number | null
+  } = $props()
 
   // Drawn at the size it's given (no stretched text): its width, and a fixed height unless it fills its box.
   let width = $state(600)
@@ -68,6 +77,7 @@
       { cls: 'limit', text: `Above ${minAltitude}°` },
       { cls: 'moon', text: 'Moon' },
       { cls: 'now', text: 'Now' },
+      ...(plan != null ? [{ cls: 'plan', text: 'Shown' }] : []),
     ]
     let at = PAD.left
     const placed = items.map((item) => {
@@ -98,6 +108,7 @@
     <text class="peak" x={x(new Date(peak.utc).getTime())} y={Math.max(y(peak.altitude) - 4, PAD.top + 9)} text-anchor="middle">{peak.altitude.toFixed(0)}°</text>
   {/if}
   {#if now > t0 && now < t1}<line class="now" x1={x(now)} x2={x(now)} y1={PAD.top} y2={H - PAD.bottom} />{/if}
+  {#if plan != null && plan > t0 && plan < t1}<line class="plan" x1={x(plan)} x2={x(plan)} y1={PAD.top} y2={H - PAD.bottom} />{/if}
 </svg>
 </div>
 
@@ -159,5 +170,10 @@
   .now {
     stroke: var(--danger);
     stroke-width: 1.5;
+  }
+  .plan {
+    stroke: var(--warn);
+    stroke-width: 2;
+    stroke-dasharray: 2 3;
   }
 </style>

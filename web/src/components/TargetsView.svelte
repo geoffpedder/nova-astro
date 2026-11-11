@@ -873,7 +873,7 @@
 
             {#if planning}
               <p class="plan-note small">
-                Showing {planLabel}, not now, so Slew, Centre and Match rotation are off.
+                The chart isn't showing the sky now, so Slew, Centre and Match rotation are off.
                 <button class="link" onclick={backToNow}>Back to now</button>
               </p>
             {/if}

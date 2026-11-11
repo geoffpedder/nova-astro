@@ -75,6 +75,8 @@ builder.Services.AddSingleton<SequencerService>();
 builder.Services.AddSingleton<MountMotionService>();
 builder.Services.AddSingleton<PowerService>();
 builder.Services.AddSingleton<ClockService>();
+builder.Services.AddSingleton<UpdateCheckService>();
+builder.Services.AddHostedService(sp => sp.GetRequiredService<UpdateCheckService>());
 builder.Services.AddSingleton<NetworkService>();
 builder.Services.AddSingleton<SkyTileService>();
 builder.Services.AddSingleton<NicknameService>();

@@ -9,6 +9,7 @@
   import FlatsPrompt from './components/FlatsPrompt.svelte'
   import RotationPrompt from './components/RotationPrompt.svelte'
   import SignIn from './components/SignIn.svelte'
+  import UpdateDialog from './components/UpdateDialog.svelte'
   import { auth } from './lib/auth.svelte'
   import { startSession } from './lib/session.svelte'
   import { nova } from './lib/state.svelte'
@@ -32,5 +33,6 @@
   <RotationPrompt />
   <FlatsPrompt />
   <ClockPrompt />
+  <UpdateDialog />
   <ErrorToast />
 {/if}

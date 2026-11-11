@@ -751,6 +751,12 @@ the activity log. Your own ntfy server works too: set its address, and an access
   terminal is open, listening on a file only NOVA's user can open, never on the network. `nova update` works from it:
   the install stops NOVA (and so the terminal), so it carries on in the background, and the page comes back a minute
   later when NOVA restarts.
+- **New releases:** once a day the mini PC asks GitHub whether a newer NOVA release is out. When one is, an
+  **Update** button appears in the top bar (desktop layout) and the Mini PC box says so beside NOVA's version; either
+  opens that release's notes and how to update: `nova update` on the mini PC, when nothing is running. NOVA only
+  tells you: it never updates itself. **Not now** puts that release away on this browser until the next one. In the
+  Mini PC box, **Check now** asks straight away and **Check daily** turns the daily check off. With no internet the
+  check is skipped quietly. A NOVA built from source shows the latest release but isn't told to update.
 - **Diagnostics** (beside Terminal) downloads one zip for looking into a problem, or to attach to a bug report:
   NOVA's activity log and its own log, the INDI drivers' log and the kernel's USB messages (the last 36 hours), `nova
   doctor`, the system (OS, disks, memory, USB devices) and NOVA's settings. Passwords, tokens, the Bluetooth code and

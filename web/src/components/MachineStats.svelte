@@ -3,6 +3,7 @@
   import { download } from '../lib/download'
   import type { SystemStats, TerminalStatus } from '../lib/types'
   import { nova } from '../lib/state.svelte'
+  import { checkNow, refreshUpdates, setDailyCheck, updates } from '../lib/updates.svelte'
 
   // The mini PC at a glance (CPU, memory, temperature, disks, the driver server), read every few seconds while the Mini PC tab shows.
   let { active }: { active: boolean } = $props()
@@ -90,6 +91,13 @@
     observer.observe(node)
     return { destroy: () => observer.disconnect() }
   }
+  // NOVA's version, and whether a newer release is out.
+  $effect(() => {
+    if (active) refreshUpdates()
+  })
+  const update = $derived(updates.status)
+  const checkedAt = (iso: string | null) =>
+    iso ? new Date(iso).toLocaleString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : null
   const memPercent = $derived(stats?.memoryUsedBytes != null && stats.memoryTotalBytes ? (100 * stats.memoryUsedBytes) / stats.memoryTotalBytes : null)
 </script>
 
@@ -118,6 +126,28 @@
     {:else}
       <p class="muted small">{terminal?.problem ?? 'Checking the terminal…'}</p>
     {/if}
+  {/if}
+  {#if update}
+    <div class="version">
+      <span class="mono"><span class="label">NOVA</span> {update.devBuild ? 'built from source' : update.installed}</span>
+      {#if update.available && update.latest}
+        <button class="link" onclick={() => (updates.open = true)} title="What's new, and how to update">{update.latest.version} is out</button>
+      {:else if update.devBuild}
+        {#if update.latest}<button class="link" onclick={() => (updates.open = true)} title="Its release notes">latest release {update.latest.version}</button>{/if}
+      {:else if update.latest && !update.problem}
+        <span class="muted small">up to date</span>
+      {/if}
+      {#if update.problem}
+        <span class="muted small" title={update.problem}>couldn't check for a new release</span>
+      {:else if update.checkedUtc}
+        <span class="muted small">checked {checkedAt(update.checkedUtc)}</span>
+      {/if}
+      <span class="gap"></span>
+      <label class="check small" title="Once a day the mini PC asks GitHub whether a newer release is out. Nothing about this install is sent. It only tells you: updating is still up to you">
+        <input type="checkbox" checked={update.enabled} onchange={(e) => setDailyCheck(e.currentTarget.checked)} /> Check daily
+      </label>
+      <button class="secondary small-button" disabled={updates.checking} onclick={checkNow}>{updates.checking ? 'Checking…' : 'Check now'}</button>
+    </div>
   {/if}
   {#if stats}
     <div class="rows mono">
@@ -166,6 +196,26 @@
     gap: 12px;
   }
   .gap {
+    flex: 1;
+  }
+  .version {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 4px 10px;
+    margin-bottom: 6px;
+    font-size: 13px;
+  }
+  .version .label {
+    color: var(--muted);
+    margin-right: 6px;
+  }
+  .version .check {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+  }
+  .version .gap {
     flex: 1;
   }
   .small-button {

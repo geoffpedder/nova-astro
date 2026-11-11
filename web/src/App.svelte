@@ -32,6 +32,7 @@
   import MiniPcView from './components/MiniPcView.svelte'
   import { reveal } from './lib/reveal.svelte'
   import { refreshSetup, setupGuide } from './lib/setup.svelte'
+  import { updates, updateShown } from './lib/updates.svelte'
   import { screenMode, session, theme, toggleFullscreen, toggleNight } from './lib/session.svelte'
 
   // The desktop layout: equipment panels down the left, the main views on the right. What it shows and does is
@@ -93,6 +94,10 @@
 
   <div class="spacer"></div>
 
+  {#if updateShown()}
+    <button class="secondary update-link" onclick={() => (updates.open = true)}
+      title="A newer NOVA release is out: what's new, and how to update">Update: {updates.status?.latest?.version}</button>
+  {/if}
   {#if !session.showGuide && setupGuide.check && nova.status}
     <button class="secondary setup-link" class:warn={session.setupLeft + session.setupProblems > 0} onclick={openGuide}
       title="The setup checklist, and what the mini PC is missing">
@@ -187,6 +192,10 @@
   .version {
     font-size: 11px;
     margin-left: -6px;
+  }
+  .update-link {
+    color: var(--accent);
+    border-color: var(--accent);
   }
   .setup-link.warn {
     border-color: var(--warn);

@@ -110,6 +110,7 @@ public sealed record SequenceNameRequest(string Name);
 /// <summary>Restart or shut down the mini PC; optionally park the mount and turn the cooler off first.</summary>
 public sealed record PowerRequest(bool Park = true, bool CoolerOff = true);
 public sealed record ClockRequest(DateTimeOffset Utc);
+public sealed record UpdateSettingsRequest(bool Enabled);
 public sealed record SequenceCountRequest(int Row, int Count, int Target = 0);
 
 /// <summary>
@@ -882,6 +883,14 @@ public static class NovaApi
             await clock.SetAsync(request.Utc, ct) is { } problem
                 ? Results.Problem(problem, statusCode: StatusCodes.Status409Conflict)
                 : Results.NoContent());
+        // Whether a newer release is out (asked of GitHub daily): it only tells; updating is "nova update".
+        api.MapGet("/system/update", (UpdateCheckService updates) => updates.Status);
+        api.MapPost("/system/update/check", async (UpdateCheckService updates, CancellationToken ct) => await updates.CheckAsync(ct));
+        api.MapPost("/system/update/settings", (UpdateSettingsRequest request, UpdateCheckService updates) =>
+        {
+            updates.SetEnabled(request.Enabled);
+            return updates.Status;
+        });
         // The Wi-Fi hotspot fallback: its name and password (for the signed-in page only), and starting or stopping it.
         api.MapGet("/hotspot", (HotspotService hotspot) => new { status = hotspot.Status, settings = hotspot.Settings });
         api.MapPost("/hotspot/settings", (HotspotSettings settings, HotspotService hotspot) =>

@@ -187,6 +187,10 @@ Installing NOVA also installs a `nova` command on the mini PC:
 | `nova uninstall` | removes NOVA (asks first); `--purge` removes its settings too |
 | `nova password` | sets NOVA's password (asked twice); `nova password --clear` removes it |
 
+NOVA says when a newer release is out (an **Update** button in the top bar, and the Mini PC box): once a day the
+mini PC asks GitHub's public API for the latest release, sending nothing about your install. It never updates by
+itself; **Check daily** in the Mini PC box turns the check off.
+
 `nova update` downloads the build for the computer (x64 or arm64), checks its checksum, and installs it.
 Nothing is compiled. Settings, sites, sequences and images are kept across updates.
 

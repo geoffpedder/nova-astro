@@ -39,6 +39,10 @@ What changed in each release. The newest is first. A release's section here beco
 
 ### Added
 
+- **NOVA says when a newer release is out:** the mini PC asks GitHub once a day, and when there's a newer release
+  an *Update* button appears in the top bar and the Mini PC box says so beside NOVA's version. Either opens the
+  release's notes and how to update (`nova update`). It only tells: NOVA never updates itself. *Not now* puts a
+  release away; *Check now* and *Check daily* (to turn it off) are in the Mini PC box.
 - **Plan ahead on the Targets page:** *Time* in the chart's toolbar shows the sky at another moment (tonight
   before it's dark, or another night): type a time, drag along the night, or jump to sunset, dark, the middle or
   dawn. The chart, Sun, Moon and planets, the target's altitude, the Tonight list and the altitude chart follow it,

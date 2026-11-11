@@ -217,6 +217,9 @@ sign in first with `POST /api/auth/login` and send the `nova.session` cookie it 
 | GET | `/api/images/latest/frame` | The latest image's outline on the sky (J2000 corners), once solved |
 | GET/POST | `/api/sequences` · `/api/sequences/{name}` · `/api/sequences/delete` | Saved sequences: list, load, save (the sequence JSON), delete `{ name }` |
 | POST | `/api/sequence/start` · `/pause` · `/resume` · `/skip` · `/skip-target` · `/abort` · `/count` | Run a sequence (body: the sequence JSON) and control it; progress in the status under `sequencer` |
+| GET | `/api/system/update` | `{ "installed", "devBuild", "enabled", "latest": { "version", "url", "notes", "publishedUtc" }, "available", "checkedUtc", "problem" }`: the installed version against the newest GitHub release (asked daily; `devBuild` is a build from source, never `available`) |
+| POST | `/api/system/update/check` | Ask GitHub now; answers the same status |
+| POST | `/api/system/update/settings` | `{ "enabled": false }`: the daily check off or on (kept in `updates.json`) |
 | GET | `/api/system/clock` | `{ "utc", "synchronized", "canSet", "problem" }`: the mini PC's clock now, whether it's set from the internet (NTP; null when that can't be told), and whether NOVA can set it. The page compares `utc` with its own device's clock |
 | POST | `/api/system/clock` | `{ "utc": "2026-11-10T04:15:30Z" }`: set the mini PC's clock (`timedatectl set-time`, network time off for the moment it takes; a polkit rule from the install allows it) and send the time to a connected mount. 409 while the clock is set from the internet, or a sequence runs |
 | POST | `/api/system/restart` · `/api/system/shutdown` | `{ "park": true, "coolerOff": true }`: stop what's running, optionally park and turn the cooler off, then restart / power off the mini PC |

@@ -741,6 +741,19 @@ export interface WebcamStatus {
   note: string | null
 }
 
+/** The installed NOVA against the newest release (asked of GitHub daily). */
+export interface UpdateStatus {
+  installed: string
+  /** Built from source: no release version to compare, so never "available". */
+  devBuild: boolean
+  /** The daily check. */
+  enabled: boolean
+  latest: { version: string; url: string; notes: string; publishedUtc: string | null } | null
+  available: boolean
+  checkedUtc: string | null
+  problem: string | null
+}
+
 /** The mini PC's clock. */
 export interface ClockStatus {
   utc: string

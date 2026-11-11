@@ -530,31 +530,33 @@
 </script>
 
 <div class="targets">
-  <div class="title">
+  <!-- While another time is shown this row is the planning bar, in the same place and at the same height, so the
+       chart (and the time slider being dragged) doesn't move when it comes and goes. -->
+  <div class="title" class:planning role={planning ? 'status' : undefined}>
+    {#if planning}
+      <b class="plan-tag">Planning view</b>
+      <span class="plan-when">{planLabel} ({planAway}), not the sky now</span>
+    {/if}
     {#if s.target}
-      <b>{s.target.name}</b>
-      {#if s.target.info}
+      <b class="target-name">{s.target.name}</b>
+      {#if s.target.info && !planning}
         {@const t = s.target.info}
         <span class="muted">{t.typeName}{#if size(t)}, {size(t)}{/if}{#if t.magnitude != null}, magnitude {t.magnitude}{/if}</span>
       {/if}
       {#if targetAltAz}
         <span class="muted small" class:bad={targetAltAz.alt < 0}
-          >{targetAltAz.alt.toFixed(0)}° up in the {compass(targetAltAz.az)}{targetAltAz.alt < 0 ? ' (below the horizon)' : ''}{planning ? ` at ${planLabel}` : ''}</span
+          >{targetAltAz.alt.toFixed(0)}° up in the {compass(targetAltAz.az)}{targetAltAz.alt < 0 ? ' (below the horizon)' : ''}{planning ? ' then' : ''}</span
         >
       {/if}
-      <span class="mono muted small">frame centre {centreRa} {centreDec}</span>
-    {:else}
+      {#if !planning}<span class="mono muted small">frame centre {centreRa} {centreDec}</span>{/if}
+    {:else if !planning}
       <span class="muted">Search, pick from tonight's list, or click anything on the sky to plan a target.</span>
     {/if}
+    {#if planning}
+      <span class="plan-space"></span>
+      <button class="plan-back" onclick={backToNow} title="Show the sky as it is now; the mount can be moved again">Back to now</button>
+    {/if}
   </div>
-
-  {#if planning}
-    <div class="plan-bar" role="status">
-      <b>Planning view</b>
-      <span>The sky at {planLabel} ({planAway}), not as it is now. The mount isn't shown and can't be moved from here.</span>
-      <button onclick={backToNow}>Back to now</button>
-    </div>
-  {/if}
 
   <div class="canvas" class:planning>
     <SkyChart
@@ -604,7 +606,7 @@
         <button class="secondary" disabled={!centre} onclick={() => fit()} title="Turn to the target and frame it">Target</button>
         <div class="layers">
           <button class="secondary time-button" class:planning aria-expanded={timeOpen} onclick={() => (timeOpen = !timeOpen)}
-            title="Show the sky at another time, to plan the night before it's dark">Time: {planLabel} ▾</button>
+            title="Show the sky at another time, to plan the night before it's dark"><span>Time: {planLabel}</span> ▾</button>
           {#if timeOpen}
             <div class="layers-menu time-menu panel over" role="group" aria-label="The time the chart shows">
               <label class="stack">
@@ -923,27 +925,48 @@
     flex: 1;
   }
   /* Another time than now: said across the top, and the chart ringed, so it can't be taken for the sky now. */
-  .plan-bar {
-    display: flex;
-    gap: 10px;
+  .title.planning {
+    padding: 0 4px 0 10px;
     align-items: center;
-    flex-wrap: wrap;
-    padding: 6px 10px;
-    font-size: 13px;
-    color: var(--text);
     background: color-mix(in srgb, var(--warn) 22%, var(--panel));
     border: 1px solid var(--warn);
     border-left-width: 5px;
+    font-variant-numeric: tabular-nums;
   }
-  .plan-bar b {
+  /* One line, whatever the width: a second line would push the chart down. The target's name gives way first. */
+  .title.planning {
+    flex-wrap: nowrap;
+    overflow: hidden;
+  }
+  .title.planning > :global(*) {
+    flex-shrink: 0;
+    white-space: nowrap;
+  }
+  .title.planning > .target-name,
+  .title.planning > .plan-when {
+    flex-shrink: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .title.planning > .plan-space {
+    flex: 1 1 0;
+  }
+  .plan-tag {
     color: var(--warn);
     text-transform: uppercase;
     letter-spacing: 0.06em;
     font-size: 12px;
   }
-  .plan-bar span {
+  .plan-when {
+    font-weight: 600;
+  }
+  .plan-space {
     flex: 1;
-    min-width: 200px;
+  }
+  .plan-back {
+    padding: 3px 10px;
+    font-size: 12px;
   }
   .canvas.planning::after {
     content: '';
@@ -959,9 +982,20 @@
     border-color: var(--warn);
     font-weight: 600;
   }
-  .time-menu {
-    min-width: 230px;
+  /* As wide as its longest label ("Time: Wed 30 Sep, 00:00"), so the toolbar and the menu under it stay put while the
+     time is dragged. */
+  .time-button {
+    display: inline-flex;
+    justify-content: space-between;
+    gap: 6px;
+    min-width: 188px;
+    white-space: nowrap;
+    font-variant-numeric: tabular-nums;
   }
+  .time-menu {
+    width: 280px;
+  }
+
   .time-menu .stack {
     display: grid;
     gap: 4px;
@@ -1205,6 +1239,12 @@
     gap: 10px;
     align-items: baseline;
     flex-wrap: wrap;
+    /* Room for the planning bar's button, always: see above. */
+    min-height: 32px;
+    align-content: center;
+    box-sizing: border-box;
+    border: 1px solid transparent;
+    padding: 0 4px 0 0;
   }
   .canvas {
     position: relative;

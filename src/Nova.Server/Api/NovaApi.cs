@@ -757,7 +757,7 @@ public static class NovaApi
             if (sites.BelowHorizon(target) is { } low) return Results.Problem(low, statusCode: StatusCodes.Status409Conflict);
             if (sites.NearSun(target) is { } sun) return Results.Problem(sun, statusCode: StatusCodes.Status409Conflict);
             return OperationResult(equipment.StartMountOperation($"Slewing to {target} (J2000)",
-                (m, ct) => sites.SlewSafelyAsync(m, Precession.J2000ToJNow(target, DateTime.UtcNow), ct), out var error), error);
+                (m, ct) => sites.ManualSlewAsync(m, Precession.J2000ToJNow(target, DateTime.UtcNow), ct), out var error), error);
         });
         api.MapPost("/mount/motion", async (MotionRequest request, MountMotionService motion, ImagingService imaging,
             SequencerService sequencer, CancellationToken ct) =>

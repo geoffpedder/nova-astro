@@ -358,6 +358,11 @@ without them, and they go into the guide frames' FITS headers. Then the Guider p
 equipment, starts and stops guiding and dithers, with the guide graph and RMS. Sequences guide, dither and
 wait for settling by themselves.
 
+**Slewing while guiding:** with guiding on, a **Slew** or **Centre** from the page (or a GoTo from Stellarium) stops
+guiding first and starts it again once the mount is there, on a star in the new field; the activity log says so.
+It isn't started again when the slew fails or is stopped. Guiding that was only calibrated or looping, not guiding,
+is left as it was: press **Guide** to start it.
+
 NOVA also watches the Dec corrections. If after 5 minutes of guiding nearly all of them push the same way, the
 star is drifting, which is what polar error does: the Guider panel and the activity log say how fast, and the
 least polar error that would cause it ("polar alignment at least 1.5° off"). Polar align again; no guide setting

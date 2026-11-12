@@ -138,6 +138,9 @@ solver.Solved += () =>
         && latest.Id == last.ImageId)
         app.Services.GetRequiredService<NovaGuider>().CameraSolved(angle);
 };
+// A slew or centring made by hand while guiding: guiding stops for it and starts again afterwards.
+app.Services.GetRequiredService<SiteService>().AroundSlew = app.Services.GetRequiredService<GuiderService>().AroundSlewAsync;
+app.Services.GetRequiredService<PlateSolveService>().AroundSlew = app.Services.GetRequiredService<GuiderService>().AroundSlewAsync;
 app.Services.GetRequiredService<ClockService>().Busy = () =>
     app.Services.GetRequiredService<SequencerService>().Running ? "A sequence is running: stop it before changing the clock" : null;
 storage.FellBack += (_, why) => notifications.Notify(NotificationKind.Storage, "Frames are going to the mini PC", why);

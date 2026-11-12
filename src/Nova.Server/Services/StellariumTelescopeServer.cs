@@ -182,7 +182,7 @@ public sealed class StellariumTelescopeServer(
         var started = center
             ? solver.StartCentering(target, out error)
             : equipment.StartMountOperation($"Slewing to {target} (J2000, from Stellarium)",
-                (m, ct) => sites.SlewSafelyAsync(m, Precession.J2000ToJNow(target, DateTime.UtcNow), ct), out error);
+                (m, ct) => sites.ManualSlewAsync(m, Precession.J2000ToJNow(target, DateTime.UtcNow), ct), out error);
         if (!started) log.Warn($"Stellarium GoTo not done: {error}");
     }
 

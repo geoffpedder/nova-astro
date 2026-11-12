@@ -51,6 +51,43 @@ public class NovaGuiderTests : IDisposable
     }
 
     [Fact]
+    public async Task ASlewByHandStopsGuidingAndStartsItAgain()
+    {
+        await using var rig = await SetUpAsync();
+        var (guider, mount) = (rig.Guider, rig.Mount);
+        using var timeout = new CancellationTokenSource(TimeSpan.FromMinutes(3));
+        await guider.GuideAndWaitAsync(new SettleSettings(Pixels: 1.5, Seconds: 2, Timeout: 60), timeout.Token);
+        Assert.True(guider.IsGuiding);
+
+        // Guiding is off while the mount moves, and comes back on (in the background) once it's there.
+        bool? guidingDuringTheSlew = null;
+        var target = mount.Coordinates with { RaHours = (mount.Coordinates.RaHours + 0.5) % 24 };
+        await guider.AroundSlewAsync(async ct =>
+        {
+            guidingDuringTheSlew = guider.IsGuiding;
+            await mount.SlewAsync(target, ct);
+        }, timeout.Token);
+        Assert.False(guidingDuringTheSlew);
+        for (var i = 0; i < 1200 && !guider.IsGuiding; i++) await Task.Delay(50, timeout.Token);
+        Assert.True(guider.IsGuiding, "guiding didn't start again after the slew");
+        Assert.Contains(_log!.Recent, e => e.Message.Contains("stopping it for the slew"));
+
+        // A slew that fails leaves guiding off, and says so.
+        await Assert.ThrowsAsync<InvalidOperationException>(() =>
+            guider.AroundSlewAsync(_ => throw new InvalidOperationException("Slew failed"), timeout.Token));
+        Assert.False(guider.IsGuiding);
+        Assert.Contains(_log.Recent, e => e.Message.Contains("hasn't been started again"));
+
+        // Not guiding to begin with: the slew just happens, and guiding stays off.
+        var moved = false;
+        await guider.AroundSlewAsync(_ => { moved = true; return Task.CompletedTask; }, timeout.Token);
+        Assert.True(moved);
+        await Task.Delay(500, timeout.Token);
+        Assert.False(guider.IsGuiding);
+        Assert.Equal(GuiderState.Stopped, guider.Status.State);
+    }
+
+    [Fact]
     public async Task CalibratesGuidesDithersAndStops()
     {
         await using var rig = await SetUpAsync();

@@ -212,6 +212,12 @@ public sealed class PlateSolveService
         _log.Info($"{mount.Name} synced to {actual} (J2000)");
     }
 
+    /// <summary>
+    /// Wraps a centring started by hand (not a sequence's): set at startup to the guider's
+    /// <see cref="GuiderService.AroundSlewAsync"/>, so guiding stops for it and starts again afterwards.
+    /// </summary>
+    public Func<Func<CancellationToken, Task>, CancellationToken, Task>? AroundSlew { get; set; }
+
     public bool StartCentering(EquatorialCoordinates target, out string? error)
     {
         if (_equipment.Mount is not { IsConnected: true }) { error = "No mount connected"; return false; }
@@ -226,7 +232,8 @@ public sealed class PlateSolveService
         {
             try
             {
-                await CenterAsync(target, cts.Token);
+                if (AroundSlew is { } around) await around(ct => CenterAsync(target, ct), cts.Token);
+                else await CenterAsync(target, cts.Token);
             }
             catch (OperationCanceledException)
             {

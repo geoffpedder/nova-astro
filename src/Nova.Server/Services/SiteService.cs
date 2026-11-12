@@ -143,6 +143,16 @@ public sealed class SiteService
     }
 
     /// <summary>
+    /// Wraps a slew made by hand (the page's Slew, a GoTo from Stellarium): set at startup to the guider's
+    /// <see cref="GuiderService.AroundSlewAsync"/>, so guiding stops for it and starts again afterwards.
+    /// </summary>
+    public Func<Func<CancellationToken, Task>, CancellationToken, Task>? AroundSlew { get; set; }
+
+    /// <summary><see cref="SlewSafelyAsync"/> for a slew asked for by hand: guiding, when on, stops for it and resumes.</summary>
+    public Task ManualSlewAsync(IMount mount, EquatorialCoordinates targetJNow, CancellationToken ct) =>
+        AroundSlew is { } around ? around(c => SlewSafelyAsync(mount, targetJNow, c), ct) : SlewSafelyAsync(mount, targetJNow, ct);
+
+    /// <summary>
     /// A GoTo that keeps clear of the Sun on the way, not just at the end: when the direct path could pass
     /// through the Sun zone, it goes round by the pole (see <see cref="SunSafeRoute"/>). Every GoTo NOVA makes
     /// goes through here. The target itself must already have been checked (<see cref="EnsureAwayFromSun"/>).

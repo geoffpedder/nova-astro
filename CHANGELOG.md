@@ -6,6 +6,10 @@ What changed in each release. The newest is first. A release's section here beco
 
 ### Changed
 
+- **Guiding resumes after a slew made by hand:** with guiding on, **Slew**, **Centre** and a GoTo from Stellarium
+  now stop guiding first and start it again when the mount gets there, on a star in the new field (as sequences
+  already did). Before, guiding was left running through the slew and lost its star. It isn't restarted when the
+  slew fails or is stopped.
 - **Predictive PEC's *PE period* is a hint:** a period you enter was used exactly, so a figure a few percent out
   left the model drifting out of step with the mount. Now the real period is looked for within 10% of it once two
   cycles have been seen; a second period elsewhere is still found, and a hint with nothing near it is dropped.

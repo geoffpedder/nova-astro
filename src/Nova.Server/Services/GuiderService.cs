@@ -241,6 +241,35 @@ public sealed class GuiderService : IAsyncDisposable
             ct => IsNova ? _nova!.DitherAsync(pixels, raOnly, settle, ct) : _phd2.DitherAsync(pixels, raOnly, settle, ct),
             "Dither settled", out error);
 
+    /// <summary>
+    /// A move of the mount made by hand (Slew, Centre, a GoTo from Stellarium). When guiding is on it's stopped first
+    /// (it would chase a star that's leaving the frame, and pulse the mount as it slews), and started again once the
+    /// mount is there, on a star in the new field. Not started again when the move fails or is cancelled: the mount
+    /// isn't where it was sent. (A sequence looks after its own guiding.)
+    /// </summary>
+    public async Task AroundSlewAsync(Func<CancellationToken, Task> move, CancellationToken ct)
+    {
+        var state = IsNova ? _nova!.State : _phd2.IsConnected ? _phd2.State : GuiderState.Disconnected;
+        var resume = IsConnected && state is GuiderState.Guiding or GuiderState.LostLock;
+        if (resume)
+        {
+            _log.Info("Guiding is on: stopping it for the slew, and starting it again when the mount gets there");
+            await StopAsync(ct);
+        }
+        try
+        {
+            await move(ct);
+        }
+        catch (Exception) when (resume)
+        {
+            _log.Warn("Guiding was stopped for the slew and hasn't been started again: the slew didn't finish");
+            throw;
+        }
+        // In the background, as when Guide is pressed: the slew is done, and settling can take a minute.
+        if (resume && !StartGuiding(new SettleSettings(), recalibrate: false, out var error))
+            _log.Warn($"Guiding didn't start again after the slew: {error}");
+    }
+
     /// <summary>Why guiding can't start now (no guide camera, PHD2 not connected).</summary>
     public string NotReady => IsNova ? "No guide camera: choose one in the Guider panel" : "Not connected to PHD2";
 

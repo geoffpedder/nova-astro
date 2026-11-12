@@ -5,6 +5,7 @@
   import CalibrationGraph from './CalibrationGraph.svelte'
   import GuideChart from './GuideChart.svelte'
   import { guideFloat } from '../lib/floats.svelte'
+  import { isCompact } from '../lib/uiLayout.svelte'
   import type { GuideLogFile } from '../lib/types'
 
   // NOVA's own guider, full size: the whole guide frame with the stars it follows (click one to guide on it), the
@@ -279,9 +280,11 @@
   <div class="legend muted">
     <span class="ra-key">— RA</span><span class="dec-key">— Dec</span><span class="dither-key">┆ dither (settling shaded, left out of the RMS)</span><span>last {steps} steps, newest on the right</span>
     <span class="gap"></span>
-    <button class="secondary small" class:on={guideFloat.layout.popped} aria-pressed={guideFloat.layout.popped}
-      onclick={() => ((guideFloat.layout.popped = !guideFloat.layout.popped), guideFloat.save())}
-      title="The graph and RMS in a small window that stays on screen whichever tab is showing">Pop out</button>
+    {#if !isCompact()}
+      <button class="secondary small" class:on={guideFloat.layout.popped} aria-pressed={guideFloat.layout.popped}
+        onclick={() => ((guideFloat.layout.popped = !guideFloat.layout.popped), guideFloat.save())}
+        title="The graph and RMS in a small window that stays on screen whichever tab is showing">Pop out</button>
+    {/if}
   </div>
 </div>
 

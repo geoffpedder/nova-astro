@@ -1,6 +1,7 @@
 <script lang="ts">
   import { api } from '../lib/api'
   import { act } from '../lib/state.svelte'
+  import { isCompact } from '../lib/uiLayout.svelte'
   import { liveStream, saveWebcamLayout, webcamLayout, webcamStreamUrl } from '../lib/webcam.svelte'
   import type { WebcamControl, WebcamControls, WebcamSettings, WebcamStatus } from '../lib/types'
 
@@ -109,7 +110,9 @@
       </select>
     {/if}
     <button class="secondary" onclick={snapshot} title="Save a picture from the webcam">Snapshot</button>
-    <button class="secondary" class:on={webcamLayout.popped} aria-pressed={webcamLayout.popped} onclick={popOut} title="A small floating view that stays on screen over the other tabs">Pop out</button>
+    {#if !isCompact()}
+      <button class="secondary" class:on={webcamLayout.popped} aria-pressed={webcamLayout.popped} onclick={popOut} title="A small floating view that stays on screen over the other tabs">Pop out</button>
+    {/if}
     <button class="secondary" class:on={showControls} aria-pressed={showControls} onclick={() => (showControls = !showControls)}
       title="The webcam's own settings: brightness, exposure, white balance…">Controls</button>
   </div>

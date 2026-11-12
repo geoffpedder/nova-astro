@@ -37,13 +37,14 @@
   // panels, the views); this file only arranges them.
 
   // ---------- Panels: the equipment panels, one at a time in a panel sliding out from behind the icons ----------
-  type SheetId = 'equipment' | 'mount' | 'camera' | 'focuser' | 'filterwheel' | 'guider' | 'setup'
+  type SheetId = 'equipment' | 'mount' | 'camera' | 'focuser' | 'filterwheel' | 'flatpanel' | 'guider' | 'setup'
   const sheetTitles: Record<SheetId, string> = {
     equipment: 'Equipment',
     mount: 'Mount',
     camera: 'Camera',
     focuser: 'Focuser',
     filterwheel: 'Filter wheel',
+    flatpanel: 'Flat panel',
     guider: 'Guider',
     setup: 'Getting started',
   }
@@ -52,10 +53,11 @@
     camera: 'camera',
     focuser: 'focuser',
     filterwheel: 'filterwheel',
+    flatpanel: 'flatpanel',
     guider: 'guider',
   }
-  // Which panel each Panel id lives in (the rotator and flat panel share the equipment one).
-  const sheetOf: Record<string, SheetId> = { rotator: 'equipment', flatpanel: 'equipment' }
+  // Which panel each Panel id lives in (the rotator shares the equipment one).
+  const sheetOf: Record<string, SheetId> = { rotator: 'equipment' }
   let sheet = $state<SheetId | null>(null)
   // Opened from the top bar (the profile chip, Setup): they drop down from it. The rest slide out from the icons.
   const dropIds: SheetId[] = ['equipment', 'setup']
@@ -149,6 +151,8 @@
       items.push({ id: 'focuser', label: 'Focus', icon: 'focuser', kind: 'focuser', dot: dotOf(status?.focuser?.connected), open: () => openSheet('focuser'), on: sheet === 'focuser' })
     if (session.hasFilterWheel)
       items.push({ id: 'filterwheel', label: 'Filter', icon: 'filterwheel', kind: 'filterwheel', dot: dotOf(status?.filterWheel?.connected), open: () => openSheet('filterwheel'), on: sheet === 'filterwheel' })
+    if (session.hasFlatPanel)
+      items.push({ id: 'flatpanel', label: 'Flats', icon: 'flatpanel', kind: 'flatpanel', dot: dotOf(status?.flatPanel?.connected), open: () => openSheet('flatpanel'), on: sheet === 'flatpanel' })
     if (session.showGuider)
       items.push({
         id: 'guider',
@@ -298,6 +302,7 @@
         <div class:hidden={side !== 'camera'}><CameraPanel /></div>
         {#if session.hasFocuser}<div class:hidden={side !== 'focuser'}><FocuserPanel /></div>{/if}
         {#if session.hasFilterWheel}<div class:hidden={side !== 'filterwheel'}><FilterWheelPanel /></div>{/if}
+        {#if session.hasFlatPanel}<div class:hidden={side !== 'flatpanel'}><FlatPanelPanel /></div>{/if}
         {#if session.showGuider}<div class:hidden={side !== 'guider'}><GuiderPanel /></div>{/if}
       </div>
     </div>
@@ -311,7 +316,6 @@
         <div class:hidden={drop !== 'equipment'}>
           <EquipmentPanel />
           {#if session.hasRotator}<div class="more"><h3>Rotator</h3><RotatorPanel /></div>{/if}
-          {#if session.hasFlatPanel}<div class="more"><h3>Flat panel</h3><FlatPanelPanel /></div>{/if}
         </div>
       </div>
       <div class="grab drop-grab"></div>

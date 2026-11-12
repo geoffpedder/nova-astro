@@ -7,6 +7,7 @@
   import Panel from './Panel.svelte'
   import { guideGraph } from '../lib/guideGraph'
   import { guideFloat } from '../lib/floats.svelte'
+  import { isCompact } from '../lib/uiLayout.svelte'
 
   const guider = $derived(nova.status?.guider)
   // PHD2, or NOVA's own guider: Guide, Stop, Dither, the graph and RMS work the same for both.
@@ -155,8 +156,10 @@
       </svg>
       <div class="legend muted">
         <span class="ra-key">— RA</span><span class="dec-key">— Dec</span>{#if chart.dithers.length}<span class="dither-key">┆ dither</span>{/if}<span>±{fmt(chart.limit, 1)}{unit}</span>
-        <button class="link pop" onclick={() => ((guideFloat.layout.popped = !guideFloat.layout.popped), guideFloat.save())}
-          title="The graph in a small window that stays on screen whichever tab is showing">{guideFloat.layout.popped ? 'Close pop-out' : 'Pop out'}</button>
+        {#if !isCompact()}
+          <button class="link pop" onclick={() => ((guideFloat.layout.popped = !guideFloat.layout.popped), guideFloat.save())}
+            title="The graph in a small window that stays on screen whichever tab is showing">{guideFloat.layout.popped ? 'Close pop-out' : 'Pop out'}</button>
+        {/if}
       </div>
       {#if guider?.diagnosis}
         <p class="diagnosis" class:warn={guider.diagnosis.axes.some((a) => a.verdict === 'chasing' || a.verdict === 'lagging')}>{guider.diagnosis.summary}</p>

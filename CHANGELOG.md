@@ -6,6 +6,9 @@ What changed in each release. The newest is first. A release's section here beco
 
 ### Changed
 
+- **Compact layout (phones and tablets):** the flat panel has its own icon in the equipment rail (*Flats*), like
+  the mount and camera, instead of sitting at the bottom of the Equipment drop-down. The *Pop out* buttons (guide
+  graph, webcam) are gone there: the compact layout has no floating windows for them to open.
 - **Guiding resumes after a slew made by hand:** with guiding on, **Slew**, **Centre** and a GoTo from Stellarium
   now stop guiding first and start it again when the mount gets there, on a star in the new field (as sequences
   already did). Before, guiding was left running through the slew and lost its star. It isn't restarted when the

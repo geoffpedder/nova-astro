@@ -6,6 +6,9 @@ What changed in each release. The newest is first. A release's section here beco
 
 ### Changed
 
+- **Live stacking takes frame after frame by itself:** with Live stack on, Expose (or the shutter) keeps taking
+  frames until Abort. Before, it took one frame and stopped unless Loop was also on. Loop shows as on while live
+  stacking. A new frame only starts another on the browser that pressed Expose, and never while a sequence runs.
 - **Compact layout (phones and tablets):** the flat panel has its own icon in the equipment rail (*Flats*), like
   the mount and camera, instead of sitting at the bottom of the Equipment drop-down. The *Pop out* buttons (guide
   graph, webcam) are gone there: the compact layout has no floating windows for them to open.

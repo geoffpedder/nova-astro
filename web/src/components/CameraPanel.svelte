@@ -1,7 +1,7 @@
 <script lang="ts">
   import { api } from '../lib/api'
   import { act, nova } from '../lib/state.svelte'
-  import { abortExposure, expose, exposure as settings } from '../lib/exposure.svelte'
+  import { abortExposure, expose, exposure as settings, liveStacking } from '../lib/exposure.svelte'
   import type { CameraSettingsUpdate, FrameType } from '../lib/types'
   import DevicePicker from './DevicePicker.svelte'
   import OpticsEditor from './OpticsEditor.svelte'
@@ -200,7 +200,11 @@
         <input type="number" min="0" max="3600" step="0.5" bind:value={settings.duration} disabled={!ready} />
       </label>
       <label class="check"><input type="checkbox" bind:checked={settings.save} /> Save FITS</label>
-      <label class="check"><input type="checkbox" bind:checked={settings.loop} /> Loop</label>
+      {#if liveStacking()}
+        <label class="check" title="Live stacking takes frame after frame by itself, until Abort"><input type="checkbox" checked disabled /> Loop</label>
+      {:else}
+        <label class="check"><input type="checkbox" bind:checked={settings.loop} /> Loop</label>
+      {/if}
     </div>
 
     <div class="progress" aria-label="Exposure progress">

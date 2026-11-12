@@ -360,7 +360,9 @@
         class="small shoot"
         disabled={!nova.status?.camera?.connected}
         onclick={expose}
-        title="Takes a frame with the Camera panel's settings (exposure, Save FITS, Loop)"
+        title={live?.enabled
+          ? "Live stacking: takes frame after frame with the Camera panel's settings and stacks them, until Abort"
+          : "Takes a frame with the Camera panel's settings (exposure, Save FITS, Loop)"}
       >
         Expose
       </button>
@@ -382,7 +384,7 @@
     </label>
     <label
       class="switch live"
-      title="Stack Expose and Loop frames as they come: each lined up on its stars and averaged in, so the picture builds up. The frames are saved as usual. A sequence target has its own Live stack tick."
+      title="Stack frames as they come: each lined up on its stars and averaged in, so the picture builds up. With it on, Expose takes frame after frame until Abort (no need for Loop). The frames are saved as usual. A sequence target has its own Live stack tick."
     >
       <input type="checkbox" role="switch" checked={live?.enabled ?? false} disabled={!live} onchange={(e) => setLiveStack(e.currentTarget.checked)} />
       <span class="track" aria-hidden="true"><span class="knob"></span></span>

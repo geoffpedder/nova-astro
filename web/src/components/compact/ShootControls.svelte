@@ -38,7 +38,7 @@
   const mode = $derived<Mode>(liveStack.status?.enabled ? 'live' : nova.status?.sequencer?.running ? 'autorun' : 'preview')
   const modes: { value: Mode; label: string; note: string }[] = [
     { value: 'preview', label: 'Preview', note: 'Single frames, or a loop' },
-    { value: 'live', label: 'Live stack', note: 'Frames stacked as they come' },
+    { value: 'live', label: 'Live stack', note: 'Frame after frame, stacked as they come' },
     { value: 'autorun', label: 'Autorun', note: "Run the night's plan" },
   ]
   let menu = $state<'mode' | 'exposure' | null>(null)
@@ -90,7 +90,7 @@
     disabled={!ready && !busy}
     onclick={() => (busy ? abortExposure() : expose())}
     aria-label={busy ? 'Stop the exposure' : 'Expose'}
-    title={!ready ? 'Connect a camera first' : busy ? 'Stop the exposure (and Loop)' : `Take a ${exposure.duration} s frame`}
+    title={!ready ? 'Connect a camera first' : busy ? 'Stop the exposure (and Loop)' : mode === 'live' ? `Start live stacking ${exposure.duration} s frames, until you stop it` : `Take a ${exposure.duration} s frame`}
   >
     <svg class="ring" viewBox="0 0 84 84" aria-hidden="true">
       <circle class="bg" cx="42" cy="42" r="39" />
@@ -102,7 +102,9 @@
     {#if e}{e.state === 'Downloading' ? 'Downloading' : `${e.elapsedSeconds.toFixed(0)} / ${e.totalSeconds} s`}{/if}
   </div>
   <div class="toggles extra">
-    <button class:on={exposure.loop} aria-pressed={exposure.loop} onclick={() => (exposure.loop = !exposure.loop)} title="Start the next frame as soon as one arrives">Loop</button>
+    <button class:on={exposure.loop || mode === 'live'} aria-pressed={exposure.loop || mode === 'live'} disabled={mode === 'live'}
+      onclick={() => (exposure.loop = !exposure.loop)}
+      title={mode === 'live' ? 'Live stacking takes frame after frame by itself, until you stop it' : 'Start the next frame as soon as one arrives'}>Loop</button>
     <button class:on={exposure.save} aria-pressed={exposure.save} onclick={() => (exposure.save = !exposure.save)} title="Save each frame as FITS">Save</button>
   </div>
   <div class="spacer extra"></div>

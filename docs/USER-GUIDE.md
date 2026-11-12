@@ -654,7 +654,8 @@ Optional: frames stacked as they come, so a faint target builds up on screen thr
 frame showing only its own noise. It's a look at how the target is coming along (and something to share on the
 night), not a replacement for stacking properly afterwards: every frame is still saved as usual.
 
-- **In the Image tab:** the **Live stack** switch stacks the frames from **Expose** and **Loop**. **Frame** |
+- **In the Image tab:** with the **Live stack** switch on, **Expose** (the shutter, in the compact layout) takes
+  frame after frame and stacks them, until **Abort**: there's no need for **Loop**, which shows as on. **Frame** |
   **Stack** picks which the viewer shows (and **Pop out** shows the same).
 - **In a sequence:** tick **Live stack** on a target (on its *Frames* line). Its light frames are stacked while it
   runs, and when the target ends the stack is saved and started afresh for the next one.

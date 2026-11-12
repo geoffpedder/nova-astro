@@ -1,7 +1,7 @@
 import { api } from './api'
 import { auth, checkAuth } from './auth.svelte'
 import { ask } from './confirm.svelte'
-import { exposure, looping } from './exposure.svelte'
+import { exposure, looping, repeats } from './exposure.svelte'
 import { mainView } from './inbox.svelte'
 import { refreshSetup, setupGuide, setupRemaining } from './setup.svelte'
 import { act, nova, startHub, stopHub } from './state.svelte'
@@ -154,13 +154,16 @@ export function startSession(): () => void {
       return () => clearTimeout(timer)
     })
 
-    // Loop: start the next exposure as soon as a new frame arrives. Shared by every Expose button (lib/exposure).
+    // Loop, and live stacking: start the next exposure as soon as a new frame arrives, until Abort. Shared by every
+    // Expose button (lib/exposure). Only for frames this browser started, and never while a sequence runs.
     $effect(() => {
       const id = nova.image?.id
       if (id === undefined || id === looping.lastImageId) return
       const first = looping.lastImageId === undefined
       looping.lastImageId = id
-      if (exposure.loop && !first && nova.status?.camera?.connected) act(() => api.expose(exposure.duration, exposure.save))
+      if (first || !looping.active) return
+      if (repeats() && nova.status?.camera?.connected && !nova.status.sequencer?.running) act(() => api.expose(exposure.duration, exposure.save))
+      else looping.active = false
     })
 
     // Finishing the last setup step while the guide is showing keeps it open, so its "All set" is seen.

@@ -315,6 +315,8 @@
     if (!image) return ''
     const linear = stretch ? '' : ', linear'
     if (mode === 'mono') return `mono${linear}`
+    // A file that's already colour (three planes: a stack), whatever pattern is chosen.
+    if (image.bayerPattern === 'RGB') return `colour (three planes${linear})`
     if (mode === 'auto')
       return image.bayerPattern ? `colour (${image.bayerPattern}${linear})` : `mono (no Bayer pattern in header${linear})`
     return `colour (${mode}, forced${linear})`

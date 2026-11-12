@@ -23,5 +23,12 @@ public sealed class RawImage
     /// <summary>FITS BITPIX of the source data (16 for most cameras, -32 for float).</summary>
     public int BitsPerPixel { get; }
 
+    /// <summary>
+    /// A colour image read from a file with three planes (R, G, B: a stack, as stacking programs and NOVA's live
+    /// stacking write them), each like <see cref="Pixels"/>, which then holds their average (for measuring stars).
+    /// Null for everything else: mono, and a colour sensor's raw mosaic.
+    /// </summary>
+    public float[][]? ColorPlanes { get; init; }
+
     public Dictionary<string, string> Headers { get; } = new(StringComparer.OrdinalIgnoreCase);
 }

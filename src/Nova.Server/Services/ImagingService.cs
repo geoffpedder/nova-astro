@@ -487,7 +487,8 @@ public sealed class ImagingService(
         var starsTask = measured is null ? Task.Run(() => StarDetector.Analyze(image)) : Task.FromResult(measured);
         // For the history: a thumbnail, and a copy on disk unless it was saved already.
         var thumbnailTask = keep
-            ? Task.Run(() => (Debayer.FromHeaders(image) is { } bayer ? Preview.RenderColor(image, bayer, ThumbnailSize) : Preview.Render(image, ThumbnailSize)).Png)
+            ? Task.Run(() => (image.ColorPlanes is not null ? Preview.RenderRgb(image, ThumbnailSize)
+                : Debayer.FromHeaders(image) is { } bayer ? Preview.RenderColor(image, bayer, ThumbnailSize) : Preview.Render(image, ThumbnailSize)).Png)
             : Task.FromResult<byte[]>([]);
         string? keptFile = path;
         if (keep && path is null)
@@ -528,7 +529,7 @@ public sealed class ImagingService(
 
         var info = new ImageInfo(Interlocked.Increment(ref _nextId), capturedUtc, duration,
             image.Width, image.Height, preview.Width, preview.Height, preview.Statistics, path,
-            Debayer.FromHeaders(image)?.ToString(), summary, openedFile);
+            image.ColorPlanes is not null ? "RGB" : Debayer.FromHeaders(image)?.ToString(), summary, openedFile);
         if (sequence < _shown) // a newer frame is already on screen
         {
             if (keep is { OwnFile: true } stale) TryDelete(stale.File);
@@ -602,7 +603,11 @@ public sealed class ImagingService(
             0 => Math.Max(raw.Width, raw.Height),
             var s => Math.Clamp(s.Value, 256, 16384),
         };
-        var label = (pattern is { } bp ? $"color {bp}" : "mono") + (stretch ? "" : " linear");
+        // A file that's already colour (three planes: a stack) is shown in colour unless mono is asked for; there's
+        // no mosaic to debayer, so a forced pattern means nothing for it.
+        var rgb = raw.ColorPlanes is not null && mode?.Trim().ToLowerInvariant() is not (null or "" or "mono");
+        if (rgb) pattern = null;
+        var label = (rgb ? "color RGB" : pattern is { } bp ? $"color {bp}" : "mono") + (stretch ? "" : " linear");
         var key = $"{label} {size}"; // cached per rendering and size
 
         if (older is { } olderId)
@@ -612,7 +617,8 @@ public sealed class ImagingService(
             {
                 if (_olderPreviews.TryGetValue(olderKey, out var hit)) return hit;
             }
-            var made = await Task.Run(() => pattern is { } p2 ? Preview.RenderColor(raw, p2, size, stretch) : Preview.Render(raw, size, stretch));
+            var made = await Task.Run(() => rgb ? Preview.RenderRgb(raw, size, stretch)
+                : pattern is { } p2 ? Preview.RenderColor(raw, p2, size, stretch) : Preview.Render(raw, size, stretch));
             var olderResult = new RenderedPreview(made.Png, label);
             lock (_olderPreviews)
             {
@@ -627,8 +633,8 @@ public sealed class ImagingService(
             if (_previews.TryGetValue(key, out var cached)) return cached;
         }
 
-        var rendered = await Task.Run(() => pattern is { } bayer
-            ? Preview.RenderColor(raw, bayer, size, stretch)
+        var rendered = await Task.Run(() => rgb ? Preview.RenderRgb(raw, size, stretch)
+            : pattern is { } bayer ? Preview.RenderColor(raw, bayer, size, stretch)
             : Preview.Render(raw, size, stretch));
         var result = new RenderedPreview(rendered.Png, label);
         lock (_previews)

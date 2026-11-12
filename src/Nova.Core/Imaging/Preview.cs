@@ -74,6 +74,34 @@ public static class Preview
     }
 
     /// <summary>
+    /// A colour image that came as three planes (<see cref="RawImage.ColorPlanes"/>: an opened stack): each colour
+    /// stretched on its own, or all three shown linearly over the same range.
+    /// </summary>
+    public static PreviewImage RenderRgb(RawImage image, int maxSize = 1600, bool stretch = true)
+    {
+        var planes = image.ColorPlanes ?? throw new ArgumentException("Not a three-plane colour image");
+        if (stretch) return RenderPlanes(planes, image.Width, image.Height, maxSize);
+        var stats = ComputeStatistics(image.Pixels);
+        var range = FullScale(image, stats);
+        var binning = BinningFor(image.Width, image.Height, maxSize);
+        var shown = new (byte[] Bytes, int W, int H)[3];
+        Parallel.For(0, 3, c =>
+        {
+            var (small, w, h) = Downsample(planes[c], image.Width, image.Height, binning);
+            shown[c] = (Linear(small, range), w, h);
+        });
+        var (pw, ph) = (shown[0].W, shown[0].H);
+        var rgb = new byte[pw * ph * 3];
+        for (var i = 0; i < pw * ph; i++)
+        {
+            rgb[i * 3] = shown[0].Bytes[i];
+            rgb[i * 3 + 1] = shown[1].Bytes[i];
+            rgb[i * 3 + 2] = shown[2].Bytes[i];
+        }
+        return new PreviewImage(Png.EncodeRgb8(pw, ph, rgb), pw, ph, binning, stats);
+    }
+
+    /// <summary>
     /// A stacked image's planes (one for mono, R, G and B for colour) as a stretched PNG, each colour stretched on its
     /// own, which also neutralises the sky's colour cast. <see cref="PreviewImage.Binning"/> is relative to the planes.
     /// </summary>

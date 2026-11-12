@@ -17,6 +17,32 @@ public class SexagesimalTests
         Assert.Equal(expected, Sexagesimal.Parse(text), 9);
 
     [Fact]
+    public void AColourFileOfThreePlanesIsReadAndShownInColour()
+    {
+        // What NOVA's live stacking (and other stacking programs) write: NAXIS3 = 3, the planes R, G, B.
+        const int w = 8, h = 6;
+        var red = Enumerable.Range(0, w * h).Select(i => 1000f + i).ToArray();
+        var green = Enumerable.Range(0, w * h).Select(i => 2000f + i).ToArray();
+        var blue = Enumerable.Range(0, w * h).Select(i => 3000f - i).ToArray();
+        var image = Fits.Read(Fits.WriteFloat32(w, h, [red, green, blue]));
+
+        Assert.Equal((w, h), (image.Width, image.Height));
+        Assert.NotNull(image.ColorPlanes);
+        Assert.Equal(red, image.ColorPlanes![0]);
+        Assert.Equal(green, image.ColorPlanes[1]);
+        Assert.Equal(blue, image.ColorPlanes[2]);
+        Assert.Equal((red[5] + green[5] + blue[5]) / 3, image.Pixels[5], 0.01); // their average, for measuring stars
+
+        // PNG colour type (byte 25): 2 is RGB, 0 is grey.
+        Assert.Equal(2, Preview.RenderRgb(image, 1600).Png[25]);
+        Assert.Equal(2, Preview.RenderRgb(image, 1600, stretch: false).Png[25]);
+        Assert.Equal(0, Preview.Render(image, 1600).Png[25]);
+
+        // One plane stays what it was.
+        Assert.Null(Fits.Read(Fits.WriteFloat32(w, h, [red])).ColorPlanes);
+    }
+
+    [Fact]
     public void FormatsWithoutRoundingToSixty()
     {
         // 59.99s must carry into the next minute instead of printing "60.0s".

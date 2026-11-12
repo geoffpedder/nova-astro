@@ -48,10 +48,29 @@ public static class Fits
 
         var count = width * height;
         var bytesPerPixel = Math.Abs(bitpix) / 8;
-        if (pos + (long)count * bytesPerPixel > data.Length)
+        // Three planes (NAXIS3 = 3) are a colour image: R, G, B, one after another.
+        var planeCount = naxis == 3 && headers.TryGetValue("NAXIS3", out var third) && third.Trim() == "3" ? 3 : 1;
+        if (pos + (long)count * planeCount * bytesPerPixel > data.Length)
             throw new FormatException("FITS data is shorter than the header says");
 
-        var src = data.AsSpan(pos);
+        if (planeCount == 3)
+        {
+            var planes = new float[3][];
+            for (var p = 0; p < 3; p++) planes[p] = ReadPlane(data.AsSpan(pos + p * count * bytesPerPixel), count, bitpix, bscale, bzero);
+            var average = new float[count];
+            for (var i = 0; i < count; i++) average[i] = (planes[0][i] + planes[1][i] + planes[2][i]) / 3;
+            var colour = new RawImage(width, height, average, bitpix) { ColorPlanes = planes };
+            foreach (var (k, v) in headers) colour.Headers[k] = v;
+            return colour;
+        }
+
+        var image = new RawImage(width, height, ReadPlane(data.AsSpan(pos), count, bitpix, bscale, bzero), bitpix);
+        foreach (var (k, v) in headers) image.Headers[k] = v;
+        return image;
+    }
+
+    private static float[] ReadPlane(ReadOnlySpan<byte> src, int count, int bitpix, double bscale, double bzero)
+    {
         var pixels = new float[count];
         switch (bitpix)
         {
@@ -77,10 +96,7 @@ public static class Fits
             default:
                 throw new FormatException($"Unsupported BITPIX {bitpix}");
         }
-
-        var image = new RawImage(width, height, pixels, bitpix);
-        foreach (var (k, v) in headers) image.Headers[k] = v;
-        return image;
+        return pixels;
     }
 
     /// <summary>Every card of the primary header in file order, with comments (for showing the header).</summary>

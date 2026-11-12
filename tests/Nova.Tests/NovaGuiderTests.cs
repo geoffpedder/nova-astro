@@ -51,6 +51,20 @@ public class NovaGuiderTests : IDisposable
     }
 
     [Fact]
+    public async Task CalibrateCarriesOnIntoGuiding()
+    {
+        await using var rig = await SetUpAsync();
+        var guider = rig.Guider;
+        Assert.True(guider.Calibrate(out var error), error);
+        for (var i = 0; i < 2400 && !guider.IsGuiding; i++) await Task.Delay(50);
+        Assert.True(guider.IsGuiding, $"still {guider.Status.State} after calibrating");
+        Assert.NotNull(guider.Status.Nova!.Calibration);
+        Assert.Contains(_log!.Recent, e => e.Message.Contains("Calibration done: starting guiding"));
+        await guider.StopAsync(CancellationToken.None);
+        Assert.False(guider.IsGuiding);
+    }
+
+    [Fact]
     public async Task ASlewByHandStopsGuidingAndStartsItAgain()
     {
         await using var rig = await SetUpAsync();

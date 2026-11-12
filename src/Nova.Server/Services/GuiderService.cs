@@ -147,9 +147,17 @@ public sealed class GuiderService : IAsyncDisposable
         return StartNova("Taking guide darks", ct => _nova!.BuildDarksAsync(exposures, frames, ct), "Guide darks done", out error);
     }
 
-    /// <summary>NOVA's guider: calibrate now.</summary>
+    /// <summary>
+    /// NOVA's guider: calibrate now, then carry on into guiding (as Guide does when there's no calibration yet), so
+    /// guiding is on afterwards rather than left looping. Stop ends it.
+    /// </summary>
     public bool Calibrate(out string? error) =>
-        StartNova("Calibrating the guider", ct => _nova!.CalibrateAsync(ct), "Calibration done", out error);
+        StartNova("Calibrating the guider", async ct =>
+        {
+            await _nova!.CalibrateAsync(ct);
+            _log.Info("Calibration done: starting guiding");
+            await _nova.GuideAsync(new SettleSettings(), recalibrate: false, ct);
+        }, "Guiding and settled", out error);
 
     private bool StartNova(string description, Func<CancellationToken, Task> operation, string doneMessage, out string? error)
     {

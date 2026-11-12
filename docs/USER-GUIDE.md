@@ -360,8 +360,8 @@ wait for settling by themselves.
 
 **Slewing while guiding:** with guiding on, a **Slew** or **Centre** from the page (or a GoTo from Stellarium) stops
 guiding first and starts it again once the mount is there, on a star in the new field; the activity log says so.
-It isn't started again when the slew fails or is stopped. Guiding that was only calibrated or looping, not guiding,
-is left as it was: press **Guide** to start it.
+It isn't started again when the slew fails or is stopped. A guider that's only looping, not guiding, is left as it
+was: press **Guide** to start it.
 
 NOVA also watches the Dec corrections. If after 5 minutes of guiding nearly all of them push the same way, the
 star is drifting, which is what polar error does: the Guider panel and the activity log say how fast, and the
@@ -395,7 +395,8 @@ time.
 - **Loop** exposes the guide camera and picks a guide star: the brightest one that isn't saturated, crowded or near
   the edge, plus up to 8 more whose average cancels some of the seeing. The small view shows the star (yellow ring)
   and where it should be (green cross).
-- **Calibrate** measures how guide pulses move the star: north until Dec backlash is taken up, west until the star has
+- **Calibrate** measures how guide pulses move the star, then carries straight on into guiding (press **Stop** to
+  slew to your target unguided; a Slew or Centre with guiding on stops it and starts it again by itself). It measures: north until Dec backlash is taken up, west until the star has
   moved 25 pixels and back east, then north and back south. The summary shows each axis's direction and speed and how
   far from square they are; over 10° is a warning to calibrate again. **Graph** (and the Guiding tab) draws it as PHD2
   does: where the star went after each West/East step (blue) and North/South step (red). Two straight lines crossing

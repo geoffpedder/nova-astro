@@ -214,7 +214,7 @@
     <button class="secondary" disabled={guider?.state === 'Looping' || busyDarks} onclick={() => act(api.guiderLoop)}
       title="Expose the guide camera in a loop and pick a guide star, without correcting">Loop</button>
     <button class="secondary" disabled={guider?.state === 'Calibrating' || busyDarks} onclick={() => act(api.guiderCalibrate)}
-      title="Measure how guide pulses move the star (near the meridian and Dec 0 is best)">Calibrate</button>
+      title="Measure how guide pulses move the star (near the meridian and Dec 0 is best), then start guiding. Press Stop afterwards to slew to a target unguided">Calibrate</button>
   </div>
 
   {#if calibration}

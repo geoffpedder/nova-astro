@@ -6,6 +6,9 @@ What changed in each release. The newest is first. A release's section here beco
 
 ### Changed
 
+- **Calibrate carries on into guiding** (NOVA's guider): when the calibration finishes, guiding starts, instead of
+  going back to looping. So calibrating and then slewing to a target leaves guiding on when the mount gets there.
+  Press Stop after calibrating to stay unguided.
 - **Live stacking takes frame after frame by itself:** with Live stack on, Expose (or the shutter) keeps taking
   frames until Abort. Before, it took one frame and stopped unless Loop was also on. Loop shows as on while live
   stacking. A new frame only starts another on the browser that pressed Expose, and never while a sequence runs.

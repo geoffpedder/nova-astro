@@ -179,12 +179,17 @@
     border-radius: 6px;
     background: color-mix(in srgb, var(--panel) 88%, var(--kind) 12%);
   }
+  /* The name takes the room it needs first; a long list of what the device does ("Camera, Filter wheel, Guider")
+     gives way and wraps, rather than squeezing the name into a column of letters. */
   .name {
-    flex: 1;
-    min-width: 0;
-    overflow-wrap: anywhere;
+    flex: 1 1 auto;
+    min-width: min(7em, 45%);
+    overflow-wrap: break-word;
   }
   .kinds {
+    flex: 0 1 auto;
+    min-width: 0;
+    text-align: right;
     font-size: 12px;
     color: color-mix(in srgb, var(--kind) 70%, var(--text) 30%);
   }

@@ -323,6 +323,11 @@ and 5′), while you turn the mount's altitude and azimuth knobs. Press **Done**
   pole a mount's RA can't measure a turn), takes the first frame there, then turns RA once, by 90°; from elsewhere
   it first goes to the pole. The turn is watched closely: it stops on the angle by the speed the mount is really
   moving (its position readings lag), and stops the mount at once if its readings stall, jump or go backwards.
+  **Starting it again** (after Done, Stop, or a failure) first turns RA back to where the last run started, then
+  makes its turn from there: a run leaves RA turned, and a second turn on top of the first would swing the
+  telescope down towards the tripod. If the mount is just off the pole and NOVA can't tell how far RA is already
+  turned (NOVA was restarted, or the mount was moved since), it doesn't turn RA at all and asks you to send the
+  mount to its home position first.
 
 For mounts without GoTo, tick *Turn RA by hand*: you turn RA yourself, and NOVA carries on once it has turned far
 enough (or press **Continue**). The settings also choose which way RA turns, the exposure, and whether to aim at

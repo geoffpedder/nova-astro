@@ -106,6 +106,11 @@ What changed in each release. The newest is first. A release's section here beco
 
 ### Fixed
 
+- **Polar alignment on the pole, started again, turned RA a second 90°:** a run leaves RA turned, and starting
+  again began from there and turned the same again, swinging the telescope down towards the tripod. Now it first
+  turns RA back to where the last run started (also after a Stop part way through the turn), and makes its turn
+  from there. When it can't tell how far RA is already turned (NOVA restarted, or the mount moved since) it doesn't
+  turn RA, and asks for the mount to be sent home first.
 - **Finding a serial device on another port** (when its driver's own port fails) set the driver's port to the
   port list's short name (`1a86_USB_Serial`, say) rather than its path, so it never connected, and left the driver
   pointing nowhere. It now picks the port from the list, as *Scan Ports* and a click do by hand.

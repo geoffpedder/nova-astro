@@ -133,6 +133,9 @@ public class PolarAlignmentServiceTests : IDisposable
 
     private ActivityLog? _log;
 
+    /// <summary>A second polar alignment service on the same equipment: NOVA restarted, the mount as it was.</summary>
+    private Func<PolarAlignmentService>? _another;
+
     private async Task<(EquipmentService, PolarAlignmentService)> SetUpAsync(bool manual)
     {
         var options = Opts.Create(new NovaOptions { Backend = "Simulator", ConfigDirectory = _config });
@@ -145,6 +148,7 @@ public class PolarAlignmentServiceTests : IDisposable
         var sites = new SiteService(equipment, options, log);
         await sites.SetSunAvoidanceAsync(0, CancellationToken.None); // the test sky can be anywhere, the Sun too
         var polar = new PolarAlignmentService(equipment, imaging, solver, sites, log, options);
+        _another = () => new PolarAlignmentService(equipment, imaging, solver, sites, log, options);
         await equipment.ConnectAsync(CancellationToken.None);
         var mount = equipment.Mount!;
         await mount.SetSiteAsync(new GeoLocation(51.5, -0.1, 0), DateTimeOffset.UtcNow, CancellationToken.None);
@@ -329,10 +333,112 @@ public class PolarAlignmentServiceTests : IDisposable
         await WaitFor(() => polar.Status?.Phase is "Adjusting" or "Failed", "the two frames", seconds: 90);
         Assert.True(polar.Status!.Phase == "Adjusting", polar.Status.Message);
         Assert.Contains(_log!.Recent, e => e.Message.Contains("already at the pole"));
-        Assert.DoesNotContain(_log.Recent, e => e.Message.StartsWith("Polar alignment: starting at"));
+        Assert.DoesNotContain(_log.Recent, e => e.Message.StartsWith("Polar alignment: starting at"));
         Assert.InRange(mount.Coordinates.DecDegrees, 89.5, 89.8); // stepped just off the pole in Dec, where RA means something
         polar.Stop();
         await WaitFor(() => !polar.Running, "stopping");
+    }
+
+    private static double TurnBetween(EquatorialCoordinates from, EquatorialCoordinates to) =>
+        (((from.RaHours - to.RaHours) % 24 + 36) % 24 - 12) * 15;
+
+    [Fact]
+    public async Task OnThePoleAgainTurnsRaBackFirst()
+    {
+        // A run leaves RA turned 90°. Starting again from there would turn another 90° on top (the telescope down by
+        // the tripod): RA goes back to where the first run started, and the turn is made from there.
+        var (equipment, polar) = await SetUpAsync(manual: false);
+        var mount = equipment.Mount!;
+        await mount.ParkAsync(CancellationToken.None);
+        polar.UpdateSettings(new PolarAlignmentSettings(Method: "Pole", ExposureSeconds: 0));
+
+        Assert.True(polar.Start(out var error), error);
+        await WaitFor(() => polar.Status?.Message.StartsWith("Turning RA") == true, "the turn starting", seconds: 30);
+        var start = mount.Coordinates;
+        await WaitFor(() => polar.Status?.Phase is "Adjusting" or "Failed", "the two frames", seconds: 90);
+        Assert.True(polar.Status!.Phase == "Adjusting", polar.Status.Message);
+        Assert.Equal(90, Math.Abs(TurnBetween(start, mount.Coordinates)), 2.0);
+        polar.Stop();
+        await WaitFor(() => !polar.Running, "stopping");
+
+        for (var again = 0; again < 2; again++)
+        {
+            Assert.True(polar.Start(out error), error);
+            await WaitFor(() => polar.Status?.Phase is "Adjusting" or "Failed", "the two frames again", seconds: 120);
+            Assert.True(polar.Status!.Phase == "Adjusting", polar.Status.Message);
+            // Still 90° from where the first run started: not 180°, or more.
+            Assert.Equal(90, Math.Abs(TurnBetween(start, mount.Coordinates)), 3.0);
+            polar.Stop();
+            await WaitFor(() => !polar.Running, "stopping");
+        }
+        Assert.Equal(2, _log!.Recent.Count(e => e.Message.Contains("turning it back to where that started")));
+    }
+
+    [Fact]
+    public async Task OnThePoleAgainAfterStoppingPartWayThroughTheTurn()
+    {
+        var (equipment, polar) = await SetUpAsync(manual: false);
+        var mount = equipment.Mount!;
+        await mount.ParkAsync(CancellationToken.None);
+        polar.UpdateSettings(new PolarAlignmentSettings(Method: "Pole", ExposureSeconds: 0));
+
+        Assert.True(polar.Start(out var error), error);
+        await WaitFor(() => polar.Status?.Message.StartsWith("Turning RA") == true, "the turn starting", seconds: 30);
+        var start = mount.Coordinates;
+        await WaitFor(() => Math.Abs(TurnBetween(start, mount.Coordinates)) > 30, "part of the turn", seconds: 30);
+        polar.Stop();
+        await WaitFor(() => !polar.Running, "stopping");
+        var partWay = Math.Abs(TurnBetween(start, mount.Coordinates));
+        Assert.InRange(partWay, 30, 80);
+
+        Assert.True(polar.Start(out error), error);
+        await WaitFor(() => polar.Status?.Phase is "Adjusting" or "Failed", "the two frames", seconds: 120);
+        Assert.True(polar.Status!.Phase == "Adjusting", polar.Status.Message);
+        Assert.Equal(90, Math.Abs(TurnBetween(start, mount.Coordinates)), 3.0); // from the start, not from where it stopped
+        polar.Stop();
+        await WaitFor(() => !polar.Running, "stopping");
+    }
+
+    [Fact]
+    public async Task OnThePoleWontTurnRaWhenItCantTellHowFarItIsTurned()
+    {
+        // NOVA restarted with the mount left as a run leaves it (just off the pole, RA turned): nothing says how far
+        // RA is turned, so it's not turned further. From home it starts as usual.
+        var (equipment, polar) = await SetUpAsync(manual: false);
+        var mount = equipment.Mount!;
+        await mount.ParkAsync(CancellationToken.None);
+        polar.UpdateSettings(new PolarAlignmentSettings(Method: "Pole", ExposureSeconds: 0));
+        Assert.True(polar.Start(out var error), error);
+        await WaitFor(() => polar.Status?.Phase is "Adjusting" or "Failed", "the two frames", seconds: 90);
+        polar.Stop();
+        await WaitFor(() => !polar.Running, "stopping");
+        var left = mount.Coordinates;
+
+        var restarted = _another!();
+        Assert.True(restarted.Start(out error), error);
+        await WaitFor(() => restarted.Status?.Phase is "Adjusting" or "Failed", "the refusal", seconds: 30);
+        Assert.Equal("Failed", restarted.Status!.Phase);
+        Assert.Contains("home position", restarted.Status.Message);
+        Assert.Equal(left.RaHours, mount.Coordinates.RaHours, 0.01); // didn't move
+
+        await mount.ParkAsync(CancellationToken.None); // home
+        Assert.True(restarted.Start(out error), error);
+        await WaitFor(() => restarted.Status?.Phase is "Adjusting" or "Failed", "the two frames from home", seconds: 90);
+        Assert.True(restarted.Status!.Phase == "Adjusting", restarted.Status.Message);
+        restarted.Stop();
+        await WaitFor(() => !restarted.Running, "stopping");
+    }
+
+    [Fact]
+    public void MeasuresHowFarRaIsStillTurned()
+    {
+        var start = new EquatorialCoordinates(10, 89.7);
+        Assert.Equal(90, PolarAlignmentService.TurnedSince(start, new EquatorialCoordinates(4, 89.7))!.Value, 0.001);   // west: RA went down
+        Assert.Equal(-90, PolarAlignmentService.TurnedSince(start, new EquatorialCoordinates(16, 89.7))!.Value, 0.001);
+        Assert.Equal(45, PolarAlignmentService.TurnedSince(new EquatorialCoordinates(1, 89.7), new EquatorialCoordinates(22, 89.7))!.Value, 0.001); // across 0 h
+        Assert.Null(PolarAlignmentService.TurnedSince(null, start));
+        Assert.Null(PolarAlignmentService.TurnedSince(start, new EquatorialCoordinates(4, 90)));  // sent home since
+        Assert.Null(PolarAlignmentService.TurnedSince(start, new EquatorialCoordinates(4, 45)));  // slewed away
     }
 
     [Fact]

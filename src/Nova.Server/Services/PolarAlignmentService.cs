@@ -83,6 +83,12 @@ public sealed class PolarAlignmentService
     private readonly object _sync = new();
     private CancellationTokenSource? _run;
     private TaskCompletionSource? _continue;
+    /// <summary>
+    /// Pole method: where the mount said it was when the last run took its first frame, before RA was turned. A run
+    /// leaves RA turned (90°, or part of that when stopped on the way), so the next one turns it back here first:
+    /// starting from where it was left would turn it the same again, towards the tripod.
+    /// </summary>
+    private EquatorialCoordinates? _poleStart;
 
     public PolarAlignmentService(EquipmentService equipment, ImagingService imaging, PlateSolveService solver,
         SiteService sites, ActivityLog log, IOptions<NovaOptions> options)
@@ -248,20 +254,51 @@ public sealed class PolarAlignmentService
                     Report("Unparking", 1);
                     await mount.UnparkAsync(ct);
                 }
-                if (settings.Pole && AtThePole(mount.Coordinates, site))
+            }
+            var motor = !settings.Manual && mount.CanMoveRaAxis;
+            if (settings.Pole && AtThePole(mount.Coordinates, site))
+            {
+                if (motor && TurnedSince(_poleStart, mount.Coordinates) is { } turned)
+                {
+                    // Where the last run left it: RA is still turned from that run's start. Back there first, or this
+                    // run's turn would go on top of the last one's (90° and 90°: the telescope down by the tripod).
+                    if (Math.Abs(turned) > PoleReturnTolerance)
+                    {
+                        _log.Info($"Polar alignment: RA is still turned {Math.Abs(turned):0}° from the last run: turning it back to where that started");
+                        Report($"Turning RA back {Math.Abs(turned):0}° to where the last run started", 1);
+                        await mount.MoveRaAxisAsync(-turned, ct);
+                        await Task.Delay(TimeSpan.FromSeconds(2), ct); // let the mount settle
+                        if (TurnedSince(_poleStart, mount.Coordinates) is not { } left || Math.Abs(left) > PoleReturnTolerance)
+                            throw new InvalidOperationException(
+                                "Couldn't turn RA back to where the last run started: send the mount to its home position, then start again");
+                    }
+                    else _log.Info("Polar alignment: at the pole where the last run started, starting here");
+                }
+                else if (motor && !AtHome(mount.Coordinates, site))
+                {
+                    // Just off the pole, as a run leaves the mount, but not one this NOVA remembers (it was restarted,
+                    // or the mount moved since): how far RA is turned can't be told, so it isn't turned any further.
+                    _poleStart = null;
+                    throw new InvalidOperationException(
+                        "The mount is just off the pole, as a polar alignment leaves it, and how far its RA axis is already turned isn't known: " +
+                        "send the mount to its home position first, then start again (or turn RA by hand: tick By hand)");
+                }
+                else
                 {
                     // Already there (at home, say): start here. A GoTo to the pole start would first swing RA round to
                     // Polaris's side, up to half a turn, before the 90° turn between the frames: with both, the scope
                     // can end up low, near the tripod. Right at the pole, though, the reported RA can't measure the
                     // turn, so first a nudge off it in Dec alone (no RA swing).
                     _log.Info("Polar alignment: already at the pole, starting here");
-                    if (!settings.Manual && mount.CanMoveRaAxis)
+                    if (motor)
                     {
                         Report("Stepping just off the pole (Dec only)", 1);
                         await StepOffThePoleAsync(mount, site, ct);
                     }
                 }
-                else
+            }
+            else if (settings.AutoStart)
+            {
                 {
                     var start = settings.Pole ? PoleStart(DateTime.UtcNow, site) : StartPosition(site, settings, DateTime.UtcNow);
                     var (altitude, azimuth) = Horizon.AltAz(Horizon.ToVector(start, DateTime.UtcNow, site));
@@ -273,6 +310,8 @@ public sealed class PolarAlignmentService
                     await _sites.SlewSafelyAsync(mount, start, ct); // and settles
                 }
             }
+            // Where this run's RA turn starts from, for the next run to come back to.
+            _poleStart = settings.Pole && motor ? mount.Coordinates : null;
 
             var useAxis = mount.CanMoveRaAxis;
             var shots = new List<Shot>();
@@ -494,6 +533,24 @@ public sealed class PolarAlignmentService
         label.Trim() is var t && t.EndsWith('x') &&
         double.TryParse(t[..^1], System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out var x) && x > 0
             ? x : null;
+
+    /// <summary>Less than this much RA turn left over from the last run isn't worth turning back (degrees).</summary>
+    public const double PoleReturnTolerance = 3;
+
+    /// <summary>
+    /// How far RA has turned from where the last pole run started (degrees, west positive, as
+    /// <see cref="IMount.MoveRaAxisAsync"/> takes it), or null when that can't be told: no run to go by, or the mount
+    /// isn't where one left it (its Dec has changed: it was slewed, or sent home).
+    /// </summary>
+    public static double? TurnedSince(EquatorialCoordinates? start, EquatorialCoordinates now)
+    {
+        if (start is not { } from || Math.Abs(now.DecDegrees - from.DecDegrees) > 0.15) return null;
+        return (((from.RaHours - now.RaHours) % 24 + 36) % 24 - 12) * 15;
+    }
+
+    /// <summary>Right on the pole (a mount at home reports Dec 90°), rather than stepped off it as a run leaves it.</summary>
+    public static bool AtHome(EquatorialCoordinates jnow, GeoLocation site) =>
+        (site.Latitude >= 0 ? jnow.DecDegrees : -jnow.DecDegrees) >= 89.95;
 
     /// <summary>The mount points within 2° of the visible pole (e.g. at its home position).</summary>
     public static bool AtThePole(EquatorialCoordinates jnow, GeoLocation site) =>

@@ -156,7 +156,16 @@
 
   // ---- Camera field of view ----
   const cameras = $derived((nova.status?.optics ?? []).filter((o) => o.imageScale && o.sensorWidth && o.sensorHeight))
-  const camera = $derived(cameras.find((c) => c.camera === s.camera) ?? cameras.find((c) => c.connected) ?? cameras[0] ?? null)
+  // The one picked in Framing; otherwise the imaging camera, not whichever comes first in the list: a guide camera
+  // connected for NOVA's guider sorts ahead of it ("ASI120…" before "ASI2600…") and has a different field.
+  const mainCamera = $derived(nova.status?.camera?.name ?? null)
+  const camera = $derived(
+    cameras.find((c) => c.camera === s.camera) ??
+      cameras.find((c) => c.camera === mainCamera) ??
+      cameras.find((c) => c.connected) ??
+      cameras[0] ??
+      null,
+  )
   const fieldW = $derived(camera ? (camera.imageScale! * camera.sensorWidth!) / 3600 : 1)
   const fieldH = $derived(camera ? (camera.imageScale! * camera.sensorHeight!) / 3600 : 0.67)
   const fieldText = (deg: number) => (deg >= 1 ? `${deg.toFixed(2)}°` : `${(deg * 60).toFixed(1)}′`)

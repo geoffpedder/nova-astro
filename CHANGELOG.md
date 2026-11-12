@@ -116,6 +116,10 @@ What changed in each release. The newest is first. A release's section here beco
 
 ### Fixed
 
+- **Targets: the planned frame was sized for the guide camera:** with a guide camera connected (for NOVA's
+  guider), the frame and the mount's frame on the chart used the first connected camera in the list, which could be
+  the guide camera with its guide scope, so they came out smaller than the plate solve's box. They now use the
+  imaging camera unless you pick another in *Framing*.
 - **Polar alignment on the pole, started again, turned RA a second 90°:** a run leaves RA turned, and starting
   again began from there and turned the same again, swinging the telescope down towards the tripod. Now it first
   turns RA back to where the last run started (also after a Stop part way through the turn), and makes its turn

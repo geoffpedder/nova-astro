@@ -67,6 +67,22 @@ public sealed class FileBrowserTests : IDisposable
     }
 
     [Fact]
+    public async Task AColourStacksThumbnailIsInColour()
+    {
+        // A saved live stack: three planes (R, G, B). Its thumbnail is colour (PNG colour type 2), a mono frame's grey (0).
+        var (files, _, _) = Create();
+        var plane = new float[400 * 300];
+        for (var i = 0; i < plane.Length; i++) plane[i] = 1000 + i % 400 * 10;
+        Write("2026-10-26/Stacked/stack.fits", Fits.WriteFloat32(400, 300, [plane, plane.Select(v => v * 0.8f).ToArray(), plane.Select(v => v * 0.5f).ToArray()]));
+        Write("2026-10-26/Stacked/mono.fits", Fits.WriteFloat32(400, 300, [plane]));
+
+        var colour = await files.ThumbnailAsync("local", "2026-10-26/Stacked/stack.fits", CancellationToken.None);
+        Assert.Equal(2, colour![25]);
+        var mono = await files.ThumbnailAsync("local", "2026-10-26/Stacked/mono.fits", CancellationToken.None);
+        Assert.Equal(0, mono![25]);
+    }
+
+    [Fact]
     public async Task MakesAThumbnailOfAFitsFileOnceAndKeepsIt()
     {
         var (files, _, _) = Create();

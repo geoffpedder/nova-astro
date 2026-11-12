@@ -122,7 +122,7 @@ What changed in each release. The newest is first. A release's section here beco
 - **A saved colour stack opened in grey:** a live stack's FITS holds three planes (red, green, blue), and opening
   one in the Image tab read only the first, so it showed as mono ("no Bayer pattern in header"). Colour files of
   three planes, NOVA's own stacks and other programs', now open in colour, thumbnail included; *Mono* still shows
-  them in grey.
+  them in grey. The file browser's thumbnails of them are in colour too (ones made before are made again).
 - **Targets: the planned frame was sized for the guide camera:** with a guide camera connected (for NOVA's
   guider), the frame and the mount's frame on the chart used the first connected camera in the list, which could be
   the guide camera with its guide scope, so they came out smaller than the plate solve's box. They now use the

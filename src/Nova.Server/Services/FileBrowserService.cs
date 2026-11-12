@@ -38,7 +38,8 @@ public sealed class FileBrowserService
     {
         var file = _storage.FitsFile(root, path);
         // One per version of the file: a file written again (same name) gets a new one.
-        var key = Convert.ToHexString(SHA1.HashData(Encoding.UTF8.GetBytes($"{file.FullName}|{file.Length}|{file.LastWriteTimeUtc.Ticks}")));
+        // (The "2": how thumbnails are made changed, so ones kept from before are made again.)
+        var key = Convert.ToHexString(SHA1.HashData(Encoding.UTF8.GetBytes($"2|{file.FullName}|{file.Length}|{file.LastWriteTimeUtc.Ticks}")));
         var cached = Path.Combine(_cache, key + ".png");
         if (File.Exists(cached)) return await File.ReadAllBytesAsync(cached, ct);
 
@@ -72,7 +73,9 @@ public sealed class FileBrowserService
                 data = unpacked.ToArray();
             }
             var image = Fits.Read(data);
-            return (Debayer.FromHeaders(image) is { } bayer ? Preview.RenderColor(image, bayer, ThumbnailSize) : Preview.Render(image, ThumbnailSize)).Png;
+            // A colour file of three planes (a saved stack) in colour; a colour sensor's frame debayered; else grey.
+            return (image.ColorPlanes is not null ? Preview.RenderRgb(image, ThumbnailSize)
+                : Debayer.FromHeaders(image) is { } bayer ? Preview.RenderColor(image, bayer, ThumbnailSize) : Preview.Render(image, ThumbnailSize)).Png;
         }
         catch (Exception ex) when (ex is FormatException or IOException or InvalidDataException or ArgumentException or IndexOutOfRangeException)
         {

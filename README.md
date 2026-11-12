@@ -15,7 +15,8 @@ network, with nothing to install there. It's inspired by [N.I.N.A.](https://nigh
 - **Plate solving** with ASTAP: sync, slew and centre on a target to within an arcminute; named stars on
   solved frames.
 - **Targets:** offline deep-sky and star catalogues, tonight's best targets for your site, a Stellarium-style
-  sky chart with survey imagery, framing with rotation and mosaics.
+  sky chart with survey imagery, framing with rotation and mosaics, and the sky at any other time to plan the
+  night before it's dark.
 - **Sequences:** a whole night unattended, for several targets: centring, autofocus with per-filter offsets,
   guiding, dithering, meridian flips, flats, the camera's rotation matched for each target, and a stop at dawn.
 - **Focusing** (V-curve autofocus), **polar alignment** (three-point, or with the camera on the pole),
@@ -45,7 +46,7 @@ network, with nothing to install there. It's inspired by [N.I.N.A.](https://nigh
   </tr>
   <tr>
     <td><b>Targets:</b> tonight's best targets, a sky chart with survey imagery, and framing the camera on IC 1396.</td>
-    <td><b>Sequence:</b> a night's imaging, with dithering, refocusing, the meridian flip and what happens at the end.</td>
+    <td><b>Plan:</b> a night's imaging, with dithering, refocusing, the meridian flip and what happens at the end.</td>
     <td><b>Image:</b> every frame stretched in colour, with its stars, HFR and FWHM, and the night's history.</td>
   </tr>
   <tr>
@@ -98,7 +99,7 @@ deploy/setup.sh
 
 `setup.sh` installs INDI and your equipment's drivers, the ASTAP plate solver, PHD2 and NOVA itself. Then
 open `http://<name>.local:5000`, where a **Getting started** checklist takes you through the rest. Later,
-`nova update` installs new releases and `nova doctor` checks everything.
+`nova update` installs new releases (NOVA says on its page when there's one) and `nova doctor` checks everything.
 
 ## Build on NOVA
 

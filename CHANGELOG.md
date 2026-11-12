@@ -4,6 +4,8 @@ What changed in each release. The newest is first. A release's section here beco
 
 ## [Unreleased]
 
+## [0.4.0] - 2026-11-12
+
 ### Changed
 
 - **Calibrate carries on into guiding** (NOVA's guider): when the calibration finishes, guiding starts, instead of
@@ -140,6 +142,10 @@ What changed in each release. The newest is first. A release's section here beco
   panel showed "Could not connect" and then connected anyway. NOVA now waits for the answer to its own request.
 - **Guiding settings changed in quick succession undid each other:** the second change was built on settings up to
   a second old, so it put the first one back. Each change now builds on the last, and they're saved in order.
+- **Equipment list:** a device with several roles (*Camera, Filter wheel, Guider*) squeezed its name into a column
+  of letters. The roles now wrap onto a second line and the name stays whole.
+- **Drop-down menus** (Layers, Time, the power menu): the cut corner is see-through instead of a dark square, and
+  the power menu has no sideways scrollbar.
 - **A driver's refusal says why:** when a driver refuses a command (the Gemini flat panel's cover before its open
   and closed positions are set, say) the error now carries the driver's own reason ("Flatpanel not ready. Click the
   configure button to start configuration.") instead of only "reported an error for CAP_PARK".
@@ -639,7 +645,8 @@ The first release: ready-made downloads for 64-bit PCs (`linux-x64`) and the Ras
 - **Stellarium:** take its selection, act as its telescope, and turn its Oculars frame to the camera's angle.
 - **The mini PC:** restart and shut down from the page, network status, night mode.
 
-[Unreleased]: https://github.com/geoffpedder/nova-astro/compare/v0.3.22...HEAD
+[Unreleased]: https://github.com/geoffpedder/nova-astro/compare/v0.4.0...HEAD
+[0.4.0]: https://github.com/geoffpedder/nova-astro/releases/tag/v0.4.0
 [0.3.22]: https://github.com/geoffpedder/nova-astro/releases/tag/v0.3.22
 [0.3.21]: https://github.com/geoffpedder/nova-astro/releases/tag/v0.3.21
 [0.3.20]: https://github.com/geoffpedder/nova-astro/releases/tag/v0.3.20

@@ -126,6 +126,7 @@ show "dev build" in the header.
 | `deploy/update.sh` | downloads, checks and installs a release (`nova update`) |
 | `deploy/install.sh` | installs a build as systemd services, the maintenance scripts and the `nova` command |
 | `deploy/doctor.sh` | checks everything and prints the fixes (`nova doctor`) |
+| `deploy/uninstall.sh` | removes what `install.sh` put there (`nova uninstall`); settings too with `--purge` |
 | `deploy/publish.sh` | builds the web UI and a self-contained build for a runtime (`linux-x64`, `linux-arm64`) |
 | `deploy/package.sh` | packs a build into a release download |
 | `deploy/nova` | the `nova` command |

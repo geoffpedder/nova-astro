@@ -95,8 +95,8 @@ same NOVA (the same panels, settings and live state) arranged differently:
 - **Top bar:** your equipment profile (tap it for Equipment: profiles, devices and drivers), **Image** and
   **Targets**, a running sequence, **Setup** while there's something to do, full screen, night mode and ⏻.
   **Targets** is the full target planner in place of the image.
-- **Icons** (down the left on a tablet, along the bottom on a phone): Mount, Camera, Focus, Filter and Guide each
-  open that panel, sliding out from behind the icons (from below on a phone); a dot shows whether it's connected.
+- **Icons** (down the left on a tablet, along the bottom on a phone): Mount, Camera, Focus, Filter, Flats (the
+  flat panel, when the profile has one) and Guide each open that panel, sliding out from behind the icons (from below on a phone); a dot shows whether it's connected.
   Plan (the sequence), Polar, Webcam, Mini PC (its health and files, and ⏻ on a phone) and Activity cover the image
   until closed with ✕.
 - **The shutter** (down the right on a tablet, a floating pill on a phone): **Mode** (Preview, Live stack, or
@@ -111,7 +111,8 @@ same NOVA (the same panels, settings and live state) arranged differently:
 **Pop-outs:** the Webcam tab, the Image tab and the guiding graph (Guiding tab, or under the Guider panel's graph)
 each have **Pop out**, which keeps a small window of it on screen whichever tab is showing. Drag one by its title,
 resize it from its bottom-right corner; ⤢ opens its tab, ✕ or **Pop out** again closes it. Each browser remembers where
-they are, and they stay inside the browser window when it's made smaller.
+they are, and they stay inside the browser window when it's made smaller. The compact layout has no pop-outs: its
+panels already float over the image.
 
 ## Equipment and drivers
 
@@ -210,7 +211,8 @@ for moving by hand. It can be switched off for testing indoors; the header then 
 The Camera panel sets the exposure, gain, offset, binning, frame type and cooling, and **Expose** takes a
 frame (saved as FITS when **Save FITS** is ticked, to `~/Pictures/Nova`). **Open ▾** in the Image tab opens a FITS
 file *from this computer*, or *from the mini PC*: its image folders (and a mounted USB drive), night by night, for a
-frame from an earlier run that hasn't been copied off yet. The Image tab shows it stretched, in colour for colour cameras, with the
+frame from an earlier run that hasn't been copied off yet. A colour file of three planes (a saved live stack, or a
+stack from another program) opens in colour too. The Image tab shows it stretched, in colour for colour cameras, with the
 star count, HFR, FWHM and statistics underneath; **Names** labels the stars once the frame is solved, and
 **Header** shows the FITS header. **Expose** at the start of the Image tab's toolbar takes a frame with the Camera
 panel's settings (exposure, Save FITS, Loop) and becomes **Abort** while it exposes, handy with the panels folded
@@ -623,8 +625,8 @@ the night's folder under `Flats/<name>/`, as `Flat` and `Dark` frames.
 **With a flat panel NOVA can control** (an INDI light box or flip-flat), nobody needs to be at the scope: NOVA
 closes the cover, switches the light on and sets its brightness, dimming or brightening it as needed. For
 dark flats it switches the light off, then opens the cover again if it was open. Untick **Use the panel** in
-the Flats… dialog to do it by hand instead. The **Flat panel** box in the left column switches the light,
-sets its brightness and opens or closes the cover. In a sequence, a closed cover is opened before each
+the Flats… dialog to do it by hand instead. The **Flat panel** box in the left column (**Flats** among the
+icons in the compact layout) switches the light, sets its brightness and opens or closes the cover. In a sequence, a closed cover is opened before each
 target, and closed when the sequence parks at the end.
 
 In a sequence, **Flats (before turning the camera, and at the end)** takes flats before the rotation helper

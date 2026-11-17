@@ -963,6 +963,10 @@
   }
   /* A phone: the time is what matters, so the target and its altitude give it the room. */
   @media (max-width: 720px) {
+    .title.planning {
+      gap: 6px;
+      padding-left: 6px;
+    }
     .title.planning > .target-name,
     .title.planning > .muted,
     .plan-more {

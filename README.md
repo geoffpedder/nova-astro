@@ -5,6 +5,8 @@ Raspberry Pi) and controls your mount, cameras, focuser, filter wheel, rotator a
 [INDI](https://www.indilib.org/). You use it from a browser on any computer, tablet or phone on the same
 network, with nothing to install there. It's inspired by [N.I.N.A.](https://nighttime-imaging.eu/), for Linux.
 
+Website: [nova-astro.app](https://nova-astro.app)
+
 ![NOVA's Image tab showing a plate-solved 300 s frame of M 31 with named stars, its image history, and the mount in 3D](docs/images/desktop-image.webp)
 
 ## What it does

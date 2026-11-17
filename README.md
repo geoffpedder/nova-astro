@@ -5,7 +5,7 @@ Raspberry Pi) and controls your mount, cameras, focuser, filter wheel, rotator a
 [INDI](https://www.indilib.org/). You use it from a browser on any computer, tablet or phone on the same
 network, with nothing to install there. It's inspired by [N.I.N.A.](https://nighttime-imaging.eu/), for Linux.
 
-![NOVA's Image tab showing a 300 s frame of M 31, with its image history](docs/images/image-tab-v2.webp)
+![NOVA's Image tab showing a plate-solved 300 s frame of M 31 with named stars, its image history, and the mount in 3D](docs/images/desktop-image.webp)
 
 ## What it does
 
@@ -40,23 +40,107 @@ network, with nothing to install there. It's inspired by [N.I.N.A.](https://nigh
 
 <table>
   <tr>
-    <td width="33%"><a href="docs/images/targets-tab-v2.webp"><img src="docs/images/targets-tab-v2.webp" alt="The Targets tab: tonight's best targets, the sky chart with DSS imagery, and the camera's frame on IC 1396, with the panels moved and the altitude chart"></a></td>
-    <td width="33%"><a href="docs/images/sequence-tab-v2.webp"><img src="docs/images/sequence-tab-v2.webp" alt="The Plan tab: IC 1396 with its frames, dithering, refocusing, meridian flip and end-of-night steps"></a></td>
-    <td width="33%"><a href="docs/images/image-tab-v2.webp"><img src="docs/images/image-tab-v2.webp" alt="The Image tab: the Andromeda Galaxy, with stars, HFR and FWHM, and the image history"></a></td>
+    <td width="33%"><a href="docs/images/desktop-targets-now.webp"><img src="docs/images/desktop-targets-now.webp" alt="The Targets tab: the sky chart with survey imagery, the camera's frame on M 31 and the altitude chart for the night"></a></td>
+    <td width="33%"><a href="docs/images/desktop-targets-time-menu.webp"><img src="docs/images/desktop-targets-time-menu.webp" alt="The Targets tab in its planning view: the Time menu open, the sky shown at 00:43 tonight, a dashed border round the chart"></a></td>
+    <td width="33%"><a href="docs/images/desktop-targets-sky.webp"><img src="docs/images/desktop-targets-sky.webp" alt="The Targets tab zoomed out to the whole sky, with tonight's list of targets down the side"></a></td>
   </tr>
   <tr>
-    <td><b>Targets:</b> tonight's best targets, a sky chart with survey imagery, and framing the camera on IC 1396.</td>
-    <td><b>Plan:</b> a night's imaging, with dithering, refocusing, the meridian flip and what happens at the end.</td>
-    <td><b>Image:</b> every frame stretched in colour, with its stars, HFR and FWHM, and the night's history.</td>
+    <td><b>Targets:</b> a sky chart with survey imagery, the camera's frame on the target, and its altitude through the night.</td>
+    <td><b>Plan ahead:</b> the sky at any other time, clearly marked, with the mount's buttons off until you're back to now.</td>
+    <td><b>Tonight:</b> the whole sky and the best targets for your site.</td>
   </tr>
   <tr>
-    <td><a href="docs/images/phd2-tab-v2.webp"><img src="docs/images/phd2-tab-v2.webp" alt="The PHD2 tab: PHD2's own window, running headless on the mini PC"></a></td>
-    <td><a href="docs/images/webcam-tab-v2.webp"><img src="docs/images/webcam-tab-v2.webp" alt="The Webcam tab: a USB webcam's view of the telescope in the back yard at night"></a></td>
+    <td width="33%"><a href="docs/images/desktop-plan.webp"><img src="docs/images/desktop-plan.webp" alt="The Plan tab: M 31 then M 33, each with its frames, times and live stacking"></a></td>
+    <td width="33%"><a href="docs/images/desktop-image-side.webp"><img src="docs/images/desktop-image-side.webp" alt="The Image tab comparing two frames side by side, with a table of what changed between them"></a></td>
+    <td width="33%"><a href="docs/images/desktop-popouts.webp"><img src="docs/images/desktop-popouts.webp" alt="The image full width with the panels hidden, and the 3D mount view and guiding graph popped out over it"></a></td>
+  </tr>
+  <tr>
+    <td><b>Plan:</b> a night's imaging over several targets, with dithering, refocusing, the meridian flip and what happens at the end.</td>
+    <td><b>Compare:</b> two frames side by side or blinked, with what changed between them.</td>
+    <td><b>Pop-outs:</b> the mount in 3D and the guiding graph in small windows over any tab.</td>
+  </tr>
+  <tr>
+    <td width="33%"><a href="docs/images/desktop-guiding.webp"><img src="docs/images/desktop-guiding.webp" alt="The Guiding tab: the guide star, the graph at about 1 arcsecond RMS, and the calibration"></a></td>
+    <td width="33%"><a href="docs/images/desktop-polar.webp"><img src="docs/images/desktop-polar.webp" alt="The Polar alignment tab part way through adjusting: the error in altitude and azimuth, and a target to bring the dot into"></a></td>
+    <td width="33%"><a href="docs/images/desktop-autofocus.webp"><img src="docs/images/desktop-autofocus.webp" alt="The Focuser panel after an autofocus run, with its V-curve"></a></td>
+  </tr>
+  <tr>
+    <td><b>Guiding:</b> NOVA's own guider, with its graph, target and calibration.</td>
+    <td><b>Polar alignment:</b> the error live as you turn the knobs (here in the simulator).</td>
+    <td><b>Autofocus:</b> a V-curve and the best focus position (here in the simulator).</td>
+  </tr>
+  <tr>
+    <td width="33%"><a href="docs/images/desktop-night.webp"><img src="docs/images/desktop-night.webp" alt="The Image tab in night mode, everything in red"></a></td>
+    <td width="33%"><a href="docs/images/phd2-tab-v2.webp"><img src="docs/images/phd2-tab-v2.webp" alt="The PHD2 tab: PHD2's own window, running headless on the mini PC"></a></td>
+    <td width="33%"><a href="docs/images/webcam-tab-v2.webp"><img src="docs/images/webcam-tab-v2.webp" alt="The Webcam tab: a USB webcam's view of the telescope in the back yard at night"></a></td>
+  </tr>
+  <tr>
+    <td><b>Night mode:</b> everything in red, to keep your night vision.</td>
+    <td><b>PHD2:</b> PHD2 runs on the mini PC without a screen, and shows in a tab (or use NOVA's own guider).</td>
+    <td><b>Webcam:</b> watch the rig from indoors, full size or popped out over any tab.</td>
+  </tr>
+</table>
+
+**On a tablet** (the compact layout, chosen automatically on touch screens):
+
+<table>
+  <tr>
+    <td width="33%"><a href="docs/images/ipad-image.webp"><img src="docs/images/ipad-image.webp" alt="The compact layout on a tablet: the image of M 31 full screen, icons down the left, the shutter down the right and a small guiding graph"></a></td>
+    <td width="33%"><a href="docs/images/ipad-targets.webp"><img src="docs/images/ipad-targets.webp" alt="The compact layout's Targets page in its planning view, with the camera's frame on M 31"></a></td>
+    <td width="33%"><a href="docs/images/ipad-plan.webp"><img src="docs/images/ipad-plan.webp" alt="The compact layout's Plan page with two targets"></a></td>
+  </tr>
+  <tr>
+    <td><b>The image, full screen:</b> icons for the equipment on one side, the shutter on the other.</td>
+    <td><b>Targets:</b> the same planner, here showing tonight at 00:43.</td>
+    <td><b>Plan:</b> the night's sequence.</td>
+  </tr>
+  <tr>
+    <td width="33%"><a href="docs/images/ipad-mount.webp"><img src="docs/images/ipad-mount.webp" alt="The Mount panel slid out over the image, with the 3D view and the direction buttons"></a></td>
+    <td width="33%"><a href="docs/images/ipad-camera.webp"><img src="docs/images/ipad-camera.webp" alt="The Camera panel slid out over the image"></a></td>
+    <td width="33%"><a href="docs/images/ipad-guide.webp"><img src="docs/images/ipad-guide.webp" alt="The Guider panel slid out over the image, with the guide star and calibration"></a></td>
+  </tr>
+  <tr>
+    <td><b>Mount</b></td>
+    <td><b>Camera</b></td>
+    <td><b>Guider</b></td>
+  </tr>
+  <tr>
+    <td width="33%"><a href="docs/images/ipad-flats.webp"><img src="docs/images/ipad-flats.webp" alt="The Flat panel's controls slid out over the image: light, brightness and cover"></a></td>
+    <td></td>
     <td></td>
   </tr>
   <tr>
-    <td><b>PHD2:</b> PHD2 runs on the mini PC without a screen, and shows in a tab (or use NOVA's own guider).</td>
-    <td><b>Webcam:</b> watch the rig from indoors, full size or popped out over any tab.</td>
+    <td><b>Flat panel</b></td>
+    <td></td>
+    <td></td>
+  </tr>
+</table>
+
+**On a phone:**
+
+<table>
+  <tr>
+    <td width="25%"><a href="docs/images/phone-image.webp"><img src="docs/images/phone-image.webp" alt="A phone: the image of M 31, the guiding graph, the shutter and the icons along the bottom"></a></td>
+    <td width="25%"><a href="docs/images/phone-targets.webp"><img src="docs/images/phone-targets.webp" alt="A phone: the Targets page in its planning view with the camera's frame on M 31"></a></td>
+    <td width="25%"><a href="docs/images/phone-targets-altitude.webp"><img src="docs/images/phone-targets-altitude.webp" alt="A phone: the Targets page with the altitude chart open"></a></td>
+    <td width="25%"><a href="docs/images/phone-targets-framing.webp"><img src="docs/images/phone-targets-framing.webp" alt="A phone: the Framing panel open over the chart"></a></td>
+  </tr>
+  <tr>
+    <td><b>Image</b></td>
+    <td><b>Targets</b></td>
+    <td><b>Altitude</b></td>
+    <td><b>Framing</b></td>
+  </tr>
+  <tr>
+    <td width="25%"><a href="docs/images/phone-mount.webp"><img src="docs/images/phone-mount.webp" alt="A phone: the Mount panel with the 3D view"></a></td>
+    <td width="25%"><a href="docs/images/phone-camera.webp"><img src="docs/images/phone-camera.webp" alt="A phone: the Camera panel"></a></td>
+    <td width="25%"><a href="docs/images/phone-guide.webp"><img src="docs/images/phone-guide.webp" alt="A phone: the Guider panel"></a></td>
+    <td></td>
+  </tr>
+  <tr>
+    <td><b>Mount</b></td>
+    <td><b>Camera</b></td>
+    <td><b>Guider</b></td>
     <td></td>
   </tr>
 </table>

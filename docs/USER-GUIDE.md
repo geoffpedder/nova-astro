@@ -86,6 +86,8 @@ gets NOVA's star icon.
 
 ### The compact layout (phones and tablets)
 
+![The compact layout on a tablet: the image full screen with the icons, shutter and guiding graph over it](images/ipad-image.webp)
+
 On a phone or an iPad NOVA uses its **compact layout**, made for touch and small screens. Everything in it is the
 same NOVA (the same panels, settings and live state) arranged differently:
 
@@ -105,6 +107,31 @@ same NOVA (the same panels, settings and live state) arranged differently:
 - **Putting things away:** the arrow on the shutter folds it down to just the shutter, and a tap on the image hides
   everything but the top bar and the shutter (tap again to bring it all back). Double-tap the image to zoom in, and pinch or double-tap again to zoom out.
 
+<p>
+<img src="images/phone-image.webp" width="24%" alt="A phone: the image, the guiding graph and the shutter">
+<img src="images/phone-targets.webp" width="24%" alt="A phone: the Targets page in its planning view">
+<img src="images/phone-targets-altitude.webp" width="24%" alt="A phone: the altitude chart">
+<img src="images/phone-targets-framing.webp" width="24%" alt="A phone: the Framing panel">
+</p>
+<p>
+<img src="images/phone-mount.webp" width="24%" alt="A phone: the Mount panel">
+<img src="images/phone-camera.webp" width="24%" alt="A phone: the Camera panel">
+<img src="images/phone-guide.webp" width="24%" alt="A phone: the Guider panel">
+</p>
+
+On a tablet the panels slide out beside the icons, and Targets and Plan cover the image:
+
+<p>
+<img src="images/ipad-mount.webp" width="32%" alt="A tablet: the Mount panel">
+<img src="images/ipad-camera.webp" width="32%" alt="A tablet: the Camera panel">
+<img src="images/ipad-guide.webp" width="32%" alt="A tablet: the Guider panel">
+</p>
+<p>
+<img src="images/ipad-flats.webp" width="32%" alt="A tablet: the Flat panel's controls">
+<img src="images/ipad-targets.webp" width="32%" alt="A tablet: the Targets page in its planning view">
+<img src="images/ipad-plan.webp" width="32%" alt="A tablet: the Plan page">
+</p>
+
 **Which layout:** ⏻ → *Layout on this browser*: **Automatic** (compact on phones and tablets, desktop otherwise),
 **Desktop** or **Compact**. Each browser remembers its own choice, so an iPad can use either.
 
@@ -113,6 +140,10 @@ each have **Pop out**, which keeps a small window of it on screen whichever tab 
 resize it from its bottom-right corner; ⤢ opens its tab, ✕ or **Pop out** again closes it. Each browser remembers where
 they are, and they stay inside the browser window when it's made smaller. The compact layout has no pop-outs: its
 panels already float over the image.
+
+![The 3D mount view and the guiding graph popped out over the image, with the panels hidden](images/desktop-popouts.webp)
+
+![Night mode: the Image tab in red](images/desktop-night.webp)
 
 ## Equipment and drivers
 
@@ -270,7 +301,7 @@ Utility → **Erase** → *ExFAT*. Formatting erases the drive.
 
 ## Plate solving
 
-![A solved frame with named stars](images/imaging.png)
+![The Image tab: a solved frame of M 31 with named stars, the image history and the mount in 3D](images/desktop-image.webp)
 
 NOVA plate solves with [ASTAP](https://www.hnsky.org/astap.htm) and its star database in /opt/astap.
 **Solve** in the Image tab solves the frame on screen, using the mount's position as a hint, then offers
@@ -281,6 +312,8 @@ Settings in `/etc/nova/nova.env`: `Nova__SolveExposureSeconds`, `Nova__CenterTol
 `Nova__CenterMaxAttempts`, `Nova__SolveSearchRadius`, `Nova__AstapPath`, `Nova__AstapDatabase` (e.g. `d20`).
 
 ## Focusing
+
+![The Focuser panel after an autofocus run, with its V-curve (in the simulator)](images/desktop-autofocus.webp)
 
 The Focuser panel moves the focuser in and out, goes to a position and saves named positions (presets).
 **Autofocus** runs a V-curve: it steps through focus, measures the stars' HFR at each point, fits the curve
@@ -305,6 +338,8 @@ with autofocus exposures long enough to average out the seeing: a single autofoc
 steps, as much as the offsets themselves. **Edit** types them in instead.
 
 ## Polar alignment
+
+![The Polar alignment tab part way through adjusting (in the simulator)](images/desktop-polar.webp)
 
 The **Polar alignment** tab has two methods. Both show the remaining error live, in degrees, minutes and
 seconds with which way to turn each knob, on a target chart that zooms in as the error shrinks (rings at 30″, 1′
@@ -374,6 +409,8 @@ Calibrate near the celestial equator and the meridian (with either guider): **La
 Targets chart shades that patch of sky (within 1.5 hours of the meridian and 20° of Dec 0).
 
 ### NOVA's own guider
+
+![The Guiding tab: the guide star, graph and calibration](images/desktop-guiding.webp)
 
 NOVA can guide by itself, with no PHD2, no virtual screen and nothing to set up beyond the Guider panel. It's the
 default on a new install; PHD2 is still there (setup installs it) if you'd rather use it, and you can switch at any
@@ -512,7 +549,11 @@ same as with PHD2.
 
 ## Targets and framing
 
-![The Targets tab framing IC 1396](images/targets-tab-v2.webp)
+![The Targets tab: the camera's frame on M 31, with the altitude chart](images/desktop-targets-now.webp)
+
+![The planning view: the Time menu open and the sky shown at another time](images/desktop-targets-time-menu.webp)
+
+![The whole sky with tonight's list of targets](images/desktop-targets-sky.webp)
 
 The **Targets** tab finds and frames what to image:
 
@@ -574,7 +615,7 @@ Without imagery the chart draws catalogue stars.
 
 ## Sequences
 
-![The Plan tab](images/sequence-tab-v2.webp)
+![The Plan tab: M 31 then M 33](images/desktop-plan.webp)
 
 The **Plan** tab runs a night's imaging unattended, for one target or several in turn:
 
@@ -636,6 +677,8 @@ Between targets it carries on without flats if nobody puts the panel on within 2
 waits for you.
 
 ## Image history
+
+![Two frames side by side, with what changed between them](images/desktop-image-side.webp)
 
 The Image tab keeps the last few images (5 by default, 3–20) down its right-hand side, as thumbnails with
 time, exposure, HFR and stars. Autofocus and polar alignment frames aren't kept. Click one to look at it:

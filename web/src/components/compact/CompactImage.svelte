@@ -279,6 +279,13 @@
     color: var(--muted);
     box-sizing: border-box;
   }
+  /* A phone: above the shutter's pill, which takes most of the width down there. */
+  @media (max-width: 720px) {
+    .guide {
+      bottom: 100px;
+      width: min(300px, calc(100% - 24px));
+    }
+  }
   .guide .head {
     display: flex;
     justify-content: space-between;

@@ -634,6 +634,8 @@
     right: var(--in-r);
     bottom: var(--in-b);
     display: grid;
+    /* Never wider than the screen, whatever is in it: a line that can't wrap is cut short instead. */
+    grid-template-columns: minmax(0, 1fr);
     min-height: 0;
     background: var(--bg);
     transition:

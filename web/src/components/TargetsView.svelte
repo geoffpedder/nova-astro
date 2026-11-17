@@ -544,7 +544,7 @@
   <div class="title" class:planning role={planning ? 'status' : undefined}>
     {#if planning}
       <b class="plan-tag">Planning view</b>
-      <span class="plan-when">{planLabel} ({planAway}), not the sky now</span>
+      <span class="plan-when">{planLabel} <span class="plan-more">({planAway}), not the sky now</span></span>
     {/if}
     {#if s.target}
       <b class="target-name">{s.target.name}</b>
@@ -960,6 +960,14 @@
   }
   .title.planning > .plan-space {
     flex: 1 1 0;
+  }
+  /* A phone: the time is what matters, so the target and its altitude give it the room. */
+  @media (max-width: 720px) {
+    .title.planning > .target-name,
+    .title.planning > .muted,
+    .plan-more {
+      display: none;
+    }
   }
   .plan-tag {
     color: var(--warn);

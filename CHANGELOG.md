@@ -4,6 +4,13 @@ What changed in each release. The newest is first. A release's section here beco
 
 ## [Unreleased]
 
+### Fixed
+
+- **Phones, planning ahead on the Targets page:** with another time shown, the bar across the top made the whole
+  page wider than the screen, so the chart's middle and half the toolbar were off to the right. The page now keeps
+  to the screen's width, and on a phone the bar shows just the time and *Back to now*.
+- **Phones, guiding:** the guiding graph over the image sat under the shutter. It's now above it.
+
 ## [0.4.0] - 2026-11-12
 
 ### Changed

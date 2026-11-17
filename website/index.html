@@ -1,0 +1,203 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>NOVA: astrophotography from your browser</title>
+  <meta name="description" content="NOVA runs on a small Linux computer at the telescope and controls your mount, cameras, focuser and more through INDI. Use it from a browser on any computer, tablet or phone. Free and open source.">
+  <meta name="theme-color" content="#161616">
+  <link rel="canonical" href="https://nova-astro.app/">
+  <meta property="og:title" content="NOVA: astrophotography from your browser">
+  <meta property="og:description" content="Imaging, plate solving, guiding, polar alignment and whole unattended nights, from a mini PC at the telescope. Free and open source.">
+  <meta property="og:image" content="https://nova-astro.app/img/desktop-image.webp">
+  <meta property="og:url" content="https://nova-astro.app/">
+  <meta property="og:type" content="website">
+  <meta name="twitter:card" content="summary_large_image">
+  <link rel="icon" href="favicon.svg" type="image/svg+xml">
+  <link rel="icon" href="favicon-32.png" sizes="32x32" type="image/png">
+  <link rel="apple-touch-icon" href="apple-touch-icon.png">
+  <link rel="preload" href="fonts/inter-latin-wght-normal.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<header class="top">
+  <a class="brand" href="#" aria-label="NOVA">
+    <svg viewBox="0 0 32 32" width="22" height="22" aria-hidden="true"><defs><radialGradient id="g"><stop offset="0" stop-color="#fff"/><stop offset=".35" stop-color="#cfe6f7"/><stop offset="1" stop-color="#5e9fcf"/></radialGradient></defs><path d="M16 1C17 10 22 15 31 16 22 17 17 22 16 31 15 22 10 17 1 16 10 15 15 10 16 1Z" fill="url(#g)"/></svg>
+    <span>NOVA</span>
+  </a>
+  <nav aria-label="Sections">
+    <a href="#features">Features</a>
+    <a href="#screens">Screenshots</a>
+    <a href="#touch">Phone and tablet</a>
+    <a href="#install">Install</a>
+    <a href="https://github.com/geoffpedder/nova-astro/blob/main/docs/USER-GUIDE.md">Guide</a>
+    <a class="gh" href="https://github.com/geoffpedder/nova-astro">GitHub</a>
+  </nav>
+</header>
+
+<main>
+
+<section class="hero">
+  <div class="hero-text">
+    <p class="kicker">For Linux, on a mini PC or a Raspberry Pi</p>
+    <h1>Astrophotography from your browser.</h1>
+    <p class="lead">NOVA runs on a small computer at the telescope and controls your mount, cameras, focuser, filter
+      wheel, rotator and flat panel through <a href="https://www.indilib.org/">INDI</a>. You use it from a browser on
+      any computer, tablet or phone on the same network, with nothing to install there.</p>
+    <p class="cta">
+      <a class="button primary" href="#install">Install NOVA</a>
+      <a class="button" href="https://github.com/geoffpedder/nova-astro">Source on GitHub</a>
+    </p>
+    <p class="small muted">Free and open source (GPL 3). Inspired by <a href="https://nighttime-imaging.eu/">N.I.N.A.</a></p>
+  </div>
+  <a class="shot hero-shot" href="img/desktop-image.webp">
+    <img src="img/desktop-image.webp" width="2000" height="1250" alt="NOVA's Image tab: a plate-solved 300 second frame of the Andromeda Galaxy with named stars, the image history, and the mount drawn in 3D">
+  </a>
+</section>
+
+<section id="features">
+  <h2>A whole night, from one page</h2>
+  <p class="intro">Everything runs on the computer at the telescope, so the work carries on when your laptop sleeps or
+    the Wi-Fi drops.</p>
+  <div class="grid features">
+    <article class="panel">
+      <h3><span class="dot camera"></span>Imaging</h3>
+      <p>Exposures with cooling, gain, offset and binning. Stretched colour previews, with stars, HFR and FWHM for
+        every frame. An image history to compare side by side or blink. Optional live stacking.</p>
+    </article>
+    <article class="panel">
+      <h3><span class="dot mount"></span>Plate solving</h3>
+      <p>Sync, slew and centre on a target to within an arcminute with ASTAP, and see the stars named on solved
+        frames.</p>
+    </article>
+    <article class="panel">
+      <h3><span class="dot filter"></span>Targets</h3>
+      <p>Offline catalogues, tonight's best targets for your site, a sky chart with survey imagery, framing with
+        rotation and mosaics, and the sky at any other time to plan before it's dark.</p>
+    </article>
+    <article class="panel">
+      <h3><span class="dot focuser"></span>Sequences</h3>
+      <p>A night unattended over several targets: centring, autofocus with filter offsets, guiding, dithering,
+        meridian flips, flats, the camera's rotation matched for each target, and a stop at dawn.</p>
+    </article>
+    <article class="panel">
+      <h3><span class="dot guider"></span>Guiding</h3>
+      <p>NOVA's own guider, with predictive PEC for strain-wave mounts, Dec backlash compensation and a guiding
+        assistant. Or PHD2, running on the mini PC and shown in a tab.</p>
+    </article>
+    <article class="panel">
+      <h3><span class="dot rotator"></span>Focus and polar alignment</h3>
+      <p>V-curve autofocus, and polar alignment by three points or with the camera on the pole, with the error shown
+        live as you turn the knobs.</p>
+    </article>
+    <article class="panel">
+      <h3><span class="dot flat"></span>Your equipment</h3>
+      <p>INDI drivers chosen on the page, profiles to switch between setups, and ZWO AM3, AM5 and AM7 mounts over
+        USB or Bluetooth.</p>
+    </article>
+    <article class="panel">
+      <h3><span class="dot camera"></span>Built for the field</h3>
+      <p>No internet needed. A red night mode. Its own Wi-Fi hotspot when the site has none. Frames saved to the
+        mini PC or straight to a USB drive, and a message to your phone when the night is done.</p>
+    </article>
+  </div>
+</section>
+
+<section id="screens">
+  <h2>A look around</h2>
+  <div class="grid shots three">
+    <figure><a class="shot" href="img/desktop-targets-now.webp"><img loading="lazy" src="img/desktop-targets-now.webp" width="2000" height="1250" alt="The Targets tab: the sky chart with the camera's frame on the Andromeda Galaxy and its altitude through the night"></a>
+      <figcaption><b>Targets.</b> Frame the camera on the sky and see how high the target gets.</figcaption></figure>
+    <figure><a class="shot" href="img/desktop-targets-time-menu.webp"><img loading="lazy" src="img/desktop-targets-time-menu.webp" width="2000" height="1250" alt="The Targets tab in its planning view, showing the sky later tonight with the Time menu open"></a>
+      <figcaption><b>Plan ahead.</b> The sky at any other time, clearly marked so the mount can't be sent there by mistake.</figcaption></figure>
+    <figure><a class="shot" href="img/desktop-targets-sky.webp"><img loading="lazy" src="img/desktop-targets-sky.webp" width="2000" height="1250" alt="The whole sky with a list of tonight's best targets"></a>
+      <figcaption><b>Tonight.</b> The whole sky and the best targets for your site.</figcaption></figure>
+    <figure><a class="shot" href="img/desktop-plan.webp"><img loading="lazy" src="img/desktop-plan.webp" width="2000" height="1250" alt="The Plan tab with two targets, each with its frames and times"></a>
+      <figcaption><b>Plan.</b> Several targets, each with its frames, times and what happens at the end.</figcaption></figure>
+    <figure><a class="shot" href="img/desktop-guiding.webp"><img loading="lazy" src="img/desktop-guiding.webp" width="2000" height="1250" alt="The Guiding tab: the guide star, the graph and the calibration"></a>
+      <figcaption><b>Guiding.</b> NOVA's own guider, with its graph, target and calibration.</figcaption></figure>
+    <figure><a class="shot" href="img/desktop-image-side.webp"><img loading="lazy" src="img/desktop-image-side.webp" width="2000" height="1250" alt="Two frames side by side with a table of what changed between them"></a>
+      <figcaption><b>Compare.</b> Two frames side by side or blinked, with what changed.</figcaption></figure>
+    <figure><a class="shot" href="img/desktop-polar.webp"><img loading="lazy" src="img/desktop-polar.webp" width="2000" height="1250" alt="The Polar alignment tab part way through adjusting, in the simulator"></a>
+      <figcaption><b>Polar alignment.</b> The error live as you turn the knobs (here in the simulator).</figcaption></figure>
+    <figure><a class="shot" href="img/desktop-popouts.webp"><img loading="lazy" src="img/desktop-popouts.webp" width="2000" height="1250" alt="The image full width, with the 3D mount view and the guiding graph in small windows over it"></a>
+      <figcaption><b>Pop-outs.</b> The mount in 3D and the guiding graph, over any tab.</figcaption></figure>
+    <figure><a class="shot" href="img/desktop-night.webp"><img loading="lazy" src="img/desktop-night.webp" width="2000" height="1250" alt="The Image tab in night mode, everything in red"></a>
+      <figcaption><b>Night mode.</b> Everything in red, to keep your night vision.</figcaption></figure>
+  </div>
+</section>
+
+<section id="touch">
+  <h2>Made for phones and tablets too</h2>
+  <p class="intro">On a touch screen NOVA switches to a compact layout: the image fills the screen and the controls
+    float over it. Added to the Home Screen, it opens like an app.</p>
+  <figure class="wide"><a class="shot" href="img/ipad-image.webp"><img loading="lazy" src="img/ipad-image.webp" width="2000" height="1390" alt="The compact layout on a tablet: the Andromeda Galaxy full screen, equipment icons down the left, the shutter down the right and a small guiding graph"></a>
+    <figcaption>On a tablet: equipment down one side, the shutter down the other.</figcaption></figure>
+  <div class="grid shots phones">
+    <figure><a class="shot" href="img/phone-image.webp"><img loading="lazy" src="img/phone-image.webp" width="900" height="1948" alt="A phone: the image, the guiding graph and the shutter"></a><figcaption>The image and the shutter</figcaption></figure>
+    <figure><a class="shot" href="img/phone-targets.webp"><img loading="lazy" src="img/phone-targets.webp" width="900" height="1948" alt="A phone: the Targets page with the camera's frame on the Andromeda Galaxy"></a><figcaption>Planning a target</figcaption></figure>
+    <figure><a class="shot" href="img/phone-targets-altitude.webp"><img loading="lazy" src="img/phone-targets-altitude.webp" width="900" height="1948" alt="A phone: the altitude chart for the target"></a><figcaption>Its altitude tonight</figcaption></figure>
+    <figure><a class="shot" href="img/phone-mount.webp"><img loading="lazy" src="img/phone-mount.webp" width="900" height="1948" alt="A phone: the Mount panel with the mount drawn in 3D"></a><figcaption>The mount</figcaption></figure>
+  </div>
+</section>
+
+<section id="taken">
+  <h2>Taken with NOVA</h2>
+  <p class="intro">Captured with NOVA and guided by its own guider, on a ZWO AM3 with an ASI2600MC Pro.</p>
+  <div class="grid shots two">
+    <figure><a class="shot" href="img/m33.webp"><img loading="lazy" src="img/m33.webp" alt="M 33, the Triangulum Galaxy: a face-on spiral with blue arms and pink star-forming regions"></a>
+      <figcaption><b>M 33</b>, the Triangulum Galaxy</figcaption></figure>
+    <figure><a class="shot" href="img/cave-nebula.webp"><img loading="lazy" src="img/cave-nebula.webp" alt="Sh2-155, the Cave Nebula: a glowing red cloud edged by dark dust in a dense star field"></a>
+      <figcaption><b>Sh2-155</b>, the Cave Nebula</figcaption></figure>
+  </div>
+</section>
+
+<section id="install">
+  <h2>Install</h2>
+  <div class="split">
+    <div>
+      <p>A used ex-office mini PC is cheap, fast and ideal, and small 12 V ones can ride on the telescope. A
+        Raspberry Pi 4 or 5 works too. See
+        <a href="https://github.com/geoffpedder/nova-astro/blob/main/docs/INSTALL.md#choosing-a-computer">Choosing a computer</a>.</p>
+      <p>On a 64-bit Arch, Debian 13, Raspberry Pi OS (trixie) or Ubuntu 26.04 system:</p>
+<pre class="panel code"><code>sudo apt install git             <span class="c"># Arch: sudo pacman -S --needed git</span>
+git clone https://github.com/geoffpedder/nova-astro.git &amp;&amp; cd nova-astro
+deploy/setup.sh</code></pre>
+      <p><code>setup.sh</code> installs INDI and your equipment's drivers, the ASTAP plate solver, PHD2 and NOVA
+        itself. Then open <code>http://&lt;name&gt;.local:5000</code>, where a Getting started checklist takes you
+        through the rest.</p>
+      <p>Later, <code>nova update</code> installs new releases and <code>nova doctor</code> checks everything.</p>
+      <p class="cta">
+        <a class="button primary" href="https://github.com/geoffpedder/nova-astro/blob/main/docs/INSTALL.md">Installing NOVA</a>
+        <a class="button" href="https://github.com/geoffpedder/nova-astro/releases/latest">Latest release</a>
+      </p>
+    </div>
+    <figure><a class="shot" href="img/mini-pc-on-rig.webp"><img loading="lazy" src="img/mini-pc-on-rig.webp" alt="A small mini PC strapped to the top of a refractor, between the guide scope and the focuser, with the cameras cabled to it"></a>
+      <figcaption>A mini PC riding on the telescope.</figcaption></figure>
+  </div>
+</section>
+
+<section id="more">
+  <h2>Read more</h2>
+  <div class="grid links">
+    <a class="panel link" href="https://github.com/geoffpedder/nova-astro/blob/main/docs/USER-GUIDE.md"><h3>Using NOVA</h3><p>Every part of the page, from the first run to unattended sequences.</p></a>
+    <a class="panel link" href="https://github.com/geoffpedder/nova-astro/blob/main/docs/WHY-NOVA.md"><h3>Why NOVA</h3><p>How it compares with an ASIAIR, or N.I.N.A. over Remote Desktop.</p></a>
+    <a class="panel link" href="https://github.com/geoffpedder/nova-astro/blob/main/docs/DEVELOPING.md#api"><h3>Build on NOVA</h3><p>Everything the page does goes through a plain HTTP API you can use too.</p></a>
+    <a class="panel link" href="https://github.com/geoffpedder/nova-astro/blob/main/CHANGELOG.md"><h3>Changelog</h3><p>What changed in each release.</p></a>
+  </div>
+  <p class="note panel"><b>NOVA is young.</b> It's developed with a ZWO AM3 mount and an ASI2600MC Pro, and tested
+    against INDI's simulators. Reports of how it works with other equipment are very welcome, on
+    <a href="https://github.com/geoffpedder/nova-astro/issues">GitHub</a>.</p>
+</section>
+
+</main>
+
+<footer>
+  <p>NOVA is free software under the <a href="https://github.com/geoffpedder/nova-astro/blob/main/LICENSE">GNU GPL 3</a>.
+    <a href="https://github.com/geoffpedder/nova-astro">Source</a>,
+    <a href="https://github.com/geoffpedder/nova-astro/blob/main/NOTICE">credits and licences</a>.</p>
+</footer>
+
+</body>
+</html>

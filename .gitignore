@@ -11,3 +11,5 @@ src/Nova.Server/wwwroot/
 *.swp
 # Raw catalogue downloads (see tools/build_*_catalog.py)
 tools/data/
+cloudflare/public/
+cloudflare/.wrangler/

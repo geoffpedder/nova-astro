@@ -4,6 +4,7 @@
 - [Building and running](#building-and-running)
 - [Tests](#tests)
 - [Releases](#releases)
+- [The website](#the-website)
 - [Deploy scripts](#deploy-scripts)
 - [Bundled data](#bundled-data)
 - [API](#api)
@@ -117,6 +118,12 @@ Releases are built by GitHub Actions (`.github/workflows/release.yml`):
 Running the workflow by hand (Actions → Release → Run workflow) makes the same builds as artifacts, without
 a release. The version comes from the tag (`NOVA_VERSION` → `-p:Version`); local builds are `0.0.0-dev` and
 show "dev build" in the header.
+
+## The website
+
+[nova-astro.app](https://nova-astro.app) is the static page in `website/` (no scripts), with the screenshots from
+`docs/images`. `cloudflare\deploy.bat` publishes it as a Cloudflare Worker with static assets;
+`cloudflare\deploy.bat build` only fills `cloudflare/public` to look at it locally.
 
 ## Deploy scripts
 

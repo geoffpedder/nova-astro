@@ -306,6 +306,21 @@ figcaption b {
 .shots.two {
   grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
 }
+/* A tall picture beside two wide ones, stacked. */
+.taken {
+  display: grid;
+  grid-template-columns: minmax(0, 17fr) minmax(0, 18fr);
+  gap: 16px;
+  align-items: start;
+}
+.taken .tall {
+  grid-row: span 2;
+}
+@media (max-width: 760px) {
+  .taken {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
 .shots.phones {
   grid-template-columns: repeat(4, minmax(0, 1fr));
   max-width: 900px;

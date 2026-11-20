@@ -155,12 +155,14 @@ Captured with NOVA and guided by NOVA's own guider (ZWO AM3, ASI2600MC Pro).
 
 <table>
   <tr>
-    <td width="50%"><a href="docs/images/m33.webp"><img src="docs/images/m33.webp" alt="M 33, the Triangulum Galaxy: a face-on spiral with blue arms and pink star-forming regions"></a></td>
-    <td width="50%"><a href="docs/images/cave-nebula.webp"><img src="docs/images/cave-nebula.webp" alt="Sh2-155, the Cave Nebula: a glowing red cloud edged by dark dust in a dense star field"></a></td>
+    <td width="41%"><a href="docs/images/m33.webp"><img src="docs/images/m33.webp" alt="M 33, the Triangulum Galaxy: a face-on spiral with blue arms and pink star-forming regions"></a></td>
+    <td width="41%"><a href="docs/images/cave-nebula.webp"><img src="docs/images/cave-nebula.webp" alt="Sh2-155, the Cave Nebula: a glowing red cloud edged by dark dust in a dense star field"></a></td>
+    <td width="18%"><a href="docs/images/heart-nebula.webp"><img src="docs/images/heart-nebula.webp" alt="IC 1805, the Heart Nebula: a wide heart-shaped loop of red hydrogen with a bright knot at its centre"></a></td>
   </tr>
   <tr>
     <td><b>M 33</b>, the Triangulum Galaxy</td>
     <td><b>Sh2-155</b>, the Cave Nebula</td>
+    <td><b>IC 1805</b>, the Heart Nebula</td>
   </tr>
 </table>
 
